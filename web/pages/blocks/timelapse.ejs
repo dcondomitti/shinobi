@@ -1,0 +1,80 @@
+<!--Timelapse Window-->
+<div class="modal full fade dark" id="timelapse" role="dialog" aria-labelledby="timelapseLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <h4 class="modal-title" id="timelapseLabel"><i class="fa fa-angle-double-right"></i> &nbsp; <span><%-lang['Time-lapse Tool']%></span></h4>
+      </div>
+        <div class="modal-body text-center">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="timelapse_hud">
+                        <div class="timelapse_playRate hover-hide"></div>
+                        <div class="controlBar hover-hide">
+                            <div class="form-group">
+                                <div class="progress" id="timelapse_seekBar">
+                                    <div class="progress-bar progress-bar-warning" role="progressbar" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="form-group monospace">
+                                    <div class="btn-group timelapseSpeedUseBasicSwitch">
+                                        <a timelapse="stepBackBack" class="active btn btn-primary">&nbsp;<i class="fa fa-backward"></i>&nbsp;</a>
+                                        <a timelapse="stepBack" class="btn btn-primary">&nbsp;<i class="fa fa-arrow-circle-o-left"></i>&nbsp;</a>
+                                    </div>
+                                    <div class="btn-group">
+                                        <a timelapse="play" class="btn btn-default">&nbsp;<i class="fa fa-play"></i>&nbsp;</a>
+                                        <a timelapse="mute" class="btn btn-default">&nbsp;<i class="fa fa-volume-up"></i>&nbsp;</a>
+                                    </div>
+                                    <div class="btn-group">
+                                        <a timelapse="stepFront" class="btn btn-primary">&nbsp;<i class="fa fa-arrow-circle-o-right"></i>&nbsp;</a>
+                                        <a timelapse="stepFrontFront" class="active btn btn-primary">&nbsp;<i class="fa fa-forward"></i>&nbsp;</a>
+                                    </div>
+                                    <a timelapse="download" class="btn btn-info">&nbsp;<i class="fa fa-download"></i>&nbsp;</a>
+                                    <div class="btn-group">
+                                        <a timelapse="setPlayBackRate" playRate="1" class="btn btn-default">1</a>
+                                        <a timelapse="setPlayBackRate" playRate="5" class="btn btn-default">5</a>
+                                        <a timelapse="setPlayBackRate" playRate="15" class="btn btn-default">15</a>
+                                    </div>
+                                    <div class="btn-group timelapseSpeedUseBasicSwitch">
+                                        <a timelapse="setPlayBackRate" playRate="30" class="btn btn-default">30</a>
+                                        <a timelapse="setPlayBackRate" playRate="60" class="btn btn-default">60</a>
+                                        <a timelapse="setPlayBackRate" playRate="120" class="btn btn-default">120</a>
+                                    </div>
+                                </div>
+                                <div class="marc-toggle abs-bot-left">
+                                    <input title="<%-lang['Use HTML5 Play Method']%>" type="checkbox" id="timelapseSpeedUseBasic"/><label for="timelapseSpeedUseBasic"><%-lang['Use HTML5 Play Method']%></label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="timelapse_video_display"></div>
+                    </div>
+                </div>
+                <form class="col-md-4">
+                    <div class="form-group">
+                        <label><div><span><%-lang.Monitor%></span></div>
+                            <div><select class="form-control monitors_list"></select></div>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                    <label><div><span><%-lang['Date Range']%></span></div>
+                        <div><input type="text" id="timelapse_daterange" class="form-control" value="" /></div>
+                    </label>
+                    </div>
+                    <div class="form-group">
+                        <ul id="timelapse_video_line" class="list-group"></ul>
+                    </div>
+                </form>
+            </div>
+        </div>
+      <div class="modal-footer">
+          <div class="btn-group">
+              <button type="button" class="btn btn-default" data-dismiss="modal"><%-lang.Close%></button>
+          </div>
+      </div>
+    </div>
+  </div>
+</div>
