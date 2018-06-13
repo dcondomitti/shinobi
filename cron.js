@@ -64,6 +64,7 @@ s.sqlDate = function(value){
     return dateQueryFunction
 }
 s.sqlQuery = function(query,values,onMoveOn,hideLog){
+    s.debugLog(query,values)
     if(!values){values=[]}
     var valuesNotFunction = true;
     if(typeof values === 'function'){
@@ -195,10 +196,13 @@ s.checkFilterRules=function(v,callback){
             }]
         };
     }
+    s.debugLog('Filters')
     var keys = Object.keys(v.d.filters)
     if(keys.length>0){
         keys.forEach(function(m,current){
-            var b=v.d.filters[m];
+            // b = filter
+            var b = v.d.filters[m];
+            s.debugLog(b)
             if(b.enabled==="1"){
                 b.ar=[v.ke];
                 b.sql=[];
@@ -470,16 +474,17 @@ s.processUser = function(number,rows){
                 }
             })
             s.deleteOldLogs(v,function(){
-                s.debugLog('deleteOldLogs')
+                s.debugLog('--- deleteOldLogs Complete')
                 s.deleteOldFileBins(v,function(){
-                    s.debugLog('deleteOldFileBins')
+                    s.debugLog('--- deleteOldFileBins Complete')
                     s.deleteOldEvents(v,function(){
-                        s.debugLog('deleteOldEvents')
+                        s.debugLog('--- deleteOldEvents Complete')
                         s.checkFilterRules(v,function(){
-                            s.debugLog('checkFilterRules')
+                            s.debugLog('--- checkFilterRules Complete')
                             s.deleteRowsWithNoVideo(v,function(){
-                                s.debugLog('deleteRowsWithNoVideo')
+                                s.debugLog('--- deleteRowsWithNoVideo Complete')
                                 s.checkForOrphanedFiles(v,function(){
+                                    s.debugLog('--- checkForOrphanedFiles Complete')
                                     //done user, unlock current, and do next
                                     s.overlapLock[v.ke]=false;
                                     s.processUser(number+1,rows)
