@@ -1,4 +1,4 @@
-# Shinobi Pro 
+# Shinobi Pro
 ### (Shinobi Open Source Software)
 
 Shinobi is the Open Source CCTV Solution written in Node.JS. Designed with multiple account system, Streams by WebSocket, and Save to WebM. Shinobi can record IP Cameras and Local Cameras.
