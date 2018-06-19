@@ -12,15 +12,12 @@ $.ccio={
     fr:$('#files_recent'),
     mon:{}
 };
-<% if(config.useUTC){ %>
-$.ccio.timeObject = function(date){
-    return moment.utc(date).local()
+$.ccio.timeObject = function(time,isUTC){
+    if(isUTC === true){
+        return moment(time).utc()
+    }
+    return moment(time)
 }
-<% }else{ %>
-$.ccio.timeObject = function(date){
-    return moment(date)
-}
-<% } %>
 if(!$user.details.lang||$user.details.lang==''){
     $user.details.lang="<%-config.language%>"
 }
@@ -158,8 +155,26 @@ switch($user.details.lang){
                         url=url+'/'
                     }
                 }else{
-                    url=''
+                    url=location.pathname
                 }
+                return url
+            break;
+            case'videoHrefToDelete':
+                var urlSplit = d.split('?')
+                var url = urlSplit[0]+'/delete'
+                if(urlSplit[1])url += '?' + urlSplit[1]
+                return url
+            break;
+            case'videoHrefToUnread':
+                var urlSplit = d.split('?')
+                var url = urlSplit[0]+'/status/1'
+                if(urlSplit[1])url += '?' + urlSplit[1]
+                return url
+            break;
+            case'videoHrefToRead':
+                var urlSplit = d.split('?')
+                var url = urlSplit[0]+'/status/2'
+                if(urlSplit[1])url += '?' + urlSplit[1]
                 return url
             break;
 //            case'streamWindow':
@@ -834,25 +849,26 @@ switch($user.details.lang){
         if(d.id&&!d.mid){d.mid=d.id;}
         switch(x){
             case 0://video
-                var href
+                var url
                 if(d.href){
-                    href = d.href
+                    url = d.href
                 }else if(!d.href && d.hrefNoAuth){
-                    href = $.ccio.init('location',user)+user.auth_token+d.hrefNoAuth
+                    url = $.ccio.init('location',user)+user.auth_token+d.hrefNoAuth
                 }
-                if(user!==$user&&href.charAt(0)==='/'){
-                    href = $.ccio.init('location',user)+d.href.substring(1)
+                if(user!==$user&&url.charAt(0)==='/'){
+                    url = $.ccio.init('location',user)+d.href.substring(1)
                 }
-                href = 'href="'+href+'"'
-                if(!d.filename){d.filename=$.ccio.init('tf',d.time)+'.'+d.ext;}
+                href = 'href="'+url+'"'
+//                if(!d.filename){d.filename=$.ccio.init('tf',d.time)+'.'+d.ext;}
                 d.dlname=d.mid+'-'+d.filename;
-                d.mom=$.ccio.timeObject(d.time),
-                d.hr=parseInt(d.mom.format('HH')),
+                d.startMoment=$.ccio.timeObject(d.time),
+                d.endMoment=$.ccio.timeObject(d.end),
+                d.hr=parseInt(d.startMoment.format('HH')),
                 d.per=parseInt(d.hr/24*100);
-                d.circle='<div title="at '+d.hr+' hours of '+d.mom.format('MMMM DD')+'" '+href+' video="launch" class="progress-circle progress-'+d.per+'"><span>'+d.hr+'</span></div>'
-                tmp+='<li class="video-item glM'+d.mid+user.auth_token+'" auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" status="'+d.status+'" status="'+d.status+'" file="'+d.filename+'">'+d.circle+'<div><span title="'+d.end+'" class="livestamp"></span></div><div><div class="small"><b><%-cleanLang(lang.Start)%></b> : '+$.ccio.timeObject(d.time).format('h:mm:ss , MMMM Do YYYY')+'</div><div class="small"><b><%-cleanLang(lang.End)%></b> : '+$.ccio.timeObject(d.end).format('h:mm:ss , MMMM Do YYYY')+'</div></div><div><span class="pull-right">'+(parseInt(d.size)/1000000).toFixed(2)+'mb</span><div class="controls btn-group"><a class="btn btn-sm btn-primary" video="launch" '+href+'><i class="fa fa-play-circle"></i></a> <a download="'+d.dlname+'" '+href+' class="btn btn-sm btn-default"><i class="fa fa-download"></i></a>'
+                d.circle='<div title="at '+d.hr+' hours of '+d.startMoment.format('MMMM DD')+'" '+href+' video="launch" class="progress-circle progress-'+d.per+'"><span>'+d.hr+'</span></div>'
+                tmp+='<li class="video-item glM'+d.mid+user.auth_token+'" auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" status="'+d.status+'" status="'+d.status+'" file="'+d.filename+'">'+d.circle+'<div><span title="'+d.endMoment.format()+'" class="livestamp"></span></div><div><div class="small"><b><%-cleanLang(lang.Start)%></b> : '+d.startMoment.format('h:mm:ss , MMMM Do YYYY')+'</div><div class="small"><b><%-cleanLang(lang.End)%></b> : '+d.endMoment.format('h:mm:ss , MMMM Do YYYY')+'</div></div><div><span class="pull-right">'+(parseInt(d.size)/1000000).toFixed(2)+'mb</span><div class="controls btn-group"><a class="btn btn-sm btn-primary" video="launch" '+href+'><i class="fa fa-play-circle"></i></a> <a download="'+d.dlname+'" '+href+' class="btn btn-sm btn-default"><i class="fa fa-download"></i></a>'
                 <% if(config.DropboxAppKey){ %> tmp+='<a video="download" host="dropbox" download="'+d.dlname+'" '+href+' class="btn btn-sm btn-default"><i class="fa fa-dropbox"></i></a>' <% } %>
-                tmp+='<a title="<%-cleanLang(lang['Delete Video'])%>" video="delete" class="btn btn-sm btn-danger permission_video_delete"><i class="fa fa-trash"></i></a></div></div></li>';
+                tmp+='<a title="<%-cleanLang(lang['Delete Video'])%>" video="delete" href="'+$.ccio.init('videoHrefToDelete',url)+'" class="btn btn-sm btn-danger permission_video_delete"><i class="fa fa-trash"></i></a></div></div></li>';
                 $(z).each(function(n,v){
                     v=$(v);
                     if(v.find('.video-item').length>10){v.find('.video-item:last').remove()}
@@ -1743,6 +1759,8 @@ $.ccio.globalWebsocket=function(d,user){
             $.ccio.init('data-video',d)
             d.e=$('[file="'+d.filename+'"][mid="'+d.mid+'"][ke="'+d.ke+'"][auth="'+user.auth_token+'"]');
             d.e.attr('status',d.status),d.e.attr('data-status',d.status);
+            console.log(d)
+
         break;
         case'video_delete':
 //            if($('.modal[mid="'+d.mid+'"][auth="'+user.auth_token+'"]').length>0){$('#video_viewer[mid="'+d.mid+'"]').attr('file',null).attr('ke',null).attr('mid',null).attr('auth',null).modal('hide')}
@@ -2153,7 +2171,7 @@ $.ccio.globalWebsocket=function(d,user){
             $.each(videos.videos,function(n,v){
                 if(!v||!v.mid){return}
                 v.mon=$.ccio.mon[v.ke+v.mid+$user.auth_token];
-                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
+//                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
                 if(v.status>0){
         //                    data.push({src:v,x:v.time,y:$.ccio.timeObject(v.time).diff($.ccio.timeObject(v.end),'minutes')/-1})
                     data[v.filename]={
@@ -4062,7 +4080,7 @@ $.timelapse.drawTimeline=function(getData){
         e.tmp=''
         $.each(videos.videos,function(n,v){
             if(!v||!v.time){return}
-            v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
+//            v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
             v.videoBefore=videos.videos[n-1];
             v.videoAfter=videos.videos[n+1];
 //            if(v.href.charAt(0)==='/'){
@@ -4075,7 +4093,7 @@ $.timelapse.drawTimeline=function(getData){
             e.tmp+='<div class="flex-block">'
             e.tmp+='<div class="flex-unit-3"><div class="frame" style="background-image:url('+$.timelapse.placeholder+')"></div></div>'
             e.tmp+='<div class="flex-unit-3"><div><span title="'+v.time+'" class="livestamp"></span></div><div>'+v.filename+'</div></div>'
-            e.tmp+='<div class="flex-unit-3 text-right"><a class="btn btn-default" download="'+v.mid+'-'+v.filename+'" href="'+v.href+'">&nbsp;<i class="fa fa-download"></i>&nbsp;</a> <a class="btn btn-danger" video="delete">&nbsp;<i class="fa fa-trash-o"></i>&nbsp;</a></div>'
+            e.tmp+='<div class="flex-unit-3 text-right"><a class="btn btn-default" download="'+v.mid+'-'+v.filename+'" href="'+v.href+'">&nbsp;<i class="fa fa-download"></i>&nbsp;</a> <a class="btn btn-danger" video="delete" href="'+$.ccio.init('videoHrefToDelete',v.href)+'">&nbsp;<i class="fa fa-trash-o"></i>&nbsp;</a></div>'
             e.tmp+='</div>'
             e.tmp+='<div class="flex-block">'
             e.tmp+='<div class="flex-unit-3"><div class="progress"><div class="progress-bar progress-bar-primary" role="progressbar" style="width:0%"></div></div></div>'
@@ -4449,7 +4467,8 @@ $.pwrvid.e.on('click','[preview]',function(e){
                     $.pwrvid.vp.find('.stream-objects .stream-detected-object').remove()
                 })
             if(e.status==1){
-                $.get(e.href.split('?')[0]+'/status/2',function(d){
+                $.get($.ccio.init('videoHrefToRead',e.href),function(d){
+                    
                 })
             }
             var labels=[]
@@ -4778,22 +4797,28 @@ $('body')
                 .attr('auth',e.auth)
                 .attr('file',e.file);
             if(e.status==1){
-                $.get(e.href.split('?')[0]+'/status/2',function(d){
+                $.get($.ccio.init('videoHrefToRead',e.href),function(d){
+                    if(d.ok !== true)console.log(d,new Error())
                 })
             }
         break;
         case'delete':
-            e.href=e.p.find('[download]').attr('href')
-            if(!e.href||e.href===''){
-                e.href=e.p.attr('href')
+            e.preventDefault();
+            var videoLink = e.p.find('[download]').attr('href')
+            var href = $(this).attr('href')
+            console.log('videoLink',videoLink)
+            console.log(href)
+            if(!href){
+                href = $.ccio.init('location',$.users[e.auth])+e.auth+'/videos/'+e.ke+'/'+e.mid+'/'+e.file+'/delete<% if(config.useUTC === true){%>?isUTC=true<%}%>'
             }
+            console.log(href)
             $.confirm.e.modal('show');
             $.confirm.title.text('<%-cleanLang(lang['Delete Video'])%> : '+e.file)
             e.html='<%-cleanLang(lang.DeleteVideoMsg)%>'
-            e.html+='<video class="video_video" autoplay loop controls><source src="'+e.href+'" type="video/'+e.mon.ext+'"></video>';
+            e.html+='<video class="video_video" autoplay loop controls><source src="'+videoLink+'" type="video/'+e.mon.ext+'"></video>';
             $.confirm.body.html(e.html)
             $.confirm.click({title:'Delete Video',class:'btn-danger'},function(){
-                $.getJSON($.ccio.init('location',$.users[e.auth])+e.auth+'/videos/'+e.ke+'/'+e.mid+'/'+e.file+'/delete',function(d){
+                $.getJSON(href,function(d){
                     $.ccio.log(d)
                 })
             });
@@ -5072,7 +5097,7 @@ $('body')
                                     var n=$.ccio.mon[v.ke+v.mid+user.auth_token];
                                     if(n){v.title=n.name+' - '+(parseInt(v.size)/1000000).toFixed(2)+'mb';}
                                     v.start=v.time;
-                                    v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
+//                                    v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
                                     e.ar.push(v);
                                 }
                             })
@@ -5123,7 +5148,7 @@ $('body')
                                 var href = $.ccio.init('location',user)+v.href
                                 v.mon=$.ccio.mon[v.ke+v.mid+user.auth_token];
                                 v.start=v.time;
-                                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
+//                                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
                                 e.tmp+='<tr data-ke="'+v.ke+'" data-status="'+v.status+'" data-mid="'+v.mid+'" data-file="'+v.filename+'" data-auth="'+v.mon.user.auth_token+'">';
                                 e.tmp+='<td><div class="checkbox"><input id="'+v.ke+'_'+v.filename+'" name="'+v.filename+'" value="'+v.mid+'" type="checkbox"><label for="'+v.ke+'_'+v.filename+'"></label></div></td>';
                                 e.tmp+='<td><span class="livestamp" title="'+v.end+'"></span></td>';
@@ -5135,7 +5160,7 @@ $('body')
                                 e.tmp+='<td><a class="btn btn-sm btn-default preview" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a></td>';
                                 e.tmp+='<td><a class="btn btn-sm btn-primary" video="launch" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a></td>';
                                 e.tmp+='<td><a class="btn btn-sm btn-success" download="'+v.mid+'-'+v.filename+'" href="'+href+'">&nbsp;<i class="fa fa-download"></i>&nbsp;</a></td>';
-                                e.tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-danger" video="delete">&nbsp;<i class="fa fa-trash"></i>&nbsp;</a></td>';
+                                e.tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-danger" video="delete" href="'+$.ccio.init('videoHrefToDelete',href)+'">&nbsp;<i class="fa fa-trash"></i>&nbsp;</a></td>';
 //                                e.tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-warning" video="fix">&nbsp;<i class="fa fa-wrench"></i>&nbsp;</a></td>';
                                 e.tmp+='</tr>';
                             }

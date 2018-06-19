@@ -884,25 +884,23 @@ s.video=function(x,e,k){
                 })
             });
         break;
-        case'archive':
-            if(!e.filename&&e.time){e.filename=s.formattedTime(e.time)}
-            if(!e.status){e.status=0}
-            e.details.archived="1"
-            e.save=[JSON.stringify(e.details),e.id,e.ke,s.nameToTime(e.filename)];
-            s.sqlQuery('UPDATE Videos SET details=? WHERE `mid`=? AND `ke`=? AND `time`=?',e.save,function(err,r){
-                s.tx({f:'video_edit',status:3,filename:e.filename+'.'+e.ext,mid:e.mid,ke:e.ke,time:s.nameToTime(e.filename)},'GRP_'+e.ke);
-            });
-        break;
         case'delete':
-            if(!e.filename&&e.time){e.filename=s.formattedTime(e.time)}
-            var filename
+            if(!e.filename && e.time){
+                e.filename = s.formattedTime(e.time)
+            }
+            var filename,
+                time
             if(e.filename.indexOf('.')>-1){
                 filename = e.filename
             }else{
                 filename = e.filename+'.'+e.ext
             }
-            if(!e.status){e.status=0}
-            e.save=[e.id,e.ke,s.nameToTime(filename)];
+            if(e.filename && !e.time){
+                time = s.nameToTime(filename)
+            }else{
+                time = e.time
+            }
+            e.save=[e.id,e.ke,time];
             s.sqlQuery('SELECT * FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',e.save,function(err,r){
                 if(r&&r[0]){
                     r=r[0]
@@ -917,6 +915,8 @@ s.video=function(x,e,k){
                         s.tx({f:'video_delete',filename:filename,mid:e.mid,ke:e.ke,time:s.nameToTime(filename),end:s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+e.ke);
                         s.file('delete',dir+filename)
                     })
+                }else{
+                    console.log(e)
                 }
             })
         break;
@@ -1028,7 +1028,8 @@ s.video=function(x,e,k){
                 }else{
                     queryString = ''
                 }
-                v.href = '/'+k+'/videos/'+v.ke+'/'+v.mid+'/'+s.formattedTime(v.time)+'.'+v.ext;
+                v.filename = s.formattedTime(v.time)+'.'+v.ext;
+                v.href = '/'+k+'/videos/'+v.ke+'/'+v.mid+'/'+v.filename;
                 v.links = {
                     deleteVideo : v.href+'/delete' + queryString,
                     changeToUnread : v.href+'/status/1' + queryString,
@@ -1067,6 +1068,7 @@ s.video=function(x,e,k){
                                 if(s.group[e.ke].usedSpace>(s.group[e.ke].sizeLimit*config.cron.deleteOverMaxOffset)){
                                         s.sqlQuery('SELECT * FROM Videos WHERE status != 0 AND details NOT LIKE \'%"archived":"1"%\' AND ke=? ORDER BY `time` ASC LIMIT 2',[e.ke],function(err,evs){
                                             k.del=[];k.ar=[e.ke];
+                                            if(!evs)return console.log(err)
                                             evs.forEach(function(ev){
                                                 ev.dir=s.video('getDir',ev)+s.formattedTime(ev.time)+'.'+ev.ext;
                                                 k.del.push('(mid=? AND time=?)');
@@ -1130,8 +1132,8 @@ s.video=function(x,e,k){
                         });
                         k.filename = s.formattedTime(e.startTime)+'.'+e.ext
                     }else{
-                        e.startTime = s.utcToLocal(e.startTime)
-                        e.endTime = s.utcToLocal(e.endTime)
+//                        e.startTime = s.utcToLocal(e.startTime)
+//                        e.endTime = s.utcToLocal(e.endTime)
                         k.filename = k.file
                     }
                     if(!e.ext){e.ext = k.filename.split('.')[1]}
@@ -1174,9 +1176,9 @@ s.video=function(x,e,k){
                             filename:k.filename,
                             mid:e.mid,
                             ke:e.ke,
-                            time:s.timeObject(e.startTime).format(),
+                            time:e.startTime,
                             size:e.filesize,
-                            end:s.timeObject(e.endTime).format()
+                            end:e.endTime
                         },'GRP_'+e.ke,'video_view');
                     }
                     //cloud auto savers
@@ -4407,6 +4409,43 @@ var tx;
             break;
         }
     })
+     //functions for retrieving cron announcements	
+     cn.on('cron',function(d){	
+         if(d.f==='init'){	
+             if(config.cron.key){	
+                 if(config.cron.key===d.cronKey){	
+                    s.cron={started:moment(),last_run:moment(),id:cn.id};	
+                 }else{	
+                     cn.disconnect()	
+                 }	
+             }else{	
+                 s.cron={started:moment(),last_run:moment(),id:cn.id};	
+             }	
+         }else{	
+             if(s.cron&&cn.id===s.cron.id){	
+                 delete(d.cronKey)	
+                 switch(d.f){	
+                     case'filters':	
+                         s.filterEvents(d.ff,d);	
+                     break;	
+                     case's.tx':	
+                         s.tx(d.data,d.to)	
+                     break;	
+                     case's.video':	
+                         s.video(d.data,d.file)	
+                     break;	
+                     case'start':case'end':	
+                         d.mid='_cron';s.log(d,{type:'cron',msg:d.msg})	
+                     break;	
+                     default:	
+                         s.systemLog('CRON : ',d)	
+                     break;	
+                 }	
+             }else{	
+                 cn.disconnect()	
+             }	
+         }	
+     })
     cn.on('disconnect', function () {
         if(cn.socketVideoStream){
             cn.closeSocketVideoStream()
@@ -4432,6 +4471,9 @@ var tx;
             s.connectedPlugins[cn.pluginEngine].plugged=false
             s.tx({f:'plugin_engine_unplugged',plug:cn.pluginEngine},'CPU')
             delete(s.api[cn.pluginEngine])
+        }
+        if(cn.cron){	
+            delete(s.cron);	
         }
         if(cn.ocv){
             s.tx({f:'detector_unplugged',plug:s.ocv.plug},'CPU')
@@ -5986,11 +6028,12 @@ app.get('/:auth/videos/:ke/:id/:file', function (req,res){
             res.end(user.lang['Not Permitted'])
             return
         }
-        var filename = s.nameToTime(req.params.file)
+        var time = s.nameToTime(req.params.file)
         if(req.query.isUTC === 'true'){
-            filename = s.utcToLocal(filename)
+            time = s.utcToLocal(time)
         }
-        s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND time=?',[req.params.ke,req.params.id,filename],function(err,r){
+        time = new Date(time)
+        s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND time=?',[req.params.ke,req.params.id,time],function(err,r){
             if(r&&r[0]){
                 req.dir=s.video('getDir',r[0])+req.params.file
                 if (fs.existsSync(req.dir)){
@@ -6081,12 +6124,13 @@ app.get(['/:auth/videos/:ke/:id/:file/:mode','/:auth/videos/:ke/:id/:file/:mode/
             res.end(user.lang['Not Permitted'])
             return
         }
-        var filename = s.nameToTime(req.params.file)
+        var time = s.nameToTime(req.params.file)
         if(req.query.isUTC === 'true'){
-            filename = s.utcToLocal(filename)
+            time = s.utcToLocal(time)
         }
+        time = new Date(time)
         req.sql='SELECT * FROM Videos WHERE ke=? AND mid=? AND time=?';
-        req.ar=[req.params.ke,req.params.id,filename];
+        req.ar=[req.params.ke,req.params.id,time];
         s.sqlQuery(req.sql,req.ar,function(err,r){
             if(r&&r[0]){
                 r=r[0];r.filename=s.formattedTime(r.time)+'.'+r.ext;
@@ -6096,13 +6140,14 @@ app.get(['/:auth/videos/:ke/:id/:file/:mode','/:auth/videos/:ke/:id/:file/:mode/
                         s.video('fix',r)
                     break;
                     case'status':
-                        req.params.f=parseInt(req.params.f)
+                        r.f = 'video_edit'
+                        r.status = parseInt(req.params.f)
                         if(isNaN(req.params.f)||req.params.f===0){
                             req.ret.msg='Not a valid value.';
                         }else{
                             req.ret.ok=true;
-                            s.sqlQuery('UPDATE Videos SET status=? WHERE ke=? AND mid=? AND time=?',[req.params.f,req.params.ke,req.params.id,filename])
-                            s.tx({f:'video_edit',status:req.params.f,filename:r.filename,mid:r.mid,ke:r.ke,time:s.nameToTime(r.filename),end:s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+r.ke);
+                            s.sqlQuery('UPDATE Videos SET status=? WHERE ke=? AND mid=? AND time=?',[req.params.f,req.params.ke,req.params.id,time])
+                            s.tx(r,'GRP_'+r.ke);
                         }
                     break;
                     case'delete':
@@ -6541,9 +6586,9 @@ if(config.childNodes.enabled === true && config.childNodes.mode === 'master'){
                                 filename:d.filename,
                                 mid:d.mid,
                                 ke:d.ke,
-                                time:s.timeObject(d.startTime).format(),
+                                time:d.startTime,
                                 size:d.filesize,
-                                end:s.timeObject(d.endTime).format()
+                                end:d.endTime
                             },'GRP_'+d.ke,'video_view');
                             clearTimeout(s.group[d.ke].mon[d.mid].checker)
                             clearTimeout(s.group[d.ke].mon[d.mid].checkStream)
