@@ -159,6 +159,18 @@ switch($user.details.lang){
                 }
                 return url
             break;
+            case'videoUrlBuild':
+                var url
+                if(d.href){
+                    url = d.href
+                }else if(!d.href && d.hrefNoAuth){
+                    url = $.ccio.init('location',user)+user.auth_token+d.hrefNoAuth
+                }
+                if(user!==$user&&url.charAt(0)==='/'){
+                    url = $.ccio.init('location',user)+d.href.substring(1)
+                }
+                return url
+            break;
             case'videoHrefToDelete':
                 var urlSplit = d.split('?')
                 var url = urlSplit[0]+'/delete'
@@ -849,15 +861,7 @@ switch($user.details.lang){
         if(d.id&&!d.mid){d.mid=d.id;}
         switch(x){
             case 0://video
-                var url
-                if(d.href){
-                    url = d.href
-                }else if(!d.href && d.hrefNoAuth){
-                    url = $.ccio.init('location',user)+user.auth_token+d.hrefNoAuth
-                }
-                if(user!==$user&&url.charAt(0)==='/'){
-                    url = $.ccio.init('location',user)+d.href.substring(1)
-                }
+                var url = $.ccio.init('videoUrlBuild',d)
                 href = 'href="'+url+'"'
 //                if(!d.filename){d.filename=$.ccio.init('tf',d.time)+'.'+d.ext;}
                 d.dlname=d.mid+'-'+d.filename;
@@ -892,7 +896,7 @@ switch($user.details.lang){
                     ],function(n,v){
                         tmp+='<div>'+v.label+' : <span class="'+v.tag+'"></span></div>'
                     })
-                tmp+='</div></div></div></div>';
+                tmp+='</div></div></div></div>'
                 tmp+='<div class="mdl-card__supporting-text text-center">';
                 tmp+='<div class="indifference detector-fade"><div class="progress"><div class="progress-bar progress-bar-danger" role="progressbar"><span></span></div></div></div>';
                 tmp+='<div class="monitor_details">';
@@ -1757,7 +1761,7 @@ $.ccio.globalWebsocket=function(d,user){
         break;
         case'video_edit':case'video_archive':
             $.ccio.init('data-video',d)
-            d.e=$('[file="'+d.filename+'"][mid="'+d.mid+'"][ke="'+d.ke+'"][auth="'+user.auth_token+'"]');
+            d.e=$('[file="'+d.filename+'"][mid="'+d.mid+'"][ke="'+d.ke+'"][auth="'+user.auth_token+'"],[data-file="'+d.filename+'"][data-mid="'+d.mid+'"][data-ke="'+d.ke+'"][data-auth="'+user.auth_token+'"]');
             d.e.attr('status',d.status),d.e.attr('data-status',d.status);
             console.log(d)
 
@@ -5114,7 +5118,7 @@ $('body')
                                 eventLimit: true,
                                 events:e.ar,
                                 eventClick:function(f){
-                                    $('#temp').html('<div mid="'+f.mid+'" ke="'+f.ke+'" auth="'+user.auth_token+'" file="'+f.filename+'"><div video="launch" href="'+f.href+'"></div></div>').find('[video="launch"]').click();
+                                    $('#temp').html('<div mid="'+f.mid+'" ke="'+f.ke+'" auth="'+user.auth_token+'" file="'+f.filename+'"><div video="launch" href="'+$.ccio.init('videoUrlBuild',f)+'"></div></div>').find('[video="launch"]').click();
                                     $(this).css('border-color', 'red');
                                 }
                             });
@@ -5145,7 +5149,7 @@ $('body')
                         e.tmp+='<tbody>';
                         $.each(d.videos,function(n,v){
                             if(v.status!==0){
-                                var href = $.ccio.init('location',user)+v.href
+                                var href = $.ccio.init('videoUrlBuild',v)
                                 v.mon=$.ccio.mon[v.ke+v.mid+user.auth_token];
                                 v.start=v.time;
 //                                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
