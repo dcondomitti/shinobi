@@ -16,6 +16,7 @@ var exec = require('child_process').exec;
 var moment = require('moment');
 var Canvas = require('canvas');
 var express = require('express');
+const path = require('path');
 var http = require('http'),
     app = express(),
     server = http.createServer(app);
@@ -135,93 +136,91 @@ s.detectLicensePlate=function(buffer,d,tx){
   })
 }
 s.detectObject=function(buffer,d,tx){
-    //detect license plate?
-  if(d.mon.detector_lisence_plate==="1"){
-      s.detectLicensePlate(buffer,d,tx)
-  }
-  cv.imdecodeAsync(buffer,(err,im) => {
-        if(err){
-            console.log(err)
-            return
-        }
-  const cv = require('../');
-  const fs = require('fs');
-  const path = require('path');
+        //detect license plate?
+      if(d.mon.detector_lisence_plate==="1"){
+          s.detectLicensePlate(buffer,d,tx)
+      }
+      cv.imdecodeAsync(buffer,(err,im) => {
+            if(err){
+                console.log(err)
+                return
+            }
 
-  if (!cv.xmodules.dnn) {
-    throw new Error('exiting: opencv4nodejs compiled without dnn module');
-  }
+      if (!cv.xmodules.dnn) {
+        throw new Error('exiting: opencv4nodejs compiled without dnn module');
+      }
 
-  // replace with path where you unzipped inception model
-  const inceptionModelPath = '__dirname/tf-inception';
+      // replace with path where you unzipped inception model
+      const inceptionModelPath = __dirname+'/data/inception';
 
 
-  const modelFile = path.resolve(inceptionModelPath, 'tensorflow_inception_graph.pb');
-  const classNamesFile = path.resolve(inceptionModelPath, 'imagenet_comp_graph_label_strings.txt');
-  if (!fs.existsSync(modelFile) || !fs.existsSync(classNamesFile)) {
-    console.log('could not find inception model');
-    console.log('download the model from: https://storage.googleapis.com/download.tensorflow.org/models/inception5h.zip');
-    throw new Error('exiting');
-  }
+      const modelFile = path.resolve(inceptionModelPath, 'tensorflow_inception_graph.pb');
+      const classNamesFile = path.resolve(inceptionModelPath, 'imagenet_comp_graph_label_strings.txt');
+      if (!fs.existsSync(modelFile) || !fs.existsSync(classNamesFile)) {
+        console.log('could not find inception model');
+        console.log('download the model from: https://cdn.shinobi.video/weights/inception5h.zip');
+        throw new Error('exiting');
+      }
 
-  // read classNames and store them in an array
-  const classNames = fs.readFileSync(classNamesFile).toString().split('\n');
+      // read classNames and store them in an array
+      const classNames = fs.readFileSync(classNamesFile).toString().split('\n');
 
-  // initialize tensorflow inception model from modelFile
-  const net = cv.readNetFromTensorflow(modelFile);
+      // initialize tensorflow inception model from modelFile
+      const net = cv.readNetFromTensorflow(modelFile);
 
-  const classifyImg = (im) => {
-    // inception model works with 224 x 224 images, so we resize
-    // our input images and pad the image with white pixels to
-    // make the images have the same width and height
-    const maxImgDim = 224;
-    const white = new cv.Vec(255, 255, 255);
-    const imgResized = img.resizeToMax(maxImgDim).padToSquare(white);
+        // inception model works with 224 x 224 images, so we resize
+        // our input images and pad the image with white pixels to
+        // make the images have the same width and height
+        const maxImgDim = 224;
+        const white = new cv.Vec(255, 255, 255);
+        const imgResized = im.resizeToMax(maxImgDim).padToSquare(white);
 
-    // network accepts blobs as input
-    const inputBlob = cv.blobFromImage(imgResized);
-    net.setInput(inputBlob);
+        // network accepts blobs as input
+        const inputBlob = cv.blobFromImage(imgResized);
+        net.setInput(inputBlob);
 
-    // forward pass input through entire network, will return
-    // classification result as 1xN Mat with confidences of each class
-    const outputBlob = net.forward();
+        // forward pass input through entire network, will return
+        // classification result as 1xN Mat with confidences of each class
+        const outputBlob = net.forward();
 
-    // find all labels with a minimum confidence
-    const minConfidence = 0.05;
-    const locations =
-      outputBlob
-        .threshold(minConfidence, 1, cv.THRESH_BINARY)
-        .convertTo(cv.CV_8U)
-        .findNonZero();
-
-    const result =
-      locations.map(pt => ({
-        confidence: parseInt(outputBlob.at(0, pt.x) * 100) / 100,
-        className: classNames[pt.x]
-      }))
-        // sort result by confidence
-        .sort((r0, r1) => r1.confidence - r0.confidence)
-        .map(res => `${res.className} (${res.confidence})`);
-      if(result.length > 0) {
-        s.cx({
-                            f:'trigger',
-                            id:d.id,
-                            ke:d.ke,
-                            name:cascade,
-                            details:{
-                                plug:'tensorflow',
-                                name:'tensorflow',
-                                reason:result,
-                                matrices : matrices
-                                // confidence:d.average
-                            },
-                            imgHeight:d.mon.detector_scale_y,
-                            imgWidth:d.mon.detector_scale_x
-                        })
-                      }
-    // return result;
-  };
-})
+        // find all labels with a minimum confidence
+        const minConfidence = 0.05;
+        const locations =
+          outputBlob
+            .threshold(minConfidence, 1, cv.THRESH_BINARY)
+            .convertTo(cv.CV_8U)
+            .findNonZero();
+//          locations.forEach(function(v){
+//              console.log(v)
+//          })
+        const result =
+          locations.map(pt => ({
+            confidence: parseInt(outputBlob.at(0, pt.x) * 100) / 100,
+            className: classNames[pt.x]
+          }))
+            // sort result by confidence
+            .sort((r0, r1) => r1.confidence - r0.confidence)
+            .map(res => `${res.className} (${res.confidence})`);
+          console.log(result)
+          if(result.length > 0) {
+            s.cx({
+                f:'trigger',
+                id:d.id,
+                ke:d.ke,
+                name:'tensorflow',
+                details:{
+                    plug:'tensorflow',
+                    name:'tensorflow',
+                    reason:'object',
+                    matrices : result
+                    // confidence:d.average
+                },
+                imgHeight:d.mon.detector_scale_y,
+                imgWidth:d.mon.detector_scale_x
+            })
+          }
+    })
+}
 s.systemLog=function(q,w,e){
     if(!w){w=''}
     if(!e){e=''}
