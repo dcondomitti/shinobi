@@ -1,5 +1,5 @@
 {
-  "plug":"OpenCV",
+  "plug":"Tensorflow",
   "host":"localhost",
   "port":8080,
   "hostPort":8082,
