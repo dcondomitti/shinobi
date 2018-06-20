@@ -86,7 +86,7 @@ function classifyImg(img) {
   outputBlob = outputBlob.flattenFloat(outputBlob.sizes[2], outputBlob.sizes[3]);
 
   return extractResults(outputBlob, img)
-    .map(r => Object.assign({}, r.rect, { confidence : r.confidence, className: classNames[r.classLabel] }));
+    .map(r => Object.assign({}, r.rect, { confidence : r.confidence, tag: classNames[r.classLabel] }));
 }
 
 const makeDrawClassDetections = predictions => (drawImg, className, getColor, thickness = 2) => {
