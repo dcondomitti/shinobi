@@ -900,12 +900,16 @@ s.video=function(x,e,k){
             }else{
                 time = e.time
             }
+            time = new Date(time)
+            if(config.databaseType !== 'sqlite'){
+                time = moment(time).format('YYYY-MM-DD HH:mm:ss')
+            }
             e.save=[e.id,e.ke,time];
-            s.sqlQuery('SELECT * FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',e.save,function(err,r){
+            s.sqlQuery('SELECT * FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=? LIMIT 1',e.save,function(err,r){
                 if(r&&r[0]){
                     r=r[0]
                     var dir=s.video('getDir',r)
-                    s.sqlQuery('DELETE FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',e.save,function(){
+                    s.sqlQuery('DELETE FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=? LIMIT 1',e.save,function(){
                         fs.stat(dir+filename,function(err,file){
                             if(err){
                                 s.systemLog('File Delete Error : '+e.ke+' : '+' : '+e.mid,err)
@@ -916,7 +920,8 @@ s.video=function(x,e,k){
                         s.file('delete',dir+filename)
                     })
                 }else{
-                    console.log(e)
+//                    console.log('Delete Failed',e)
+//                    console.error(err)
                 }
             })
         break;
@@ -4425,7 +4430,7 @@ var tx;
              if(s.cron&&cn.id===s.cron.id){	
                  delete(d.cronKey)	
                  switch(d.f){	
-                     case'filters':	
+                     case'filters':
                          s.filterEvents(d.ff,d);	
                      break;	
                      case's.tx':	
