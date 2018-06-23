@@ -155,7 +155,7 @@ switch($user.details.lang){
                         url=url+'/'
                     }
                 }else{
-                    url=location.pathname
+                    url = ''
                 }
                 return url
             break;
