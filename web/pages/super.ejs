@@ -354,7 +354,7 @@ $.conf.draw.keyup(function(){
         color = 'danger'
         $.conf.valid = 0
     }
-    $.conf.msg.text(msg).css('color',color)
+    new PNotify({text:msg,type:color})
 })
 $.conf.e.submit(function(e){
     e.preventDefault()
@@ -368,7 +368,7 @@ $.conf.e.submit(function(e){
             $.ccio.cx({f:'system',ff:'configure',data:$.parseJSON($.conf.draw.val())})
         });
     }else{
-        $.conf.msg.text('Invalid JSON Syntax, Cannot Save.')
+        new PNotify({text:'Invalid JSON Syntax, Cannot Save.',type:'error'})
     }
     return false;
 })
