@@ -1925,30 +1925,37 @@ $.ccio.globalWebsocket=function(d,user){
                         })
                     break;
                     case'mp4':
-                        var stream = d.e.find('.stream-element');
-                        if(d.d.stream_flv_type==='ws'){
-                            if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){
-                                $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.destroy()
+                        setTimeout(function(){
+                            var stream = d.e.find('.stream-element');
+                            if(d.d.stream_flv_type==='ws'){
+                                if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){
+                                    $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.destroy()
+                                }
+                                try{
+                                    $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon = new Poseidon({
+                                        video: stream[0],
+                                        auth_token:user.auth_token,
+                                        ke:d.ke,
+                                        uid:user.uid,
+                                        id:d.id,
+                                        url: url
+                                    });
+                                    $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.start();
+                                }catch(err){
+                                    setTimeout(function(){
+                                        $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
+                                    },5000)
+                                    console.log(err)
+                                }
+                            }else{
+                                stream.attr('src',$.ccio.init('location',user)+user.auth_token+'/mp4/'+d.ke+'/'+d.id+'/s.mp4')
+                                stream[0].onerror = function(){
+                                    setTimeout(function(){
+                                        $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
+                                    },3000)
+                                }
                             }
-                            try{
-                                $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon = new Poseidon({
-                                    video: stream[0],
-                                    auth_token:user.auth_token,
-                                    ke:d.ke,
-                                    uid:user.uid,
-                                    id:d.id,
-                                    url: url
-                                });
-                                $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.start();
-                            }catch(err){
-                                setTimeout(function(){
-                                    $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
-                                },3000)
-                                console.log(err)
-                            }
-                        }else{
-                            stream.attr('src',$.ccio.init('location',user)+user.auth_token+'/mp4/'+d.ke+'/'+d.id+'/s.mp4')
-                        }
+                        },2000)
                     break;
                     case'flv':
                         if (flvjs.isSupported()) {
