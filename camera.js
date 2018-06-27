@@ -517,7 +517,7 @@ s.kill=function(x,e,p){
             if(!x||x===1){return};
             p=x.pid;
             if(s.group[e.ke].mon_conf[e.id].type===('dashcam'||'socket'||'jpeg'||'pipe')){
-                x.stdin.pause();setTimeout(function(){x.kill('SIGTERM');delete(x);},500)
+                x.stdin.pause();setTimeout(function(){x.kill('SIGTERM');},500)
             }else{
                 try{
                     x.stdin.setEncoding('utf8');x.stdin.write('q');
@@ -592,7 +592,7 @@ s.ffmpegVersion=execSync(config.ffmpegDir+" -version").toString().split('Copyrig
 console.log('FFMPEG version : '+s.ffmpegVersion)
 if(s.ffmpegVersion.indexOf(': 2.')>-1){
     s.systemLog('FFMPEG is too old : '+s.ffmpegVersion+', Needed : 3.2+',err)
-    return
+    throw (new Error())
 }
 //directories
 s.group={};
@@ -5096,7 +5096,7 @@ app.get('/:auth/jpeg/:ke/:id/s.jpg', function(req,res){
                 'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache'
                 });
-            res.on('finish',function(){res.end();delete(res)});
+            res.on('finish',function(){res.end();});
             if (fs.existsSync(req.dir)){
                 fs.createReadStream(req.dir).pipe(res);
             }else{
