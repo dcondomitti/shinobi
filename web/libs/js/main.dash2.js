@@ -1956,10 +1956,8 @@ $.ccio.globalWebsocket=function(d,user){
                                 }
                             }else{
                                 stream.attr('src',$.ccio.init('location',user)+user.auth_token+'/mp4/'+d.ke+'/'+d.id+'/s.mp4')
-                                stream[0].onerror = function(){
-                                    setTimeout(function(){
-                                        $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
-                                    },3000)
+                                stream[0].onerror = function(err){
+                                    console.error(err)
                                 }
                             }
                         },2000)
