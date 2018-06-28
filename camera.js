@@ -2429,18 +2429,28 @@ s.camera=function(x,e,cn,tx){
                     s.kill(s.group[e.ke].mon[e.id].spawn,e);
                 }
             }
-            errorFatalCount = 0;
+            var errorFatalCount = 0;
+            //cutoff time and recording check interval
+            if(!e.details.cutoff||e.details.cutoff===''){e.cutoff=15}else{e.cutoff=parseFloat(e.details.cutoff)};
+            if(isNaN(e.cutoff)===true){e.cutoff=15}
             //set master based process launcher
-            launchMonitorProcesses = function(){
+            var resetRecordingCheck = function(){
+                clearTimeout(s.group[e.ke].mon[e.id].checker)
+                clearTimeout(s.group[e.ke].mon[e.id].checkStream)
+                s.group[e.ke].mon[e.id].checker=setTimeout(function(){
+                    if(s.group[e.ke].mon[e.id].started===1){
+                        launchMonitorProcesses();
+                        s.log(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
+                    }
+                },60000 * e.cutoff * 1.1);
+            }
+            var launchMonitorProcesses = function(){
                 if(e.details.detector_trigger=='1'){
                     s.group[e.ke].mon[e.id].motion_lock=setTimeout(function(){
                         clearTimeout(s.group[e.ke].mon[e.id].motion_lock);
                         delete(s.group[e.ke].mon[e.id].motion_lock);
                     },30000)
                 }
-                //cutoff time and recording check interval
-                if(!e.details.cutoff||e.details.cutoff===''){e.cutoff=15}else{e.cutoff=parseFloat(e.details.cutoff)};
-                if(isNaN(e.cutoff)===true){e.cutoff=15}
                 //start "no motion" checker
                 if(e.details.detector=='1'&&e.details.detector_notrigger=='1'){
                     if(!e.details.detector_notrigger_timeout||e.details.detector_notrigger_timeout===''){
@@ -2490,14 +2500,7 @@ s.camera=function(x,e,cn,tx){
                                 s.group[e.ke].mon[e.id].open = filename.split('.')[0]
                             break;
                             case'change':
-                                clearTimeout(s.group[e.ke].mon[e.id].checker)
-                                clearTimeout(s.group[e.ke].mon[e.id].checkStream)
-                                s.group[e.ke].mon[e.id].checker=setTimeout(function(){
-                                    if(s.group[e.ke].mon[e.id].started===1){
-                                        launchMonitorProcesses();
-                                        s.log(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
-                                    }
-                                },60000 * e.cutoff * 1.1);
+                                resetRecordingCheck()
                             break;
                         }
                     });
@@ -2918,6 +2921,7 @@ s.camera=function(x,e,cn,tx){
                                             })
                                         }
                                         s.group[e.ke].mon[e.id].detector_motion_count = 0
+                                        resetRecordingCheck()
                                         return;
                                     break;
                                 }
