@@ -1816,13 +1816,24 @@ $.ccio.globalWebsocket=function(d,user){
             d.o=$.ccio.op()[d.chosen_set];
             if(!d.o[d.ke]){d.o[d.ke]={}};d.o[d.ke][d.id]=0;$.ccio.op(d.chosen_set,d.o);
             if($.ccio.mon[d.ke+d.id+user.auth_token]){
+                var el = $('#monitor_live_'+d.id+user.auth_token)
+                var video = el.find('video')
+                if(video.length === 1){
+                    if(!video[0].paused){
+                        video[0].onerror = function(){}
+                        video[0].pause()
+                    }
+                    video.prop('src','');
+                    video.find('source').remove();
+                    video.remove();
+                }
                 $.ccio.init('jpegModeStop',{mid:d.id,ke:d.ke});
                 $.ccio.init('clearTimers',d)
                 clearInterval($.ccio.mon[d.ke+d.id+user.auth_token].signal);delete($.ccio.mon[d.ke+d.id+user.auth_token].signal);
                 $.ccio.mon[d.ke+d.id+user.auth_token].watch=0;
                 if($.ccio.mon[d.ke+d.id+user.auth_token].hls){$.ccio.mon[d.ke+d.id+user.auth_token].hls.destroy()}
                 if($.ccio.mon[d.ke+d.id+user.auth_token].dash){$.ccio.mon[d.ke+d.id+user.auth_token].dash.reset()}
-                $.grid.data().removeWidget($('#monitor_live_'+d.id+user.auth_token))
+                $.grid.data().removeWidget(el)
             }
         break;
         case'monitor_watch_on':
