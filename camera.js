@@ -791,6 +791,10 @@ s.init=function(x,e,k,fn){
                 checkQueue()
             }
         break;
+        case'monitorStatus':
+            s.group[e.ke].mon[e.id].monitorStatus = e.status
+            s.tx(Object.assign(e,{f:'monitor_status'}),'GRP_'+e.ke)
+        break;
     }
     if(typeof e.callback==='function'){setTimeout(function(){e.callback()},500);}
 }
@@ -2288,6 +2292,7 @@ s.camera=function(x,e,cn,tx){
             s.tx({viewers:e.ob,ke:e.ke,id:e.id},'MON_'+e.id);
         break;
         case'restart'://restart monitor
+            s.init('monitorStatus',{id:e.id,ke:e.ke,status:'Restarting'});
             s.camera('stop',e)
             setTimeout(function(){
                 s.camera(e.mode,e)
@@ -2342,6 +2347,11 @@ s.camera=function(x,e,cn,tx){
                     s.log(e,{type:lang['Monitor Idling'],msg:lang.MonitorIdlingText});
                 }
             }
+            var wantedStatus = lang.Stopped
+            if(x==='idle'){
+                var wantedStatus = lang.Idle
+            }
+            s.init('monitorStatus',{id:e.id,ke:e.ke,status:wantedStatus});
         break;
         case'start':case'record'://watch or record monitor url
             s.init(0,{ke:e.ke,mid:e.id})
@@ -2352,6 +2362,7 @@ s.camera=function(x,e,cn,tx){
                 return
             }
             //lock this function
+            s.init('monitorStatus',{id:e.id,ke:e.ke,status:lang.Starting});
             s.group[e.ke].mon[e.id].started = 1;
             //create host string without username and password
             e.hosty = e.host.split('@');
@@ -2363,7 +2374,9 @@ s.camera=function(x,e,cn,tx){
                 e.hosty = e.hosty[0]
             }
             //set recording status
+            var wantedStatus = lang.Watching
             if(x==='record'){
+                var wantedStatus = lang.Recording
                 s.group[e.ke].mon[e.id].record.yes=1;
             }else{
                 s.group[e.ke].mon[e.mid].record.yes=0;
@@ -2428,6 +2441,7 @@ s.camera=function(x,e,cn,tx){
                 }else{
                     s.kill(s.group[e.ke].mon[e.id].spawn,e);
                 }
+                s.init('monitorStatus',{id:e.id,ke:e.ke,status:lang.Died});
             }
             var errorFatalCount = 0;
             //cutoff time and recording check interval
@@ -2440,6 +2454,7 @@ s.camera=function(x,e,cn,tx){
                 s.group[e.ke].mon[e.id].checker=setTimeout(function(){
                     if(s.group[e.ke].mon[e.id].started===1){
                         launchMonitorProcesses();
+                        s.init('monitorStatus',{id:e.id,ke:e.ke,status:lang.Restarting});
                         s.log(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
                     }
                 },60000 * e.cutoff * 1.1);
@@ -2485,7 +2500,7 @@ s.camera=function(x,e,cn,tx){
                 }
                 var resetStreamCheck=function(){
                     clearTimeout(s.group[e.ke].mon[e.id].checkStream)
-                    s.group[e.ke].mon[e.id].checkStream=setTimeout(function(){
+                    s.group[e.ke].mon[e.id].checkStream = setTimeout(function(){
                         if(s.group[e.ke].mon[e.id].started===1){
                             launchMonitorProcesses();
                             s.log(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
@@ -2531,6 +2546,7 @@ s.camera=function(x,e,cn,tx){
                         if(!s.group[e.ke].mon[e.id].record){s.group[e.ke].mon[e.id].record={yes:1}};
                         //launch ffmpeg (main)
                         s.group[e.ke].mon[e.id].spawn = s.ffmpeg(e);
+                        s.init('monitorStatus',{id:e.id,ke:e.ke,status:wantedStatus});
                         //on unexpected exit restart
                         s.group[e.ke].mon[e.id].spawn_exit=function(){
                             if(s.group[e.ke].mon[e.id].started===1){
@@ -5482,6 +5498,9 @@ app.get(['/:auth/monitor/:ke','/:auth/monitor/:ke/:id'], function (req,res){
             r.forEach(function(v,n){
                 if(s.group[v.ke]&&s.group[v.ke].mon[v.mid]&&s.group[v.ke].mon[v.mid].watch){
                     r[n].currentlyWatching=Object.keys(s.group[v.ke].mon[v.mid].watch).length
+                }
+                if(s.group[v.ke]&&s.group[v.ke].mon[v.mid]&&s.group[v.ke].mon[v.mid].watch){
+                    r[n].status = s.group[v.ke].mon[v.mid].monitorStatus
                 }
                 var buildStreamURL = function(type,channelNumber){
                     var streamURL

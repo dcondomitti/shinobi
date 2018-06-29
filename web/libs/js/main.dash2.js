@@ -396,6 +396,7 @@ switch($user.details.lang){
                 d.e.find('.monitor_ext').text(d.mon.ext);
                 d.mode=$.ccio.init('humanReadMode',d.mon.mode,user)
                 d.e.find('.monitor_mode').text(d.mode)
+                d.e.find('.monitor_status').text(d.status)
                 d.e.attr('mode',d.mode)
                 d.e.find('.lamp').attr('title',d.mode)
             break;
@@ -884,7 +885,7 @@ switch($user.details.lang){
             break;
             case 1://monitor icon
                 d.src=placeholder.getData(placeholder.plcimg({bgcolor:'#b57d00',text:'...'}));
-                tmp+='<div auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" title="'+d.mid+' : '+d.name+'" class="monitor_block glM'+d.mid+user.auth_token+' col-md-4"><img monitor="watch" class="snapshot" src="'+d.src+'"><div class="box"><div class="title monitor_name truncate">'+d.name+'</div><div class="list-data"><div class="monitor_mid">'+d.mid+'</div><div><b><%-cleanLang(lang['Save as'])%> :</b> <span class="monitor_ext">'+d.ext+'</span></div><div><b>Mode :</b> <span class="monitor_mode">'+d.mode+'</span></div></div><div class="icons text-center"><div class="btn-group"><a class="btn btn-xs btn-default permission_monitor_edit" monitor="edit"><i class="fa fa-wrench"></i></a> <a monitor="videos_table" class="btn btn-xs btn-default"><i class="fa fa-film"></i></a> <a monitor="pop" class="btn btn-xs btn-success"><i class="fa fa-external-link"></i></a></div></div></div></div>';
+                tmp+='<div auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" title="'+d.mid+' : '+d.name+'" class="monitor_block glM'+d.mid+user.auth_token+' col-md-4"><img monitor="watch" class="snapshot" src="'+d.src+'"><div class="box"><div class="title monitor_name truncate">'+d.name+'</div><div class="list-data"><div class="monitor_mid">'+d.mid+'</div><div><b><%-cleanLang(lang['Save as'])%> :</b> <span class="monitor_ext">'+d.ext+'</span></div><div><b>Status :</b> <span class="monitor_status">'+d.status+'</span></div></div><div class="icons text-center"><div class="btn-group"><a class="btn btn-xs btn-default permission_monitor_edit" monitor="edit"><i class="fa fa-wrench"></i></a> <a monitor="videos_table" class="btn btn-xs btn-default"><i class="fa fa-film"></i></a> <a monitor="pop" class="btn btn-xs btn-success"><i class="fa fa-external-link"></i></a></div></div></div></div>';
                 delete(d.src);
             break;
             case 2://monitor stream
@@ -1621,7 +1622,11 @@ $.ccio.globalWebsocket=function(d,user){
     }
     switch(d.f){
         case'note':
-            $.ccio.init('note',d.note);
+            $.ccio.init('note',d.note,user);
+        break;
+        case'monitor_status':
+            console.log(d)
+            $('[ke="'+d.ke+'"][mid="'+d.id+'"][auth="'+user.auth_token+'"] .monitor_status').html(d.status);
         break;
         case'detector_trigger':
             d.e=$('.monitor_item[ke="'+d.ke+'"][mid="'+d.id+'"][auth="'+user.auth_token+'"]')
@@ -3022,7 +3027,7 @@ $.multimon.e.on('shown.bs.modal',function() {
         var img = $('#left_menu [mid="'+v.mid+'"][auth="'+v.user.auth_token+'"] [monitor="watch"]').attr('src')
         tmp+='<tr mid="'+v.mid+'" ke="'+v.ke+'" auth="'+v.user.auth_token+'">'
         tmp+='<td><div class="checkbox"><input id="multimonCheck_'+v.ke+v.mid+v.user.auth_token+'" type="checkbox" name="'+v.ke+v.mid+v.user.auth_token+'" value="1"><label for="multimonCheck_'+v.ke+v.mid+v.user.auth_token+'"></label></div></td>'
-        tmp+='<td><a monitor="watch"><img class="small-square-img" src="'+img+'"></a></td><td>'+v.name+'<br><small>'+v.mid+'</small></td><td class="monitor_mode">'+$.ccio.init('humanReadMode',v.mode)+'</td><td>'+streamURL+'</td>'
+        tmp+='<td><a monitor="watch"><img class="small-square-img" src="'+img+'"></a></td><td>'+v.name+'<br><small>'+v.mid+'</small></td><td class="monitor_status">'+v.status+'</td><td>'+streamURL+'</td>'
         //buttons
         tmp+='<td class="text-right"><a title="<%-cleanLang(lang.Pop)%>" monitor="pop" class="btn btn-primary"><i class="fa fa-external-link"></i></a> <a title="<%-cleanLang(lang.Calendar)%>" monitor="calendar" class="btn btn-default"><i class="fa fa-calendar"></i></a> <a title="<%-cleanLang(lang['Power Viewer'])%>" class="btn btn-default" monitor="powerview"><i class="fa fa-map-marker"></i></a> <a title="<%-cleanLang(lang['Time-lapse'])%>" class="btn btn-default" monitor="timelapse"><i class="fa fa-angle-double-right"></i></a> <a title="<%-cleanLang(lang['Videos List'])%>" monitor="videos_table" class="btn btn-default"><i class="fa fa-film"></i></a> <a title="<%-cleanLang(lang['Monitor Settings'])%>" class="btn btn-default permission_monitor_edit" monitor="edit"><i class="fa fa-wrench"></i></a></td>'
         tmp+='</tr>'
