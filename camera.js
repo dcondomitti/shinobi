@@ -4253,8 +4253,11 @@ var tx;
                         switch(d.ff){
                             case'update':
                                 s.ffmpegKill()
-                                s.systemLog('Shinobi ordered to update',{by:cn.mail,ip:cn.ip,distro:d.distro})
-                                var updateProcess = spawn('sh',(__dirname+'/UPDATE.sh '+d.distro).split(' '),{detached: true})
+                                s.systemLog('Shinobi ordered to update',{
+                                    by:cn.mail,
+                                    ip:cn.ip
+                                })
+                                var updateProcess = spawn('sh',(__dirname+'/UPDATE.sh').split(' '),{detached: true})
                                 updateProcess.stderr.on('data',function(data){
                                     s.systemLog('Update Info',data.toString())
                                 })

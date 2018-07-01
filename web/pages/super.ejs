@@ -142,11 +142,13 @@
                                                                 <p><i class="fa fa-retweet"></i> <%-lang['Flush PM2 Logs']%></p>
                                                             </a>
                                                         </li>
+<!--
                                                         <li class="nav-item">
-                                                            <a class="nav-link" restart="system">
+                                                            <a class="nav-link" system="update">
                                                                 <p><i class="fa fa-arrow-up"></i> <%-lang['Update']%></p>
                                                             </a>
                                                         </li>
+-->
                                                     </ul>
                                                 </div>
                                             </div>
@@ -434,13 +436,11 @@ $.system.e.find('[system]').click(function(e){
             });
         break;
         case'update':
-            e.distro=$(this).attr('distro')
-            if(!e.distro){e.distro='master'}
             $.confirm.e.modal('show')
             $.confirm.title.html('Update Shinobi?')
-            $.confirm.body.html('Updating Shinobi means overwriting files. If you have modified any files yourself you should update Shinobi manually. The updater will download the latest '+e.distro+' from the <a href="https://github.com/ShinobiCCTV/Shinobi" target="_blank">Pro repository</a>.')
+            $.confirm.body.html('Updating Shinobi means overwriting files. If you have modified any files yourself you should update Shinobi manually.')
             $.confirm.click({title:'Update',class:'btn-danger'},function(){
-                $.ccio.cx({f:'system',ff:'update',distro:e.distro})
+                $.ccio.cx({f:'system',ff:'update'})
             });
         break;
     }
