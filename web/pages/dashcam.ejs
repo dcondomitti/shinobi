@@ -147,9 +147,33 @@ function log(message){
 navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
 window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
 if(getBrowser() == "Chrome"){
-	var constraints = {"audio": true, "video": {  "mandatory": {  "minWidth": 640,  "maxWidth": 640, "minHeight": 480,"maxHeight": 480 }, "optional": [] } };//Chrome
+	var constraints = {
+        "audio": true,
+        "video": {
+            "mandatory": {
+                "minWidth": 640,
+                "maxWidth": 5000,
+                "minHeight": 480,
+                "maxHeight": 2500
+            }, "optional": []
+        }
+    };
 }else if(getBrowser() == "Firefox"){
-	var constraints = {audio: true,video: {  width: { min: 640, ideal: 640, max: 640 },  height: { min: 480, ideal: 480, max: 480 }}}; //Firefox
+	var constraints = {
+        audio: true,
+        video: {
+            width: {
+                min: 640,
+                ideal: 640,
+                max: 5000
+            },
+            height: {
+                min: 480,
+                ideal: 480,
+                max: 2500
+            }
+        }
+    };
 }
 var mediaRecorder;
 var chunks = [];
