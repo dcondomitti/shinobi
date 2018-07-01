@@ -1,5 +1,17 @@
 #!/bin/bash
-echo "Stopping All Processes"
+
+gitURL="https://gitlab.com/Shinobi-Systems/Shinobi"
+branch="$(git name-rev --name-only HEAD)"
+repo=$1
+productName="Shinobi Pro"
+if [ "$repo" = "CE" ] || [ "$repo" = "ce" ] || [ "$repo" = "Ce" ] || [ "$repo" = "cE" ]; then
+    productName="Shinobi CE"
+    gitURL="https://gitlab.com/Shinobi-Systems/ShinobiCE"
+fi
+echo $productName
+echo $branch
+echo $gitURL
+echo "Shinobi - Stopping All Processes"
 pm2 stop all
 
 # open working directory (default is /home)
@@ -12,18 +24,18 @@ if [ -e "./ShinobiOld" ]; then
 fi
 
 # back up old install
-echo "Backup old files"
+echo "Shinobi - Backup old files"
 mv Shinobi ShinobiOld
 
 # clone the new files
-echo "Download new files"
-git clone https://gitlab.com/Shinobi-Systems/Shinobi Shinobi
+echo "Shinobi - Download new files"
+git clone $gitURL -b $branch Shinobi
 
 # set permissions
 chmod -R 777 Shinobi
 
 # move videos, videos2, conf.json, and super.json
-echo "Move videos, videos2, conf.json, and super.json"
+echo "Shinobi - Move videos, videos2, conf.json, and super.json"
 mv ShinobiOld/videos Shinobi/videos
 mv ShinobiOld/videos2 Shinobi/videos2
 cp ShinobiOld/conf.json Shinobi/conf.json
@@ -32,7 +44,7 @@ if [ -e "./ShinobiOld/super.json" ]; then
 fi
 
 # merge new plugin files but keep configs (added files)
-echo "merge new plugin files but keep configs (added files)"
+echo "Shinobi - merge new plugin files but keep configs (added files)"
 cp -R Shinobi/plugins Shinobi/pluginsTemp
 rm -rf Shinobi/plugins
 cp -R ShinobiOld/plugins Shinobi/plugins
@@ -41,12 +53,21 @@ cp -R Shinobi/pluginsTemp/* Shinobi/plugins/
 rm -rf Shinobi/pluginsTemp
 
 # move node modules and install updates
-echo "Move node modules and install updates"
+echo "Shinobi - Move node modules and install updates"
 mv ShinobiOld/node_modules Shinobi/node_modules
 cd Shinobi
 chmod -R 777 node_modules
 npm install
 
+# write version info
+gitVersionNumber=$(git rev-parse HEAD)
+theDateRightNow=$(date)
+touch version.json
+chmod 666 version.json
+versionJson='{"Product" : "'"$productName"'" , "Branch" : "'"$branch"'" , "Version" : "'"$gitVersionNumber"'" , "Date" : "'"$theDateRightNow"'" , "Repository" : "'"$gitURL"'"}'
+echo $versionJson > version.json
+echo $versionJson
+
 # start processes
-echo "Starting All Processes"
+echo "Shinobi - Starting All Processes"
 pm2 start all
