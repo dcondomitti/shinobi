@@ -1,24 +1,52 @@
 #!/bin/bash
-distro=$1
-repo=$2
-if [ -z "$distro" ]; then 
-    distro='master'
+echo "Stopping All Processes"
+pm2 stop all
+
+# open working directory (default is /home)
+cd ..
+
+# delete the old backup
+if [ -e "./ShinobiOld" ]; then
+    echo "Remove old backup"
+    rm -rf ShinobiOld
 fi
-if [ -z "$repo" ]; then 
-    repo='ShinobiCCTV'
+
+# back up old install
+echo "Backup old files"
+mv Shinobi ShinobiOld
+
+# clone the new files
+echo "Download new files"
+git clone https://gitlab.com/Shinobi-Systems/Shinobi Shinobi
+
+# set permissions
+chmod -R 777 Shinobi
+
+# move videos, videos2, conf.json, and super.json
+echo "Move videos, videos2, conf.json, and super.json"
+mv ShinobiOld/videos Shinobi/videos
+mv ShinobiOld/videos2 Shinobi/videos2
+cp ShinobiOld/conf.json Shinobi/conf.json
+if [ -e "./ShinobiOld/super.json" ]; then
+    cp ShinobiOld/super.json Shinobi/super.json
 fi
-if [ "$repo" = "ShinobiCCTV" ]; then
-    productName="Shinobi Professional (Pro)"
-else
-    productName="Shinobi Community Editon (CE)"
-fi
-git reset --hard
-git pull
-gitURL="https://github.com/$repo/Shinobi"
-gitVersionNumber=$(git rev-parse HEAD)
-theDateRightNow=$(date)
-rm version.json
-touch version.json
-chmod 755 version.json
-echo '{"Product" : "'"$productName"'" , "Branch" : "'"$distro"'" , "Version" : "'"$gitVersionNumber"'" , "Date" : "'"$theDateRightNow"'" , "Repository" : "'"$gitURL"'"}' > version.json
-echo "Restart Shinobi for updates to take effect."
+
+# merge new plugin files but keep configs (added files)
+echo "merge new plugin files but keep configs (added files)"
+cp -R Shinobi/plugins Shinobi/pluginsTemp
+rm -rf Shinobi/plugins
+cp -R ShinobiOld/plugins Shinobi/plugins
+rm -rf ShinobiOld/plugins
+cp -R Shinobi/pluginsTemp/* Shinobi/plugins/
+rm -rf Shinobi/pluginsTemp
+
+# move node modules and install updates
+echo "Move node modules and install updates"
+mv ShinobiOld/node_modules Shinobi/node_modules
+cd Shinobi
+chmod -R 777 node_modules
+npm install
+
+# start processes
+echo "Starting All Processes"
+pm2 start all
