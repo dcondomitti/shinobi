@@ -2508,13 +2508,17 @@ s.camera=function(x,e,cn,tx){
                 var resetRecordingCheck = function(){
                     clearTimeout(s.group[e.ke].mon[e.id].checker)
                     clearTimeout(s.group[e.ke].mon[e.id].checkStream)
+                    var cutoff = e.cutoff + 0
+                    if(e.type === 'dashcam'){
+                        cutoff *= 100
+                    }
                     s.group[e.ke].mon[e.id].checker=setTimeout(function(){
-                        if(s.group[e.ke].mon[e.id].started===1){
+                        if(s.group[e.ke].mon[e.id].started === 1){
                             launchMonitorProcesses();
                             s.init('monitorStatus',{id:e.id,ke:e.ke,status:lang.Restarting});
                             s.log(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
                         }
-                    },60000 * e.cutoff * 1.1);
+                    },60000 * cutoff * 1.1);
                 }
                 var resetStreamCheck=function(){
                     clearTimeout(s.group[e.ke].mon[e.id].checkStream)
