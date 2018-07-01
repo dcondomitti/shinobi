@@ -1,14 +1,24 @@
 #!/bin/bash
 
-gitURL="https://gitlab.com/Shinobi-Systems/Shinobi"
+gitURL="$(git remote get-url origin)"
 branch="$(git name-rev --name-only HEAD)"
-repo=$1
 productName="Shinobi Pro"
-if [ "$repo" = "CE" ] || [ "$repo" = "ce" ] || [ "$repo" = "Ce" ] || [ "$repo" = "cE" ]; then
+reqsubstr="Not a git repository"
+if [ -z "${gitURL##*$reqsubstr*}" ]; then
+    echo "This is not a Git folder"
+    gitURL="https://gitlab.com/Shinobi-Systems/Shinobi"
+    branch='master'
+else
+    echo "This is a Git folder"
+fi
+reqsubstr="/ShinobiCE"
+if [ -z "${gitURL##*$reqsubstr*}" ]; then
+    echo "This is Shinobi CE"
     productName="Shinobi CE"
     gitURL="https://gitlab.com/Shinobi-Systems/ShinobiCE"
+else
+    echo "This is Shinobi Pro"
 fi
-echo $productName
 echo $branch
 echo $gitURL
 echo "Shinobi - Stopping All Processes"
