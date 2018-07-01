@@ -488,6 +488,7 @@ s.getRequest = function(url,callback){
 s.kill=function(x,e,p){
     if(s.group[e.ke]&&s.group[e.ke].mon[e.id]&&s.group[e.ke].mon[e.id].spawn !== undefined){
         if(s.group[e.ke].mon[e.id].spawn){
+            s.group[e.ke].mon[e.mid].allowStdinWrite = false
             s.group[e.ke].mon[e.id].spawn.stdio[3].unpipe();
 //            if(s.group[e.ke].mon[e.id].p2pStream){s.group[e.ke].mon[e.id].p2pStream.unpipe();}
             if(s.group[e.ke].mon[e.id].p2p){s.group[e.ke].mon[e.id].p2p.unpipe();}
@@ -1526,11 +1527,11 @@ s.ffmpeg=function(e){
     //input - stream loop (good for static files/lists)
     if(e.details.stream_loop==='1'){x.cust_input+=' -stream_loop -1'};
     //input
+    if(e.details.cust_input.indexOf('-fflags') === -1){x.cust_input+=' -fflags +igndts'}
     switch(e.type){
         case'h264':
             switch(e.protocol){
                 case'rtsp':
-                    if(e.details.cust_input.indexOf('-fflags') === -1){x.cust_input+=' -fflags +igndts'}
                     if(e.details.rtsp_transport&&e.details.rtsp_transport!==''&&e.details.rtsp_transport!=='no'){x.cust_input+=' -rtsp_transport '+e.details.rtsp_transport;}
                 break;
             }
@@ -1919,19 +1920,19 @@ s.ffmpeg=function(e){
     }
     switch(e.type){
         case'dashcam':
-            x.ffmpegCommandString += ' -i -';
+            x.ffmpegCommandString += x.cust_input+x.hwaccel+' -i -';
         break;
         case'socket':case'jpeg':case'pipe':
-            x.ffmpegCommandString += ' -pattern_type glob -f image2pipe'+x.record_fps+' -vcodec mjpeg'+x.cust_input+' -i -';
+            x.ffmpegCommandString += ' -pattern_type glob -f image2pipe'+x.record_fps+' -vcodec mjpeg'+x.cust_input+x.hwaccel+' -i -';
         break;
         case'mjpeg':
-            x.ffmpegCommandString += ' -reconnect 1 -f mjpeg'+x.cust_input+' -i "'+e.url+'"';
+            x.ffmpegCommandString += ' -reconnect 1 -f mjpeg'+x.cust_input+x.hwaccel+' -i "'+e.url+'"';
         break;
         case'h264':case'hls':case'mp4':
             x.ffmpegCommandString += x.cust_input+x.hwaccel+' -i "'+e.url+'"';
         break;
         case'local':
-            x.ffmpegCommandString += x.cust_input+' -i "'+e.path+'"';
+            x.ffmpegCommandString += x.cust_input+x.hwaccel+' -i "'+e.path+'"';
         break;
     }
     //add extra input maps
@@ -2448,18 +2449,8 @@ s.camera=function(x,e,cn,tx){
             if(!e.details.cutoff||e.details.cutoff===''){e.cutoff=15}else{e.cutoff=parseFloat(e.details.cutoff)};
             if(isNaN(e.cutoff)===true){e.cutoff=15}
             //set master based process launcher
-            var resetRecordingCheck = function(){
-                clearTimeout(s.group[e.ke].mon[e.id].checker)
-                clearTimeout(s.group[e.ke].mon[e.id].checkStream)
-                s.group[e.ke].mon[e.id].checker=setTimeout(function(){
-                    if(s.group[e.ke].mon[e.id].started===1){
-                        launchMonitorProcesses();
-                        s.init('monitorStatus',{id:e.id,ke:e.ke,status:lang.Restarting});
-                        s.log(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
-                    }
-                },60000 * e.cutoff * 1.1);
-            }
             var launchMonitorProcesses = function(){
+                s.group[e.ke].mon[e.id].allowStdinWrite = false
                 if(e.details.detector_trigger=='1'){
                     s.group[e.ke].mon[e.id].motion_lock=setTimeout(function(){
                         clearTimeout(s.group[e.ke].mon[e.id].motion_lock);
@@ -2497,6 +2488,17 @@ s.camera=function(x,e,cn,tx){
                         clearInterval(s.group[e.ke].mon[e.id].detector_notrigger_timeout)
                         s.group[e.ke].mon[e.id].detector_notrigger_timeout=setInterval(s.group[e.ke].mon[e.id].detector_notrigger_timeout_function,s.group[e.ke].mon[e.id].detector_notrigger_timeout)
                     })
+                }
+                var resetRecordingCheck = function(){
+                    clearTimeout(s.group[e.ke].mon[e.id].checker)
+                    clearTimeout(s.group[e.ke].mon[e.id].checkStream)
+                    s.group[e.ke].mon[e.id].checker=setTimeout(function(){
+                        if(s.group[e.ke].mon[e.id].started===1){
+                            launchMonitorProcesses();
+                            s.init('monitorStatus',{id:e.id,ke:e.ke,status:lang.Restarting});
+                            s.log(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
+                        }
+                    },60000 * e.cutoff * 1.1);
                 }
                 var resetStreamCheck=function(){
                     clearTimeout(s.group[e.ke].mon[e.id].checkStream)
@@ -2546,6 +2548,9 @@ s.camera=function(x,e,cn,tx){
                         if(!s.group[e.ke].mon[e.id].record){s.group[e.ke].mon[e.id].record={yes:1}};
                         //launch ffmpeg (main)
                         s.group[e.ke].mon[e.id].spawn = s.ffmpeg(e);
+                        setTimeout(function(){
+                            s.group[e.ke].mon[e.id].allowStdinWrite = true
+                        },10000)
                         s.init('monitorStatus',{id:e.id,ke:e.ke,status:wantedStatus});
                         //on unexpected exit restart
                         s.group[e.ke].mon[e.id].spawn_exit=function(){
@@ -2901,14 +2906,14 @@ s.camera=function(x,e,cn,tx){
 //                                        case e.chk('Unable to open RTSP for listening'):
 //                                        case e.chk('timed out'):
 //                                        case e.chk('Invalid data found when processing input'):
-//                                        case e.chk('Immediate exit requested'):
 //                                        case e.chk('reset by peer'):
 //                                           if(e.frames===0&&x==='record'){s.video('delete',e)};
 //                                            setTimeout(function(){
 //                                                if(!s.group[e.ke].mon[e.id].spawn){launchMonitorProcesses()}
 //                                            },2000)
 //                                        break;
-                                    case e.chk('mjpeg_decode_dc'):
+                                    case e.chk('Immediate exit requested'):
+                                     case e.chk('mjpeg_decode_dc'):
                                     case e.chk('bad vlc'):
                                     case e.chk('error dc'):
                                         launchMonitorProcesses()
@@ -4391,17 +4396,29 @@ var tx;
                 }
             })
         }else{
-            switch(d.f){
-                case'monitor_chunk':
-                    if(!s.group[d.ke]||!s.group[d.ke].mon[d.mid]){return}
-                    if(s.group[d.ke].mon[d.mid].started!==1){s.tx({error:'Not Started'},cn.id);return false};
-                    s.group[d.ke].mon[d.mid].spawn.stdin.write(new Buffer(d.chunk, "binary"));
-                break;
-                case'monitor_frame':
-                    if(!s.group[d.ke]||!s.group[d.ke].mon[d.mid]){return}
-                    if(s.group[d.ke].mon[d.mid].started!==1){s.tx({error:'Not Started'},cn.id);return false};
-                    s.group[d.ke].mon[d.mid].spawn.stdin.write(d.frame);
-                break;
+            if(s.group[d.ke] && s.group[d.ke].mon[d.mid]){
+                if(s.group[d.ke].mon[d.mid].allowStdinWrite === true){
+                    switch(d.f){
+                        case'monitor_chunk':
+                            if(s.group[d.ke].mon[d.mid].started!==1 || !s.group[d.ke].mon[d.mid].spawn || !s.group[d.ke].mon[d.mid].spawn.stdin){
+                                s.tx({error:'Not Started'},cn.id);
+                                return false
+                            };
+                            s.group[d.ke].mon[d.mid].spawn.stdin.write(new Buffer(d.chunk, "binary"));
+                        break;
+                        case'monitor_frame':
+                            if(s.group[d.ke].mon[d.mid].started!==1){
+                                s.tx({error:'Not Started'},cn.id);
+                                return false
+                            };
+                            s.group[d.ke].mon[d.mid].spawn.stdin.write(d.frame);
+                        break;
+                    }
+                }else{
+                    s.tx({error:'Cannot Write Yet'},cn.id)
+                }
+            }else{
+                s.tx({error:'Non Existant Monitor'},cn.id)
             }
         }
     })
