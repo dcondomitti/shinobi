@@ -326,8 +326,13 @@ s.ocvTx=function(data){
     }
 }
 //send data to socket client function
-s.tx=function(z,y,x){if(x){return x.broadcast.to(y).emit('f',z)};io.to(y).emit('f',z);}
-s.txWithSubPermissions=function(z,y,permissionChoices){
+s.tx = function(z,y,x){if(x){return x.broadcast.to(y).emit('f',z)};io.to(y).emit('f',z);}
+s.txToDashcamUsers = function(data,groupKey){
+    Object.keys(s.group[groupKey].dashcamUsers).forEach(function(auth){
+        s.tx(data,s.group[groupKey].dashcamUsers[auth].cnid)
+    })
+}
+s.txWithSubPermissions = function(z,y,permissionChoices){
     if(typeof permissionChoices==='string'){
         permissionChoices=[permissionChoices]
     }
@@ -489,6 +494,11 @@ s.kill=function(x,e,p){
     if(s.group[e.ke]&&s.group[e.ke].mon[e.id]&&s.group[e.ke].mon[e.id].spawn !== undefined){
         if(s.group[e.ke].mon[e.id].spawn){
             s.group[e.ke].mon[e.mid].allowStdinWrite = false
+            s.txToDashcamUsers({
+                f : 'disable_stream',
+                ke : e.ke,
+                mid : e.id
+            },e.ke)
             s.group[e.ke].mon[e.id].spawn.stdio[3].unpipe();
 //            if(s.group[e.ke].mon[e.id].p2pStream){s.group[e.ke].mon[e.id].p2pStream.unpipe();}
             if(s.group[e.ke].mon[e.id].p2p){s.group[e.ke].mon[e.id].p2p.unpipe();}
@@ -653,6 +663,7 @@ s.init=function(x,e,k,fn){
             if(!s.group[e.ke].sizeChangeQueue){s.group[e.ke].sizeChangeQueue=[]}
             if(!s.group[e.ke].sizePurgeQueue){s.group[e.ke].sizePurgeQueue=[]}
             if(!s.group[e.ke].users){s.group[e.ke].users={}}
+            if(!s.group[e.ke].dashcamUsers){s.group[e.ke].dashcamUsers={}}
             if(!s.group[e.ke].mon[e.mid]){s.group[e.ke].mon[e.mid]={}}
             if(!s.group[e.ke].mon[e.mid].streamIn){s.group[e.ke].mon[e.mid].streamIn={}};
             if(!s.group[e.ke].mon[e.mid].emitterChannel){s.group[e.ke].mon[e.mid].emitterChannel={}};
@@ -2451,6 +2462,11 @@ s.camera=function(x,e,cn,tx){
             //set master based process launcher
             var launchMonitorProcesses = function(){
                 s.group[e.ke].mon[e.id].allowStdinWrite = false
+                s.txToDashcamUsers({
+                    f : 'disable_stream',
+                    ke : e.ke,
+                    mid : e.id
+                },e.ke)
                 if(e.details.detector_trigger=='1'){
                     s.group[e.ke].mon[e.id].motion_lock=setTimeout(function(){
                         clearTimeout(s.group[e.ke].mon[e.id].motion_lock);
@@ -2548,9 +2564,16 @@ s.camera=function(x,e,cn,tx){
                         if(!s.group[e.ke].mon[e.id].record){s.group[e.ke].mon[e.id].record={yes:1}};
                         //launch ffmpeg (main)
                         s.group[e.ke].mon[e.id].spawn = s.ffmpeg(e);
-                        setTimeout(function(){
-                            s.group[e.ke].mon[e.id].allowStdinWrite = true
-                        },10000)
+                        if(e.type === 'dashcam'){
+                            setTimeout(function(){
+                                s.group[e.ke].mon[e.id].allowStdinWrite = true
+                                s.txToDashcamUsers({
+                                    f : 'enable_stream',
+                                    ke : e.ke,
+                                    mid : e.id
+                                },e.ke)
+                            },30000)
+                        }
                         s.init('monitorStatus',{id:e.id,ke:e.ke,status:wantedStatus});
                         //on unexpected exit restart
                         s.group[e.ke].mon[e.id].spawn_exit=function(){
@@ -2867,6 +2890,12 @@ s.camera=function(x,e,cn,tx){
                                 d=d.toString();
                                 e.chk=function(x){return d.indexOf(x)>-1;}
                                 switch(true){
+                                    case e.chk('Non-monotonous DTS'):
+                                    case e.chk('NULL @'):
+                                    case e.chk('RTP: missed'):
+                                    case e.chk('deprecated pixel format used, make sure you did set range correctly'):
+                                        return
+                                    break;
                                         //mp4 output with webm encoder chosen
                                     case e.chk('Could not find tag for vp8'):
                                     case e.chk('Only VP8 or VP9 Video'):
@@ -2887,11 +2916,6 @@ s.camera=function(x,e,cn,tx){
 //                                            }
 //                                            s.camera('restart',e)
                                         return s.log(e,{type:lang['Incorrect Settings Chosen'],msg:{msg:d}})
-                                    break;
-                                    case e.chk('NULL @'):
-                                    case e.chk('RTP: missed'):
-                                    case e.chk('deprecated pixel format used, make sure you did set range correctly'):
-                                        return
                                     break;
 //                                                case e.chk('av_interleaved_write_frame'):
                                     case e.chk('Connection refused'):
@@ -4392,7 +4416,33 @@ var tx;
                     cn.ke=d.ke,cn.uid=d.uid,cn.auth=d.auth;
                     if(!s.group[d.ke])s.group[d.ke]={};
                     if(!s.group[d.ke].users)s.group[d.ke].users={};
-                    s.group[d.ke].users[d.auth]={cnid:cn.id,uid:r.uid,mail:r.mail,details:JSON.parse(r.details),logged_in_at:s.timeObject(new Date).format(),login_type:'Streamer'}
+                    if(!s.group[d.ke].dashcamUsers)s.group[d.ke].dashcamUsers={};
+                    s.group[d.ke].users[d.auth]={
+                        cnid:cn.id,
+                        ke : d.ke,
+                        uid:r.uid,
+                        mail:r.mail,
+                        details:JSON.parse(r.details),
+                        logged_in_at:s.timeObject(new Date).format(),
+                        login_type:'Streamer'
+                    }
+                    s.group[d.ke].dashcamUsers[d.auth] = s.group[d.ke].users[d.auth]
+                    if(s.group[d.ke].mon){
+                        Object.keys(s.group[d.ke].mon).forEach(function(monitorId){
+                            var dataToClient = {
+                                f : 'disable_stream',
+                                mid : monitorId,
+                                ke : d.ke
+                            }
+                            var mon = s.group[d.ke].mon[monitorId]
+                            if(s.group[d.ke].mon_conf[monitorId].type === 'dashcam'){
+                                if(mon.allowStdinWrite === true){
+                                    dataToClient.f = 'enable_stream'
+                                }
+                                s.tx(dataToClient,cn.id)
+                            }
+                        })
+                    }
                 }
             })
         }else{
@@ -4507,6 +4557,7 @@ var tx;
                 }
                 s.log({ke:cn.ke,mid:'$USER'},{type:lang['Websocket Disconnected'],msg:{mail:s.group[cn.ke].users[cn.auth].mail,id:cn.uid,ip:cn.ip}})
                 delete(s.group[cn.ke].users[cn.auth]);
+                delete(s.group[cn.ke].dashcamUsers[cn.auth]);
             }
         }
         if(cn.pluginEngine){
