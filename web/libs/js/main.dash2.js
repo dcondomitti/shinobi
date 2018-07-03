@@ -2883,25 +2883,28 @@ $.log.e.on('shown.bs.modal', function () {
     $.log.lm.change()
 })
 $.log.lm.change(function(){
-    e = {
-        _this : this
-    }
+    e = {}
     e.v = $(this).val();
+    e.urlSelector = e.v+'';
     if(e.v === 'all'){
-        e.v=''
+        e.urlSelector = ''
     }
     e.dateRange = $.log.dateRange.data('daterangepicker');
     $.log.loaded.startDate = e.dateRange.startDate
     $.log.loaded.endDate = e.dateRange.endDate
-    var url = $.ccio.init('location',$user)+$user.auth_token+'/logs/'+$user.ke+'/'+e.v+'?start='+$.ccio.init('th',$.log.loaded.startDate)+'&end='+$.ccio.init('th',$.log.loaded.endDate)
+    var url = $.ccio.init('location',$user)+$user.auth_token+'/logs/'+$user.ke+'/'+e.urlSelector+'?start='+$.ccio.init('th',$.log.loaded.startDate)+'&end='+$.ccio.init('th',$.log.loaded.endDate)
     $.get(url,function(d){
         $.log.loaded.url = url
-        $.log.loaded.query = $(e._this).val()
+        $.log.loaded.query = e.v
         $.log.loaded.rows = d
         e.tmp='';
-        $.each(d,function(n,v){
-            e.tmp+='<tr class="search-row"><td title="'+v.time+'" class="livestamp"></td><td>'+v.time+'</td><td>'+v.mid+'</td><td>'+$.ccio.init('jsontoblock',v.info)+'</td></tr>'
-        })
+        if(d.length === 0){
+            e.tmp = '<tr class="text-center"><td><%-cleanLang(lang.NoLogsFoundForDateRange)%></td></tr>'
+        }else{
+            $.each(d,function(n,v){
+                e.tmp+='<tr class="search-row"><td title="'+v.time+'" class="livestamp"></td><td>'+v.time+'</td><td>'+v.mid+'</td><td>'+$.ccio.init('jsontoblock',v.info)+'</td></tr>'
+            })
+        }
         $.log.table.find('tbody').html(e.tmp)
 //        $.log.table.bootstrapTable()
         $.ccio.init('ls')
