@@ -12,6 +12,20 @@ $.ccio={
     fr:$('#files_recent'),
     mon:{}
 };
+$.ccio.downloadJSON = function(jsonToDownload,filename,errorResponse){
+    var arr = jsonToDownload;
+    if(arr.length===0 && errorResponse){
+        errorResponse.type = 'error'
+        $.ccio.init('note',errorResponse);
+        return
+    }
+    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(arr,null,3));
+    $('#temp').html('<a></a>')
+        .find('a')
+        .attr('href',dataStr)
+        .attr('download',filename)
+        [0].click()
+}
 $.ccio.timeObject = function(time,isUTC){
     if(isUTC === true){
         return moment(time).utc()
@@ -2844,7 +2858,8 @@ $.pB.e.find('.stop').click(function(e){
 $.log = {
     e : $('#logs_modal'),
     lm : $('#log_monitors'),
-    dateRange : $('#logs_daterange')
+    dateRange : $('#logs_daterange'),
+    loaded : {}
 }
 $.log.dateRange.daterangepicker({
     startDate:$.ccio.timeObject().subtract(moment.duration("5:00:00")),
@@ -2868,24 +2883,34 @@ $.log.e.on('shown.bs.modal', function () {
     $.log.lm.change()
 })
 $.log.lm.change(function(){
-    e = {}
+    e = {
+        _this : this
+    }
     e.v = $(this).val();
     if(e.v === 'all'){
         e.v=''
     }
-    e.dateRange=$.log.dateRange.data('daterangepicker');
-    e.dateRange={startDate:e.dateRange.startDate,endDate:e.dateRange.endDate}
-    var url = $.ccio.init('location',$user)+$user.auth_token+'/logs/'+$user.ke+'/'+e.v+'?start='+$.ccio.init('th',e.dateRange.startDate)+'&end='+$.ccio.init('th',e.dateRange.endDate)
-    console.log(url)
+    e.dateRange = $.log.dateRange.data('daterangepicker');
+    $.log.loaded.startDate = e.dateRange.startDate
+    $.log.loaded.endDate = e.dateRange.endDate
+    var url = $.ccio.init('location',$user)+$user.auth_token+'/logs/'+$user.ke+'/'+e.v+'?start='+$.ccio.init('th',$.log.loaded.startDate)+'&end='+$.ccio.init('th',$.log.loaded.endDate)
     $.get(url,function(d){
+        $.log.loaded.url = url
+        $.log.loaded.query = $(e._this).val()
+        $.log.loaded.rows = d
         e.tmp='';
         $.each(d,function(n,v){
-            
             e.tmp+='<tr class="search-row"><td title="'+v.time+'" class="livestamp"></td><td>'+v.time+'</td><td>'+v.mid+'</td><td>'+$.ccio.init('jsontoblock',v.info)+'</td></tr>'
         })
         $.log.table.find('tbody').html(e.tmp)
 //        $.log.table.bootstrapTable()
         $.ccio.init('ls')
+    })
+})
+$.log.e.find('[download]').click(function(){
+    $.ccio.downloadJSON($.log.loaded,'Shinobi_Logs_'+(new Date())+'.json',{
+        title : 'No Logs Found',
+        text : 'No file will be downloaded.',
     })
 })
 //multi monitor manager
