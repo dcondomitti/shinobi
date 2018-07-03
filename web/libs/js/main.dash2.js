@@ -1734,7 +1734,8 @@ $.ccio.globalWebsocket=function(d,user){
             $.ccio.pm(0,d,null,user)
         break;
         case'log':
-            $.ccio.tm(4,d,'#logs,.monitor_item[mid="'+d.mid+'"][ke="'+d.ke+'"][auth="'+user.auth_token+'"] .logs',user)
+            var attr = '[mid="'+d.mid+'"][ke="'+d.ke+'"][auth="'+user.auth_token+'"]'
+            $.ccio.tm(4,d,'#logs,'+attr+'.monitor_item .logs:visible,'+attr+'#add_monitor:visible .logs',user)
         break;
         case'os'://indicator
             //cpu
