@@ -2840,27 +2840,53 @@ $.pB.e.find('.stop').click(function(e){
 //    $.ccio.cx({f:'ffprobe',ff:'stop'})
 });
 //log viewer
-$.log={e:$('#logs_modal'),lm:$('#log_monitors')};$.log.o=$.log.e.find('table tbody');
+$.log = {
+    e : $('#logs_modal'),
+    lm : $('#log_monitors'),
+    dateRange : $('#logs_daterange')
+}
+$.log.dateRange.daterangepicker({
+    startDate:$.ccio.timeObject().subtract(moment.duration("5:00:00")),
+    endDate:$.ccio.timeObject().add(moment.duration("24:00:00")),
+    timePicker: true,
+    timePickerIncrement: 30,
+    locale: {
+        format: 'MM/DD/YYYY h:mm A'
+    }
+},function(start, end, label){
+    //change daterange
+    $.log.lm.change()
+});
+$.log.table = $.log.e.find('table')
 $.log.e.on('shown.bs.modal', function () {
     $.log.lm.find('option:not(.hard)').remove()
     $.each($.ccio.mon,function(n,v){
-        v.id=v.mid;
+        v.id = v.mid
         $.ccio.tm('option',v,'#log_monitors')
     })
     $.log.lm.change()
-});
-$.log.lm.change(function(e){
-    e.v=$(this).val();
-    if(e.v==='all'){e.v=''}
-    $.get($.ccio.init('location',$user)+$user.auth_token+'/logs/'+$user.ke+'/'+e.v,function(d){
+})
+$.log.lm.change(function(){
+    e = {}
+    e.v = $(this).val();
+    if(e.v === 'all'){
+        e.v=''
+    }
+    e.dateRange=$.log.dateRange.data('daterangepicker');
+    e.dateRange={startDate:e.dateRange.startDate,endDate:e.dateRange.endDate}
+    var url = $.ccio.init('location',$user)+$user.auth_token+'/logs/'+$user.ke+'/'+e.v+'?start='+$.ccio.init('th',e.dateRange.startDate)+'&end='+$.ccio.init('th',e.dateRange.endDate)
+    console.log(url)
+    $.get(url,function(d){
         e.tmp='';
         $.each(d,function(n,v){
-            e.tmp+='<tr class="search-row"><td title="'+v.time+'" class="livestamp"></td><td>'+v.time+'</td><td>'+v.name+'</td><td>'+v.mid+'</td><td>'+$.ccio.init('jsontoblock',v.info)+'</td></tr>'
+            
+            e.tmp+='<tr class="search-row"><td title="'+v.time+'" class="livestamp"></td><td>'+v.time+'</td><td>'+v.mid+'</td><td>'+$.ccio.init('jsontoblock',v.info)+'</td></tr>'
         })
-        $.log.o.html(e.tmp)
+        $.log.table.find('tbody').html(e.tmp)
+//        $.log.table.bootstrapTable()
         $.ccio.init('ls')
     })
-});
+})
 //multi monitor manager
 $.multimon={e:$('#multi_mon')};
 $.multimon.table=$.multimon.e.find('.tableData tbody');
