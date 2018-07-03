@@ -65,6 +65,7 @@ nav h4{cursor:default;font-size:95%;padding:16px 40px;font-weight:100;text-trans
 .m-b{margin-bottom:10px}
 .m-t{margin-top:10px}
 .m-l{margin-left:10px}
+.overflow-hidden{overflow: hidden!important}
 .list-inline{list-style:none}
 .list-inline li{display:inline-block;vertical-align: top;margin:0;}
 .truncate{width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -91,9 +92,9 @@ img{max-width:100%}
 .monitor_item[mode="Watch Only"] .stream-hud .lamp{color:#5da8e8}
 .monitor_item[mode="Idle"] .stream-hud .lamp{color:#fff}
 .monitor_item[mode="Record"] .stream-hud .lamp{color:#d9534f}
-/*.monitor_item .data-menu{max-height:700px}*/
-.monitor_item .data-menu:not(:last-child){border-right:1px solid #fff;}
-.monitor_item .data-menu.logs{list-style:none;}
+/*.data-menu{max-height:700px}*/
+.data-menu:not(:last-child){border-right:1px solid #fff;}
+.data-menu.logs{list-style:none;}
 .monitor_item .motionVision{display:none}
 
 .monitor_item .grid-stack-item-content{width:100%!important;left:0;right:0}
