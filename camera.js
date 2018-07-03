@@ -5805,6 +5805,25 @@ app.get(['/:auth/logs/:ke','/:auth/logs/:ke/:id'], function (req,res){
                 return;
             }
         }
+        if(req.query.start||req.query.end){
+            if(!req.query.startOperator||req.query.startOperator==''){
+                req.query.startOperator='>='
+            }
+            if(!req.query.endOperator||req.query.endOperator==''){
+                req.query.endOperator='<='
+            }
+            if(req.query.start && req.query.start !== '' && req.query.end && req.query.end !== ''){
+                req.query.start=req.query.start.replace('T',' ')
+                req.query.end=req.query.end.replace('T',' ')
+                req.sql+=' AND `time` '+req.query.startOperator+' ? AND `time` '+req.query.endOperator+' ?';
+                req.ar.push(req.query.start)
+                req.ar.push(req.query.end)
+            }else if(req.query.start && req.query.start !== ''){
+                req.query.start=req.query.start.replace('T',' ')
+                req.sql+=' AND `time` '+req.query.startOperator+' ?';
+                req.ar.push(req.query.start)
+            }
+        }
         if(!req.query.limit||req.query.limit==''){req.query.limit=50}
         req.sql+=' ORDER BY `time` DESC LIMIT '+req.query.limit+'';
         s.sqlQuery(req.sql,req.ar,function(err,r){
