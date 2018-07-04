@@ -10,5 +10,3 @@ super.json
 dbdata
 npm-debug.log
 shinobi.sqlite
-*.swp
-*.swo
