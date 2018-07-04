@@ -1,19 +1,12 @@
 <!--Confirmation Window-->
-<div class="modal fade" id="add_edit" tabindex="-1" role="dialog" aria-labelledby="permissionsLabel" aria-hidden="true">
+<div class="modal fade full" id="add_edit" tabindex="-1" role="dialog" aria-labelledby="permissionsLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <form class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
-        <h4 class="modal-title" id="permissionsLabel"><i class="fa fa-lock"></i> &nbsp; <span id="title"></span>
-              <div class="pull-right">
-                  <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="edit">
-                      <input type="checkbox" id="edit" value="1" class="mdl-switch__input">
-                      <span class="monospace mdl-switch__label"></span>
-                  </label>
-              </div>
-          </h4>
+        <h4 class="modal-title" id="permissionsLabel"><i class="fa fa-lock"></i> &nbsp; <span id="title"></span></h4>
       </div>
       <div class="modal-body" style="max-height:600px;overflow:auto">
         <div class="form-group">
@@ -137,6 +130,12 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default pull-left" data-dismiss="modal"><i class="fa fa-times"></i> <%-lang.Close%></button>
+          
+            <div class="pull-left">
+            <div class="marc-toggle display-inline">
+                <input type="checkbox" id="edit"/><label for="edit">Add or Edit</label>
+            </div>
+            </div>
           <button type="submit" class="btn btn-success"><i class="fa fa-check"></i> <%-lang.Save%></button>
         </div>
         <input type="hidden" name="details" value="{}">

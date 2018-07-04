@@ -64,6 +64,7 @@ s.sqlDate = function(value){
     return dateQueryFunction
 }
 s.sqlQuery = function(query,values,onMoveOn,hideLog){
+    s.debugLog(query,values)
     if(!values){values=[]}
     var valuesNotFunction = true;
     if(typeof values === 'function'){
@@ -176,9 +177,9 @@ s.checkFilterRules=function(v,callback){
     }
     //delete old videos with filter
     if(config.cron.deleteOld===true){
-        v.d.filters.deleteOldByCron={
-            "id":"deleteOldByCron",
-            "name":"deleteOldByCron",
+        v.d.filters.deleteOldVideosByCron={
+            "id":"deleteOldVideosByCron",
+            "name":"deleteOldVideosByCron",
             "sort_by":"time",
             "sort_by_direction":"ASC",
             "limit":"",
@@ -195,10 +196,13 @@ s.checkFilterRules=function(v,callback){
             }]
         };
     }
+    s.debugLog('Filters')
     var keys = Object.keys(v.d.filters)
     if(keys.length>0){
         keys.forEach(function(m,current){
-            var b=v.d.filters[m];
+            // b = filter
+            var b = v.d.filters[m];
+            s.debugLog(b)
             if(b.enabled==="1"){
                 b.ar=[v.ke];
                 b.sql=[];
@@ -223,6 +227,9 @@ s.checkFilterRules=function(v,callback){
                 }
                 s.sqlQuery('SELECT * FROM Videos '+b.sql,b.ar,function(err,r){
                      if(r&&r[0]){
+                        if(r.length > 0 || config.debugLog === true){
+                            s.cx({f:'filterMatch',msg:r.length+' SQL rows match "'+m+'"',ke:v.ke,time:moment()})
+                        }
                         b.cx={
                             f:'filters',
                             name:b.name,
@@ -233,10 +240,8 @@ s.checkFilterRules=function(v,callback){
                         };
                         if(b.archive==="1"){
                             s.cx({f:'filters',ff:'archive',videos:r,time:moment(),ke:v.ke,id:b.id});
-                        }else{
-                            if(b.delete==="1"){
-                                s.cx({f:'filters',ff:'delete',videos:r,time:moment(),ke:v.ke,id:b.id});
-                            }
+                        }else if(b.delete==="1"){
+                            s.cx({f:'filters',ff:'delete',videos:r,time:moment(),ke:v.ke,id:b.id});
                         }
                         if(b.email==="1"){
                             b.cx.ff='email';
@@ -277,21 +282,30 @@ s.deleteRowsWithNoVideo=function(v,callback){
             if(evs&&evs[0]){
                 es.del=[];es.ar=[v.ke];
                 evs.forEach(function(ev){
-                    var details = JSON.parse(ev.details)
-                    var filename = ev.time
-                    var dir = s.getVideoDirectory(ev)+s.moment(filename)+'.'+ev.ext;
-                    var fileExists = fs.existsSync(dir)
-                    if(details.isUTC === true){
-                        filename = s.localToUtc(filename).format('YYYY-MM-DDTHH-mm-ss')
-                        dir = s.getVideoDirectory(ev)+filename+'.'+ev.ext;
-                        fileExists = fs.existsSync(dir)
+                    var filename
+                    var details
+                    try{
+                        details = JSON.parse(ev.details)
+                    }catch(err){
+                        if(details instanceof Object){
+                            details = ev.details
+                        }else{
+                            details = {}
+                        }
                     }
+                    var dir = s.getVideoDirectory(ev)
+                    if(details.isUTC === true){
+                        filename = s.localToUtc(ev.time).format('YYYY-MM-DDTHH-mm-ss')+'.'+ev.ext
+                    }else{
+                        filename = s.moment(ev.time)+'.'+ev.ext
+                    }
+                    fileExists = fs.existsSync(dir+filename)
                     if(fileExists !== true){
                         s.video('delete',ev)
                         s.tx({f:'video_delete',filename:filename+'.'+ev.ext,mid:ev.mid,ke:ev.ke,time:ev.time,end:s.moment(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+ev.ke);
                     }
                 });
-                if(es.del.length>0){
+                if(es.del.length>0 || config.debugLog === true){
                     s.cx({f:'deleteNoVideo',msg:es.del.length+' SQL rows with no file deleted',ke:v.ke,time:moment()})
                 }
             }
@@ -310,8 +324,8 @@ s.deleteOldLogs=function(v,callback){
         s.sqlQuery("DELETE FROM Logs WHERE ke=? AND `time` < "+s.sqlDate('? DAYS'),[v.ke,v.d.log_days],function(err,rrr){
             callback()
             if(err)return console.error(err);
-            if(rrr.affectedRows && rrr.affectedRows.length>0){
-                s.cx({f:'deleteLogs',msg:rrr.affectedRows+' SQL rows older than '+v.d.log_days+' days deleted',ke:v.ke,time:moment()})
+            if(rrr.affectedRows && rrr.affectedRows.length>0 || config.debugLog === true){
+                s.cx({f:'deleteLogs',msg:(rrr.affectedRows || 0)+' SQL rows older than '+v.d.log_days+' days deleted',ke:v.ke,time:moment()})
             }
         })
     }else{
@@ -325,8 +339,8 @@ s.deleteOldEvents=function(v,callback){
         s.sqlQuery("DELETE FROM Events WHERE ke=? AND `time` < "+s.sqlDate('? DAYS'),[v.ke,v.d.event_days],function(err,rrr){
             callback()
             if(err)return console.error(err);
-            if(rrr.affectedRows && rrr.affectedRows.length>0){
-                s.cx({f:'deleteEvents',msg:rrr.affectedRows+' SQL rows older than '+v.d.event_days+' days deleted',ke:v.ke,time:moment()})
+            if(rrr.affectedRows && rrr.affectedRows.length>0 || config.debugLog === true){
+                s.cx({f:'deleteEvents',msg:(rrr.affectedRows || 0)+' SQL rows older than '+v.d.event_days+' days deleted',ke:v.ke,time:moment()})
             }
         })
     }else{
@@ -350,8 +364,8 @@ s.deleteOldFileBins=function(v,callback){
                 s.sqlQuery("DELETE"+fileBinQuery,[v.ke,v.d.fileBin_days],function(err,rrr){
                     callback()
                     if(err)return console.error(err);
-                    if(rrr.affectedRows && rrr.affectedRows.length>0){
-                        s.cx({f:'deleteFileBins',msg:rrr.affectedRows+' files older than '+v.d.fileBin_days+' days deleted',ke:v.ke,time:moment()})
+                    if(rrr.affectedRows && rrr.affectedRows.length>0 || config.debugLog === true){
+                        s.cx({f:'deleteFileBins',msg:(rrr.affectedRows || 0)+' files older than '+v.d.fileBin_days+' days deleted',ke:v.ke,time:moment()})
                     }
                 })
             }else{
@@ -366,7 +380,7 @@ s.deleteOldFileBins=function(v,callback){
 s.checkForOrphanedFiles=function(v,callback){
     if(config.cron.deleteOrphans===true){
         var finish=function(count){
-            if(count>0){
+            if(count>0 || config.debugLog === true){
                 s.cx({f:'deleteOrphanedFiles',msg:count+' SQL rows with no database row deleted',ke:v.ke,time:moment()})
             }
             callback()
@@ -445,9 +459,9 @@ s.processUser = function(number,rows){
             rr.forEach(function(b,m){
                 b.details=JSON.parse(b.details);
                 if(b.details.max_keep_days&&b.details.max_keep_days!==''){
-                    v.d.filters['deleteOldByCron'+b.mid]={
-                        "id":'deleteOldByCron'+b.mid,
-                        "name":'deleteOldByCron'+b.mid,
+                    v.d.filters['deleteOldVideosByCron'+b.mid]={
+                        "id":'deleteOldVideosByCron'+b.mid,
+                        "name":'deleteOldVideosByCron'+b.mid,
                         "sort_by":"time",
                         "sort_by_direction":"ASC",
                         "limit":"",
@@ -470,16 +484,17 @@ s.processUser = function(number,rows){
                 }
             })
             s.deleteOldLogs(v,function(){
-                s.debugLog('deleteOldLogs')
+                s.debugLog('--- deleteOldLogs Complete')
                 s.deleteOldFileBins(v,function(){
-                    s.debugLog('deleteOldFileBins')
+                    s.debugLog('--- deleteOldFileBins Complete')
                     s.deleteOldEvents(v,function(){
-                        s.debugLog('deleteOldEvents')
+                        s.debugLog('--- deleteOldEvents Complete')
                         s.checkFilterRules(v,function(){
-                            s.debugLog('checkFilterRules')
+                            s.debugLog('--- checkFilterRules Complete')
                             s.deleteRowsWithNoVideo(v,function(){
-                                s.debugLog('deleteRowsWithNoVideo')
+                                s.debugLog('--- deleteRowsWithNoVideo Complete')
                                 s.checkForOrphanedFiles(v,function(){
+                                    s.debugLog('--- checkForOrphanedFiles Complete')
                                     //done user, unlock current, and do next
                                     s.overlapLock[v.ke]=false;
                                     s.processUser(number+1,rows)

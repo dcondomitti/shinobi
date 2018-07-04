@@ -44,7 +44,7 @@ if [ "$ffmpeginstall" = "y" ] || [ "$ffmpeginstall" = "Y" ]; then
         sudo rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-1.el7.nux.noarch.rpm
         sudo yum install ffmpeg ffmpeg-devel -y
     else
-        sudo npm install ffmpeg-static
+        sudo npm install ffmpeg-static@2.2.1
     fi
 fi
 echo "Shinobi - Do you want to Install Node.js?"

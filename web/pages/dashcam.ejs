@@ -23,11 +23,16 @@ requires https or firefox
 <script src="libs/js/socket.io.js"></script>
 <script src="libs/js/menu.js"></script>
 <script>
-$.ccio={};$.ls=localStorage;
-$.ccio.ws=io(location.origin);
+$.ccio = {}
+$.ls = localStorage
+$.ccio.ws = io(location.origin)
 $.ccio.ws.on('connect',function (d){
     $(document).ready(function(e){
-        $.ccio.cx=function(x){if(!x.ke){x.ke=$user.ke;};if(!x.uid){x.uid=$user.uid;};return $.ccio.ws.emit('r',x)}
+        $.ccio.cx=function(x){
+            if(!x.ke){x.ke=$user.ke;}
+            if(!x.uid){x.uid=$user.uid;}
+            return $.ccio.ws.emit('r',x)
+        }
         console.log($user)
         $.ccio.cx({f:'init',ke:$user.ke,auth:$user.auth_token,uid:$user.uid})
     })
@@ -41,6 +46,16 @@ $.ccio.ws.on('f',function(d){
                 $.ccio.mon[d.mid][n]=v;
             });
         break;
+        case'disable_stream':
+            $.ccio.mon[d.mid].allowStream = false
+            if(d.mid === $.ccio.selected){
+                $.ccio.stopSending()
+                setTimeout($.ccio.startSending,2000)
+            }
+        break;
+        case'enable_stream':
+            $.ccio.mon[d.mid].allowStream = true
+        break;
     }
 })
 function _base64ToArrayBuffer(base64) {
@@ -52,81 +67,95 @@ function _base64ToArrayBuffer(base64) {
     }
     return bytes.buffer;
 }
+
 $.ccio.framerate=2;
     
 $.ccio.stopSending=function(){
+    $.ls.setItem('Shinobi_Dashcam_Started','0')
     $('#main').removeClass('recording');
     clearInterval($.ccio.cutChunk);
+    clearTimeout($.ccio.sendCheckTimeout);
+    try{
+        mediaRecorder.stop()
+    }catch(err){
+        
+    }
     $('[record]').unbind('click').click($.ccio.startSending)
 }
-$.ccio.startSending=function(){
-    if($.ccio.selected===null){return false;}
-    $('#main').addClass('recording');
-	if (typeof MediaRecorder.isTypeSupported == 'function'){
-		/*
-			MediaRecorder.isTypeSupported is a function announced in https://developers.google.com/web/updates/2016/01/mediarecorder and later introduced in the MediaRecorder API spec http://www.w3.org/TR/mediastream-recording/
-		*/
-		if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
-		  var options = {mimeType: 'video/webm;codecs=vp9'};
-		} else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
-		  var options = {mimeType: 'video/webm;codecs=h264'};
-		} else  if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-		  var options = {mimeType: 'video/webm;codecs=vp8'};
-		}
-		log('Using '+options.mimeType);
-		mediaRecorder = new MediaRecorder($.ccio.vid.stream, options);
-	}else{
-		log('Using default codecs for browser');
-		mediaRecorder = new MediaRecorder($.ccio.vid.stream);
-	}
-
-	mediaRecorder.start(10);
-    $.ccio.chunker = function(){
-        clearInterval($.ccio.cutChunk)
-        $.ccio.cutChunk=setInterval(function(){
-            mediaRecorder.stop()
-            mediaRecorder.start()
-        },5000)
+$.ccio.firstFrame = null
+$.ccio.startSending = function(){
+    if($.ccio.selected === null){
+        return false
     }
-	mediaRecorder.ondataavailable = function(e) {
-		//log('Data available...');
-		//console.log(e.data);
-		//console.log(e.data.type);
-		//console.log(e);
-		chunks.push(e.data);
-	};
+    $.ls.setItem('Shinobi_Dashcam_Started',1)
+    $('#main').addClass('recording');
+    if($.ccio.mon[$.ccio.selected].allowStream === true){
+        if (typeof MediaRecorder.isTypeSupported == 'function'){
+            var options = {
+                audioBitsPerSecond : 128000,
+                videoBitsPerSecond : 2500000,
+            }
+            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+              options.mimeType = 'video/webm;codecs=vp9'
+            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
+              options.mimeType = 'video/webm;codecs=h264'
+            } else  if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+              options.mimeType = 'video/webm;codecs=vp8'
+            }
+            console.log('Using '+options.mimeType);
+            mediaRecorder = new MediaRecorder($.ccio.vid.stream, options);
+        }else{
+            console.log('Using default codecs for browser');
+            mediaRecorder = new MediaRecorder($.ccio.vid.stream);
+        }
 
-	mediaRecorder.onerror = function(e){
-		clearInterval($.ccio.cutChunk)
-	};
+        mediaRecorder.start(10)
+
+        $.ccio.chunker = function(){
+            clearInterval($.ccio.cutChunk)
+            $.ccio.cutChunk=setInterval(function(){
+                var blob = new Blob(chunks, {type: "video/webm"});
+                $.ccio.cx({f:'monitor_chunk',chunk:blob,mid:$.ccio.selected});
+                chunks = [];
+            },1000/$.ccio.framerate)
+        }
+        var noFirstFrame = function(e){
+            $.ccio.firstFrame = e.data
+            chunks.push(e.data);
+            mediaRecorder.ondataavailable = function(e) {
+                chunks.push(e.data);
+            }
+        }
+        mediaRecorder.ondataavailable = noFirstFrame
+
+        mediaRecorder.onerror = function(e){
+            clearInterval($.ccio.cutChunk)
+        }
 
 
-	mediaRecorder.onstart = function(){
-		$.ccio.chunker()
-	};
+        mediaRecorder.onstart = function(){
+            if($.ccio.firstFrame){
+                var blob = new Blob([$.ccio.firstFrame], {type: "video/webm"});
+                $.ccio.cx({f:'monitor_chunk',chunk:blob,mid:$.ccio.selected});
+            }
+            $.ccio.chunker()
+        }
 
-	mediaRecorder.onstop = function(){
-		var blob = new Blob(chunks, {type: "video/webm"});
-        $.ccio.cx({f:'monitor_chunk',chunk:blob,mid:$.ccio.selected});
-//        var reader = new FileReader();
-//        reader.addEventListener("loadend", function() {
-//            console.log(reader.result)
-//        });
-//        reader.readAsArrayBuffer(blob);
-		chunks = [];
-	};
+        mediaRecorder.onpause = function(){
+            clearInterval($.ccio.cutChunk)
+        }
 
-	mediaRecorder.onpause = function(){
-		clearInterval($.ccio.cutChunk)
-	}
+        mediaRecorder.onresume = function(){
+            $.ccio.chunker()
+        }
 
-	mediaRecorder.onresume = function(){
-        $.ccio.chunker()
-	}
-
-	mediaRecorder.onwarning = function(e){
-		clearInterval($.ccio.cutChunk)
-	};
+        mediaRecorder.onwarning = function(e){
+            clearInterval($.ccio.cutChunk)
+        }
+    }else{
+        clearTimeout($.ccio.sendCheckTimeout)
+        $.ccio.sendCheckTimeout = setTimeout($.ccio.startSending,2000)
+    }
     $('[record]').unbind('click').click($.ccio.stopSending)
 };
 function log(message){
@@ -138,9 +167,33 @@ function log(message){
 navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
 window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
 if(getBrowser() == "Chrome"){
-	var constraints = {"audio": true, "video": {  "mandatory": {  "minWidth": 640,  "maxWidth": 640, "minHeight": 480,"maxHeight": 480 }, "optional": [] } };//Chrome
+	var constraints = {
+        "audio": true,
+        "video": {
+            "mandatory": {
+                "minWidth": 640,
+                "maxWidth": 5000,
+                "minHeight": 480,
+                "maxHeight": 2500
+            }, "optional": []
+        }
+    };
 }else if(getBrowser() == "Firefox"){
-	var constraints = {audio: true,video: {  width: { min: 640, ideal: 640, max: 640 },  height: { min: 480, ideal: 480, max: 480 }}}; //Firefox
+	var constraints = {
+        audio: true,
+        video: {
+            width: {
+                min: 640,
+                ideal: 640,
+                max: 5000
+            },
+            height: {
+                min: 480,
+                ideal: 480,
+                max: 2500
+            }
+        }
+    };
 }
 var mediaRecorder;
 var chunks = [];
@@ -149,8 +202,20 @@ var count = 0;
 $.ccio.vid = {element:$('#video')[0],canvas:$('#canvas')[0],data:$('#data')};
 $.ccio.vid.element.controls = false;
 navigator.getUserMedia(constraints,function(stream,fn) {
-    $.ccio.vid.stream=stream;
+    $.ccio.vid.stream = stream;
+    $.ccio.vid.element.srcObject = stream;
     $('[record]').click($.ccio.startSending)
+    ////////
+    if($user.mons.length>0&&$.ls.getItem('Shinobi_Dashcam')){
+        $('[monitor="'+$.ls.getItem('Shinobi_Dashcam')+'"]').click()
+        if($.ls.getItem('Shinobi_Dashcam_Started') === 1){
+            setTimeout(function(){
+                $('[record]').click()
+            },3000)
+        }
+    }else{
+        $.ccio.selected = null;
+    }
 }, function(err){console.error('getUserMedia',err)});
     
     
@@ -186,8 +251,6 @@ navigator.getUserMedia(constraints,function(stream,fn) {
         $('[monitor]').removeClass('active'),e.e.addClass('active');
     })
     
-    
-if($user.mons.length>0&&$.ls.getItem('Shinobi_Dashcam')){$('[monitor="'+$.ls.getItem('Shinobi_Dashcam')+'"]').click()}else{$.ccio.selected=null;}
     
 $('body')
 .on('click','.logout',function(e){
@@ -264,5 +327,6 @@ $('body')
     #main{text-align:center}
     #msg h2{margin-top:0}
     #img{border-radius:5px;overflow:hidden;max-width:100%;display:inline-block;margin-top: 30px}
-    #video,#canvas{position: absolute;display:none}
+    #canvas{position: absolute;display:none}
+    #video{display:inline-block}
 </style>

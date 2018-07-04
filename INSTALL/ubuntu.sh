@@ -62,7 +62,7 @@ if [ "$ffmpeginstall" = "y" ] || [ "$ffmpeginstall" = "Y" ]; then
             echo "============="
         fi
     else
-        sudo npm install ffmpeg-static
+        sudo npm install ffmpeg-static@2.2.1
     fi
 fi
 echo "============="
