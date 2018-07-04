@@ -116,6 +116,7 @@ if(config.databaseType===undefined){config.databaseType='mysql'}
 if(config.pluginKeys===undefined)config.pluginKeys={};
 if(config.databaseLogs===undefined){config.databaseLogs=false}
 if(config.useUTC===undefined){config.useUTC=false}
+if(config.strictDatabase===undefined){config.strictDatabase=false}
 if(config.pipeAddition===undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
 //Web Paths
 if(config.webPaths===undefined){config.webPaths={}}
@@ -1236,7 +1237,11 @@ s.video=function(x,e,k){
                     if(e.details&&e.details.dir&&e.details.dir!==''){
                         k.details.dir = e.details.dir
                     }
-                    if(config.useUTC)k.details.isUTC = config.useUTC;
+                    if(config.useUTC === true)k.details.isUTC = config.useUTC;
+                    if(config.strictDatabase === true){
+                        e.startTime = s.formattedTime(e.startTime)
+                        e.endTime = s.formattedTime(e.endTime)
+                    }
                     var save = [
                         e.mid,
                         e.ke,
