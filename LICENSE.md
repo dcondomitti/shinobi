@@ -49,6 +49,8 @@ representative at support@shinobi.systems.
 - When used for research or educational purposes
 - Testing Purposes
 - Usage by Educational institutions
+- Use for Emergency Services and facilties associated like Search and Rescue Services or Ambulance Services
+- Use in Health Care facility like a hospital or walk-in clinic
 
 #### Support Services.
 The Maintenance and Support Service shall be contracted and provided as per selected plan 
@@ -92,3 +94,45 @@ All lawsuits must be filed at the Vancouver Court House.
 
 Courthouse Vancouver Robson Square
 800 Hornby St, Vancouver, BC V6Z 2C5
+
+#### List of Included Software 
+
+    This list is completed to best of our knowledge.
+
+    Node.js - https://nodejs.org/en/
+    MariaDB - https://mariadb.org/
+    FFmpeg - https://www.ffmpeg.org/
+    Express (npm) - https://expressjs.com/ https://www.npmjs.com/package/express
+    EJS (npm) - http://ejs.co/ https://www.npmjs.com/package/ejs
+    pam-diff (npm) (Motion Detector) - https://github.com/kevinGodell/pam-diff
+    pipe2pam (npm) (for pam-diff) - https://github.com/kevinGodell/pipe2pam
+    mp4frag (npm) (Poseidon's main engine) - https://github.com/kevinGodell/mp4frag
+    mse-live-player (for mp4frag) - https://github.com/kevinGodell/mse-live-player
+    pipe2jpeg (npm) - https://github.com/kevinGodell/pipe2jpeg
+    webdav (npm) - https://www.npmjs.com/package/webdav
+    jsonfile (npm) - https://www.npmjs.com/package/jsonfile
+    connectionTester (npm) - https://www.npmjs.com/package/connectionTester
+    node-onvif (npm) - https://www.npmjs.com/package/node-onvif
+    knex (npm) - https://www.npmjs.com/package/knex
+    nodemailer (npm) - https://www.npmjs.com/package/nodemailer
+    mysql (npm) - https://www.npmjs.com/package/mysql
+    sqlite3 (npm) - https://www.npmjs.com/package/sqlite3
+    ldapauth-fork (npm) - https://www.npmjs.com/package/ldapauth-fork
+    http-proxy (npm) - https://www.npmjs.com/package/http-proxy
+    hls.js - https://github.com/video-dev/hls.js/
+    flv.js - https://github.com/Bilibili/flv.js/
+    Material Design Lite - https://getmdl.io/
+    socket.io - https://socket.io/
+    fullcalendar - https://fullcalendar.io/
+    jQuery & jQuery UI - http://jquery.com
+    Bootstrap - https://getbootstrap.com/
+    PNotify - https://sciactive.com/pnotify/
+    Font Awesome - https://fontawesome.com/
+    Gridstack.js - http://gridstackjs.com/
+    Date Range Picker (daterangepicker.js) - http://www.daterangepicker.com/
+    Hero Pattern CSS Backgrounds - http://www.heropatterns.com/
+    Bootstrap Table - https://github.com/wenzhixin/bootstrap-table
+    placeholder.js - https://jamesallardice.github.io/Placeholders.js/
+    Moment.js - https://momentjs.com/
+    Livestamp.js - https://mattbradley.github.io/livestampjs/
+    Lodash - https://lodash.com/
