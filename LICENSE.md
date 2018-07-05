@@ -8,7 +8,8 @@ SHINOBI OPEN SOURCE SOFTWARE LICENSE AGREEMENT
   
 Defintions.
 -----------
-This license, which also serves as a general End User License Agreement [EULA], the following terms shall be interpreted by these definitions:
+In this license, which also serves as a general End User License Agreement [EULA], the following 
+terms shall be interpreted by these definitions:
  * "EULA" shall mean this End User Licence Agreement
  * "Licensor" shall mean SHINOBI SYSTEMS
  * "Licensee" shall mean YOU, or the organisation (if any) on whose behalf YOU are taking the EULA.
@@ -25,9 +26,9 @@ included with and any additional modules or add-ons delivered by Shinobi Systems
 
 Purpose of the Agreement.
 -------------------------
-**The Short**: Protect the rights of this Software Product and the Licensor.
+**The Short**: Protect the rights of this Software Product and the LICENSOR.
 
-**The Long**: The Licensor grants the LICENSEE a non-exclusive, non-transferable and perpetual 
+**The Long**: The LICENSOR grants the LICENSEE a non-exclusive, non-transferable and perpetual 
 licence to use the SOFTWARE PRODUCTS listed therein and under the terms thereof. By accepting 
 the terms and conditions established in this agreement, the LICENSEE does not acquire any 
 ownership of copyright or other intellectual property rights in any part of the SOFTWARE 
@@ -49,7 +50,8 @@ representative at support@shinobi.systems.
 - When used for research or educational purposes
 - Testing Purposes
 - Usage by Educational institutions
-- Use for Emergency Services and facilties associated like Search and Rescue Services or Ambulance Services
+- Use for Emergency Services and facilties associated like Search and Rescue Services or 
+Ambulance Services
 - Use in Health Care facility like a hospital or walk-in clinic
 
 #### Support Services.
@@ -66,7 +68,10 @@ This software is property of Shinobi Systems. LICENSEE must keep all copyright n
 unchanged.
 
 #### Modification of this Software Product.
-LICENSEE may modify code for personal use but must provide these changes upon request from Shinobi Systems or an authorized Shinobi representative. LICENSEE may not alter or change copyright notices. All code changes by LICENSEE shall fall under the copyright of Shinobi Systems in the case code modified by LICENSEE is integrated into the official Shinobi code base.
+LICENSEE may modify code for personal use but must provide these changes upon request from 
+Shinobi Systems or an authorized Shinobi representative. LICENSEE may not alter or change 
+copyright notices. All code changes by LICENSEE shall fall under the copyright of Shinobi 
+Systems in the case code modified by LICENSEE is integrated into the official Shinobi code base.
 
 #### Software Product Rebranding or "White-Labelling".
 LICENSEE can remove the Shinobi branding from the front end but all copyright notices must 
