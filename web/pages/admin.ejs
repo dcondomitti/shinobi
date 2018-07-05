@@ -113,9 +113,11 @@ $.ccio.ws.on('f',function(d){
     console.log(d);
     switch(d.f){
         case'edit_sub_account':
+            var account = $.ccio.subs[d.uid]
             $.each(d.form,function(n,v){
-                $.ccio.subs[d.uid][n]=v;
+                account[n]=v;
             });
+            account.detailsJSON=JSON.parse(account.details);
         break;
         case'add_sub_account':
             $.ccio.tm(0,d,'#sub_accounts')
@@ -193,7 +195,7 @@ $.sU.e.on('click','.permission',function(e){
 $.pR={e:$('#permissions'),l:$('#permissionsLabel small')};$.pR.f=$.pR.e.find('form')
 $.pR.e.on('change','[detail="allmonitors"]',function(e){
     e.e=$(this),
-    e.mon=$('#monitors_section,#monitors_edit_section,#video_delete_section')
+    e.mon=$('.permission-view')
     e.details=$.pR.e.find('[name="details"]')
     e.json=JSON.parse(e.details.val())
     if(e.e.val()=='1'){

@@ -12,15 +12,26 @@ $.ccio={
     fr:$('#files_recent'),
     mon:{}
 };
-<% if(config.useUTC){ %>
-$.ccio.timeObject = function(date){
-    return moment.utc(date).local()
+$.ccio.downloadJSON = function(jsonToDownload,filename,errorResponse){
+    var arr = jsonToDownload;
+    if(arr.length===0 && errorResponse){
+        errorResponse.type = 'error'
+        $.ccio.init('note',errorResponse);
+        return
+    }
+    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(arr,null,3));
+    $('#temp').html('<a></a>')
+        .find('a')
+        .attr('href',dataStr)
+        .attr('download',filename)
+        [0].click()
 }
-<% }else{ %>
-$.ccio.timeObject = function(date){
-    return moment(date)
+$.ccio.timeObject = function(time,isUTC){
+    if(isUTC === true){
+        return moment(time).utc()
+    }
+    return moment(time)
 }
-<% } %>
 if(!$user.details.lang||$user.details.lang==''){
     $user.details.lang="<%-config.language%>"
 }
@@ -158,8 +169,38 @@ switch($user.details.lang){
                         url=url+'/'
                     }
                 }else{
-                    url=''
+                    url = ''
                 }
+                return url
+            break;
+            case'videoUrlBuild':
+                var url
+                if(d.href){
+                    url = d.href
+                }else if(!d.href && d.hrefNoAuth){
+                    url = $.ccio.init('location',user)+user.auth_token+d.hrefNoAuth
+                }
+                if(user!==$user&&url.charAt(0)==='/'){
+                    url = $.ccio.init('location',user)+d.href.substring(1)
+                }
+                return url
+            break;
+            case'videoHrefToDelete':
+                var urlSplit = d.split('?')
+                var url = urlSplit[0]+'/delete'
+                if(urlSplit[1])url += '?' + urlSplit[1]
+                return url
+            break;
+            case'videoHrefToUnread':
+                var urlSplit = d.split('?')
+                var url = urlSplit[0]+'/status/1'
+                if(urlSplit[1])url += '?' + urlSplit[1]
+                return url
+            break;
+            case'videoHrefToRead':
+                var urlSplit = d.split('?')
+                var url = urlSplit[0]+'/status/2'
+                if(urlSplit[1])url += '?' + urlSplit[1]
                 return url
             break;
 //            case'streamWindow':
@@ -369,6 +410,7 @@ switch($user.details.lang){
                 d.e.find('.monitor_ext').text(d.mon.ext);
                 d.mode=$.ccio.init('humanReadMode',d.mon.mode,user)
                 d.e.find('.monitor_mode').text(d.mode)
+                d.e.find('.monitor_status').text(d.status)
                 d.e.attr('mode',d.mode)
                 d.e.find('.lamp').attr('title',d.mode)
             break;
@@ -463,6 +505,19 @@ switch($user.details.lang){
                 })
                 return $.ccio.mon_groups;
             break;
+            case'closeVideo':
+                var el = $('#monitor_live_'+d.mid+user.auth_token)
+                var video = el.find('video')
+                if(video.length === 1){
+                    if(!video[0].paused){
+                        video[0].onerror = function(){}
+                        video[0].pause()
+                    }
+                    video.prop('src','');
+                    video.find('source').remove();
+                    video.remove();
+                }
+            break;
             case'jpegModeStop':
                 clearTimeout($.ccio.mon[d.ke+d.mid+user.auth_token].jpegInterval);
                 delete($.ccio.mon[d.ke+d.mid+user.auth_token].jpegInterval);
@@ -491,15 +546,6 @@ switch($user.details.lang){
                 $.each($.ccio.mon,function(n,v){
                     $.ccio.init('jpegMode',v,user)
                 });
-            break;
-            case'dragWindows':
-                console.log('Deprecated : dragWindows')
-//                k.e=$("#monitors_live");
-//                if(k.e.disableSelection){k.e.disableSelection()};
-//                k.e.sortable({
-//                  handle: ".mdl-card__supporting-text",
-//                  placeholder: "ui-state-highlight col-md-6"
-//                });
             break;
             case'getLocation':
                 var l = document.createElement("a");
@@ -834,25 +880,18 @@ switch($user.details.lang){
         if(d.id&&!d.mid){d.mid=d.id;}
         switch(x){
             case 0://video
-                var href
-                if(d.href){
-                    href = d.href
-                }else if(!d.href && d.hrefNoAuth){
-                    href = $.ccio.init('location',user)+user.auth_token+d.hrefNoAuth
-                }
-                if(user!==$user&&href.charAt(0)==='/'){
-                    href = $.ccio.init('location',user)+d.href.substring(1)
-                }
-                href = 'href="'+href+'"'
-                if(!d.filename){d.filename=$.ccio.init('tf',d.time)+'.'+d.ext;}
+                var url = $.ccio.init('videoUrlBuild',d)
+                href = 'href="'+url+'"'
+//                if(!d.filename){d.filename=$.ccio.init('tf',d.time)+'.'+d.ext;}
                 d.dlname=d.mid+'-'+d.filename;
-                d.mom=$.ccio.timeObject(d.time),
-                d.hr=parseInt(d.mom.format('HH')),
+                d.startMoment=$.ccio.timeObject(d.time),
+                d.endMoment=$.ccio.timeObject(d.end),
+                d.hr=parseInt(d.startMoment.format('HH')),
                 d.per=parseInt(d.hr/24*100);
-                d.circle='<div title="at '+d.hr+' hours of '+d.mom.format('MMMM DD')+'" '+href+' video="launch" class="progress-circle progress-'+d.per+'"><span>'+d.hr+'</span></div>'
-                tmp+='<li class="video-item glM'+d.mid+user.auth_token+'" auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" status="'+d.status+'" status="'+d.status+'" file="'+d.filename+'">'+d.circle+'<div><span title="'+d.end+'" class="livestamp"></span></div><div><div class="small"><b><%-cleanLang(lang.Start)%></b> : '+$.ccio.timeObject(d.time).format('h:mm:ss , MMMM Do YYYY')+'</div><div class="small"><b><%-cleanLang(lang.End)%></b> : '+$.ccio.timeObject(d.end).format('h:mm:ss , MMMM Do YYYY')+'</div></div><div><span class="pull-right">'+(parseInt(d.size)/1000000).toFixed(2)+'mb</span><div class="controls btn-group"><a class="btn btn-sm btn-primary" video="launch" '+href+'><i class="fa fa-play-circle"></i></a> <a download="'+d.dlname+'" '+href+' class="btn btn-sm btn-default"><i class="fa fa-download"></i></a>'
+                d.circle='<div title="at '+d.hr+' hours of '+d.startMoment.format('MMMM DD')+'" '+href+' video="launch" class="progress-circle progress-'+d.per+'"><span>'+d.hr+'</span></div>'
+                tmp+='<li class="video-item glM'+d.mid+user.auth_token+'" auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" status="'+d.status+'" status="'+d.status+'" file="'+d.filename+'">'+d.circle+'<div><span title="'+d.endMoment.format()+'" class="livestamp"></span></div><div><div class="small"><b><%-cleanLang(lang.Start)%></b> : '+d.startMoment.format('h:mm:ss , MMMM Do YYYY')+'</div><div class="small"><b><%-cleanLang(lang.End)%></b> : '+d.endMoment.format('h:mm:ss , MMMM Do YYYY')+'</div></div><div><span class="pull-right">'+(parseInt(d.size)/1000000).toFixed(2)+'mb</span><div class="controls btn-group"><a class="btn btn-sm btn-primary" video="launch" '+href+'><i class="fa fa-play-circle"></i></a> <a download="'+d.dlname+'" '+href+' class="btn btn-sm btn-default"><i class="fa fa-download"></i></a>'
                 <% if(config.DropboxAppKey){ %> tmp+='<a video="download" host="dropbox" download="'+d.dlname+'" '+href+' class="btn btn-sm btn-default"><i class="fa fa-dropbox"></i></a>' <% } %>
-                tmp+='<a title="<%-cleanLang(lang['Delete Video'])%>" video="delete" class="btn btn-sm btn-danger permission_video_delete"><i class="fa fa-trash"></i></a></div></div></li>';
+                tmp+='<a title="<%-cleanLang(lang['Delete Video'])%>" video="delete" href="'+$.ccio.init('videoHrefToDelete',url)+'" class="btn btn-sm btn-danger permission_video_delete"><i class="fa fa-trash"></i></a></div></div></li>';
                 $(z).each(function(n,v){
                     v=$(v);
                     if(v.find('.video-item').length>10){v.find('.video-item:last').remove()}
@@ -860,7 +899,7 @@ switch($user.details.lang){
             break;
             case 1://monitor icon
                 d.src=placeholder.getData(placeholder.plcimg({bgcolor:'#b57d00',text:'...'}));
-                tmp+='<div auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" title="'+d.mid+' : '+d.name+'" class="monitor_block glM'+d.mid+user.auth_token+' col-md-4"><img monitor="watch" class="snapshot" src="'+d.src+'"><div class="box"><div class="title monitor_name truncate">'+d.name+'</div><div class="list-data"><div class="monitor_mid">'+d.mid+'</div><div><b><%-cleanLang(lang['Save as'])%> :</b> <span class="monitor_ext">'+d.ext+'</span></div><div><b>Mode :</b> <span class="monitor_mode">'+d.mode+'</span></div></div><div class="icons text-center"><div class="btn-group"><a class="btn btn-xs btn-default permission_monitor_edit" monitor="edit"><i class="fa fa-wrench"></i></a> <a monitor="videos_table" class="btn btn-xs btn-default"><i class="fa fa-film"></i></a> <a monitor="pop" class="btn btn-xs btn-success"><i class="fa fa-external-link"></i></a></div></div></div></div>';
+                tmp+='<div auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" title="'+d.mid+' : '+d.name+'" class="monitor_block glM'+d.mid+user.auth_token+' col-md-4"><img monitor="watch" class="snapshot" src="'+d.src+'"><div class="box"><div class="title monitor_name truncate">'+d.name+'</div><div class="list-data"><div class="monitor_mid">'+d.mid+'</div><div><b><%-cleanLang(lang['Save as'])%> :</b> <span class="monitor_ext">'+d.ext+'</span></div><div><b>Status :</b> <span class="monitor_status">'+d.status+'</span></div></div><div class="icons text-center"><div class="btn-group"><a class="btn btn-xs btn-default permission_monitor_edit" monitor="edit"><i class="fa fa-wrench"></i></a> <a monitor="videos_table" class="btn btn-xs btn-default"><i class="fa fa-film"></i></a> <a monitor="pop" class="btn btn-xs btn-success"><i class="fa fa-external-link"></i></a></div></div></div></div>';
                 delete(d.src);
             break;
             case 2://monitor stream
@@ -876,7 +915,7 @@ switch($user.details.lang){
                     ],function(n,v){
                         tmp+='<div>'+v.label+' : <span class="'+v.tag+'"></span></div>'
                     })
-                tmp+='</div></div></div></div>';
+                tmp+='</div></div></div></div>'
                 tmp+='<div class="mdl-card__supporting-text text-center">';
                 tmp+='<div class="indifference detector-fade"><div class="progress"><div class="progress-bar progress-bar-danger" role="progressbar"><span></span></div></div></div>';
                 tmp+='<div class="monitor_details">';
@@ -1597,7 +1636,11 @@ $.ccio.globalWebsocket=function(d,user){
     }
     switch(d.f){
         case'note':
-            $.ccio.init('note',d.note);
+            $.ccio.init('note',d.note,user);
+        break;
+        case'monitor_status':
+            console.log(d)
+            $('[ke="'+d.ke+'"][mid="'+d.id+'"][auth="'+user.auth_token+'"] .monitor_status').html(d.status);
         break;
         case'detector_trigger':
             d.e=$('.monitor_item[ke="'+d.ke+'"][mid="'+d.id+'"][auth="'+user.auth_token+'"]')
@@ -1705,7 +1748,8 @@ $.ccio.globalWebsocket=function(d,user){
             $.ccio.pm(0,d,null,user)
         break;
         case'log':
-            $.ccio.tm(4,d,'#logs,.monitor_item[mid="'+d.mid+'"][ke="'+d.ke+'"][auth="'+user.auth_token+'"] .logs',user)
+            var attr = '[mid="'+d.mid+'"][ke="'+d.ke+'"][auth="'+user.auth_token+'"]'
+            $.ccio.tm(4,d,'#logs,'+attr+'.monitor_item .logs:visible,'+attr+'#add_monitor:visible .logs',user)
         break;
         case'os'://indicator
             //cpu
@@ -1741,8 +1785,10 @@ $.ccio.globalWebsocket=function(d,user){
         break;
         case'video_edit':case'video_archive':
             $.ccio.init('data-video',d)
-            d.e=$('[file="'+d.filename+'"][mid="'+d.mid+'"][ke="'+d.ke+'"][auth="'+user.auth_token+'"]');
+            d.e=$('[file="'+d.filename+'"][mid="'+d.mid+'"][ke="'+d.ke+'"][auth="'+user.auth_token+'"],[data-file="'+d.filename+'"][data-mid="'+d.mid+'"][data-ke="'+d.ke+'"][data-auth="'+user.auth_token+'"]');
             d.e.attr('status',d.status),d.e.attr('data-status',d.status);
+            console.log(d)
+
         break;
         case'video_delete':
 //            if($('.modal[mid="'+d.mid+'"][auth="'+user.auth_token+'"]').length>0){$('#video_viewer[mid="'+d.mid+'"]').attr('file',null).attr('ke',null).attr('mid',null).attr('auth',null).modal('hide')}
@@ -1794,8 +1840,9 @@ $.ccio.globalWebsocket=function(d,user){
             d.o=$.ccio.op()[d.chosen_set];
             if(!d.o[d.ke]){d.o[d.ke]={}};d.o[d.ke][d.id]=0;$.ccio.op(d.chosen_set,d.o);
             if($.ccio.mon[d.ke+d.id+user.auth_token]){
-                $.ccio.init('jpegModeStop',{mid:d.id,ke:d.ke});
-                $.ccio.init('clearTimers',d)
+                $.ccio.init('closeVideo',{mid:d.id,ke:d.ke},user);
+                $.ccio.init('jpegModeStop',{mid:d.id,ke:d.ke},user);
+                $.ccio.init('clearTimers',d,user)
                 clearInterval($.ccio.mon[d.ke+d.id+user.auth_token].signal);delete($.ccio.mon[d.ke+d.id+user.auth_token].signal);
                 $.ccio.mon[d.ke+d.id+user.auth_token].watch=0;
                 if($.ccio.mon[d.ke+d.id+user.auth_token].hls){$.ccio.mon[d.ke+d.id+user.auth_token].hls.destroy()}
@@ -1817,9 +1864,11 @@ $.ccio.globalWebsocket=function(d,user){
             d.e=$('#monitor_live_'+d.id+user.auth_token);
             d.e.find('.stream-detected-object').remove()
             $.ccio.init('clearTimers',d)
-            if(d.e.length==0){
+            if(d.e.length === 1){
+                $.ccio.init('closeVideo',{mid:d.id,ke:d.ke},user);
+            }
+            if(d.e.length === 0){
                 $.ccio.tm(2,$.ccio.mon[d.ke+d.id+user.auth_token],'#monitors_live',user);
-                $.ccio.init('dragWindows')
             }
             d.d=JSON.parse($.ccio.mon[d.ke+d.id+user.auth_token].details);
             $.ccio.tm('stream-element',$.ccio.mon[d.ke+d.id+user.auth_token],null,user);
@@ -1903,30 +1952,35 @@ $.ccio.globalWebsocket=function(d,user){
                         })
                     break;
                     case'mp4':
-                        var stream = d.e.find('.stream-element');
-                        if(d.d.stream_flv_type==='ws'){
-                            if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){
-                                $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.destroy()
+                        setTimeout(function(){
+                            var stream = d.e.find('.stream-element');
+                            if(d.d.stream_flv_type==='ws'){
+                                if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){
+                                    $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.destroy()
+                                }
+                                try{
+                                    $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon = new Poseidon({
+                                        video: stream[0],
+                                        auth_token:user.auth_token,
+                                        ke:d.ke,
+                                        uid:user.uid,
+                                        id:d.id,
+                                        url: url
+                                    });
+                                    $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.start();
+                                }catch(err){
+                                    setTimeout(function(){
+                                        $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
+                                    },5000)
+                                    console.log(err)
+                                }
+                            }else{
+                                stream.attr('src',$.ccio.init('location',user)+user.auth_token+'/mp4/'+d.ke+'/'+d.id+'/s.mp4')
+                                stream[0].onerror = function(err){
+                                    console.error(err)
+                                }
                             }
-                            try{
-                                $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon = new Poseidon({
-                                    video: stream[0],
-                                    auth_token:user.auth_token,
-                                    ke:d.ke,
-                                    uid:user.uid,
-                                    id:d.id,
-                                    url: url
-                                });
-                                $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.start();
-                            }catch(err){
-                                setTimeout(function(){
-                                    $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
-                                },3000)
-                                console.log(err)
-                            }
-                        }else{
-                            stream.attr('src',$.ccio.init('location',user)+user.auth_token+'/mp4/'+d.ke+'/'+d.id+'/s.mp4')
-                        }
+                        },2000)
                     break;
                     case'flv':
                         if (flvjs.isSupported()) {
@@ -2153,7 +2207,7 @@ $.ccio.globalWebsocket=function(d,user){
             $.each(videos.videos,function(n,v){
                 if(!v||!v.mid){return}
                 v.mon=$.ccio.mon[v.ke+v.mid+$user.auth_token];
-                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
+//                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
                 if(v.status>0){
         //                    data.push({src:v,x:v.time,y:$.ccio.timeObject(v.time).diff($.ccio.timeObject(v.end),'minutes')/-1})
                     data[v.filename]={
@@ -2801,27 +2855,67 @@ $.pB.e.find('.stop').click(function(e){
 //    $.ccio.cx({f:'ffprobe',ff:'stop'})
 });
 //log viewer
-$.log={e:$('#logs_modal'),lm:$('#log_monitors')};$.log.o=$.log.e.find('table tbody');
+$.log = {
+    e : $('#logs_modal'),
+    lm : $('#log_monitors'),
+    dateRange : $('#logs_daterange'),
+    loaded : {}
+}
+$.log.dateRange.daterangepicker({
+    startDate:$.ccio.timeObject().subtract(moment.duration("5:00:00")),
+    endDate:$.ccio.timeObject().add(moment.duration("24:00:00")),
+    timePicker: true,
+    timePickerIncrement: 30,
+    locale: {
+        format: 'MM/DD/YYYY h:mm A'
+    }
+},function(start, end, label){
+    //change daterange
+    $.log.lm.change()
+});
+$.log.table = $.log.e.find('table')
 $.log.e.on('shown.bs.modal', function () {
     $.log.lm.find('option:not(.hard)').remove()
     $.each($.ccio.mon,function(n,v){
-        v.id=v.mid;
+        v.id = v.mid
         $.ccio.tm('option',v,'#log_monitors')
     })
     $.log.lm.change()
-});
-$.log.lm.change(function(e){
-    e.v=$(this).val();
-    if(e.v==='all'){e.v=''}
-    $.get($.ccio.init('location',$user)+$user.auth_token+'/logs/'+$user.ke+'/'+e.v,function(d){
+})
+$.log.lm.change(function(){
+    e = {}
+    e.v = $(this).val();
+    e.urlSelector = e.v+'';
+    if(e.v === 'all'){
+        e.urlSelector = ''
+    }
+    e.dateRange = $.log.dateRange.data('daterangepicker');
+    $.log.loaded.startDate = e.dateRange.startDate
+    $.log.loaded.endDate = e.dateRange.endDate
+    var url = $.ccio.init('location',$user)+$user.auth_token+'/logs/'+$user.ke+'/'+e.urlSelector+'?start='+$.ccio.init('th',$.log.loaded.startDate)+'&end='+$.ccio.init('th',$.log.loaded.endDate)
+    $.get(url,function(d){
+        $.log.loaded.url = url
+        $.log.loaded.query = e.v
+        $.log.loaded.rows = d
         e.tmp='';
-        $.each(d,function(n,v){
-            e.tmp+='<tr class="search-row"><td title="'+v.time+'" class="livestamp"></td><td>'+v.time+'</td><td>'+v.name+'</td><td>'+v.mid+'</td><td>'+$.ccio.init('jsontoblock',v.info)+'</td></tr>'
-        })
-        $.log.o.html(e.tmp)
+        if(d.length === 0){
+            e.tmp = '<tr class="text-center"><td><%-cleanLang(lang.NoLogsFoundForDateRange)%></td></tr>'
+        }else{
+            $.each(d,function(n,v){
+                e.tmp+='<tr class="search-row"><td title="'+v.time+'" class="livestamp"></td><td>'+v.time+'</td><td>'+v.mid+'</td><td>'+$.ccio.init('jsontoblock',v.info)+'</td></tr>'
+            })
+        }
+        $.log.table.find('tbody').html(e.tmp)
+//        $.log.table.bootstrapTable()
         $.ccio.init('ls')
     })
-});
+})
+$.log.e.find('[download]').click(function(){
+    $.ccio.downloadJSON($.log.loaded,'Shinobi_Logs_'+(new Date())+'.json',{
+        title : 'No Logs Found',
+        text : 'No file will be downloaded.',
+    })
+})
 //multi monitor manager
 $.multimon={e:$('#multi_mon')};
 $.multimon.table=$.multimon.e.find('.tableData tbody');
@@ -2988,7 +3082,7 @@ $.multimon.e.on('shown.bs.modal',function() {
         var img = $('#left_menu [mid="'+v.mid+'"][auth="'+v.user.auth_token+'"] [monitor="watch"]').attr('src')
         tmp+='<tr mid="'+v.mid+'" ke="'+v.ke+'" auth="'+v.user.auth_token+'">'
         tmp+='<td><div class="checkbox"><input id="multimonCheck_'+v.ke+v.mid+v.user.auth_token+'" type="checkbox" name="'+v.ke+v.mid+v.user.auth_token+'" value="1"><label for="multimonCheck_'+v.ke+v.mid+v.user.auth_token+'"></label></div></td>'
-        tmp+='<td><a monitor="watch"><img class="small-square-img" src="'+img+'"></a></td><td>'+v.name+'<br><small>'+v.mid+'</small></td><td class="monitor_mode">'+$.ccio.init('humanReadMode',v.mode)+'</td><td>'+streamURL+'</td>'
+        tmp+='<td><a monitor="watch"><img class="small-square-img" src="'+img+'"></a></td><td>'+v.name+'<br><small>'+v.mid+'</small></td><td class="monitor_status">'+v.status+'</td><td>'+streamURL+'</td>'
         //buttons
         tmp+='<td class="text-right"><a title="<%-cleanLang(lang.Pop)%>" monitor="pop" class="btn btn-primary"><i class="fa fa-external-link"></i></a> <a title="<%-cleanLang(lang.Calendar)%>" monitor="calendar" class="btn btn-default"><i class="fa fa-calendar"></i></a> <a title="<%-cleanLang(lang['Power Viewer'])%>" class="btn btn-default" monitor="powerview"><i class="fa fa-map-marker"></i></a> <a title="<%-cleanLang(lang['Time-lapse'])%>" class="btn btn-default" monitor="timelapse"><i class="fa fa-angle-double-right"></i></a> <a title="<%-cleanLang(lang['Videos List'])%>" monitor="videos_table" class="btn btn-default"><i class="fa fa-film"></i></a> <a title="<%-cleanLang(lang['Monitor Settings'])%>" class="btn btn-default permission_monitor_edit" monitor="edit"><i class="fa fa-wrench"></i></a></td>'
         tmp+='</tr>'
@@ -4062,7 +4156,7 @@ $.timelapse.drawTimeline=function(getData){
         e.tmp=''
         $.each(videos.videos,function(n,v){
             if(!v||!v.time){return}
-            v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
+//            v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
             v.videoBefore=videos.videos[n-1];
             v.videoAfter=videos.videos[n+1];
 //            if(v.href.charAt(0)==='/'){
@@ -4075,7 +4169,7 @@ $.timelapse.drawTimeline=function(getData){
             e.tmp+='<div class="flex-block">'
             e.tmp+='<div class="flex-unit-3"><div class="frame" style="background-image:url('+$.timelapse.placeholder+')"></div></div>'
             e.tmp+='<div class="flex-unit-3"><div><span title="'+v.time+'" class="livestamp"></span></div><div>'+v.filename+'</div></div>'
-            e.tmp+='<div class="flex-unit-3 text-right"><a class="btn btn-default" download="'+v.mid+'-'+v.filename+'" href="'+v.href+'">&nbsp;<i class="fa fa-download"></i>&nbsp;</a> <a class="btn btn-danger" video="delete">&nbsp;<i class="fa fa-trash-o"></i>&nbsp;</a></div>'
+            e.tmp+='<div class="flex-unit-3 text-right"><a class="btn btn-default" download="'+v.mid+'-'+v.filename+'" href="'+v.href+'">&nbsp;<i class="fa fa-download"></i>&nbsp;</a> <a class="btn btn-danger" video="delete" href="'+$.ccio.init('videoHrefToDelete',v.href)+'">&nbsp;<i class="fa fa-trash-o"></i>&nbsp;</a></div>'
             e.tmp+='</div>'
             e.tmp+='<div class="flex-block">'
             e.tmp+='<div class="flex-unit-3"><div class="progress"><div class="progress-bar progress-bar-primary" role="progressbar" style="width:0%"></div></div></div>'
@@ -4449,7 +4543,8 @@ $.pwrvid.e.on('click','[preview]',function(e){
                     $.pwrvid.vp.find('.stream-objects .stream-detected-object').remove()
                 })
             if(e.status==1){
-                $.get(e.href.split('?')[0]+'/status/2',function(d){
+                $.get($.ccio.init('videoHrefToRead',e.href),function(d){
+                    
                 })
             }
             var labels=[]
@@ -4778,22 +4873,28 @@ $('body')
                 .attr('auth',e.auth)
                 .attr('file',e.file);
             if(e.status==1){
-                $.get(e.href.split('?')[0]+'/status/2',function(d){
+                $.get($.ccio.init('videoHrefToRead',e.href),function(d){
+                    if(d.ok !== true)console.log(d,new Error())
                 })
             }
         break;
         case'delete':
-            e.href=e.p.find('[download]').attr('href')
-            if(!e.href||e.href===''){
-                e.href=e.p.attr('href')
+            e.preventDefault();
+            var videoLink = e.p.find('[download]').attr('href')
+            var href = $(this).attr('href')
+            console.log('videoLink',videoLink)
+            console.log(href)
+            if(!href){
+                href = $.ccio.init('location',$.users[e.auth])+e.auth+'/videos/'+e.ke+'/'+e.mid+'/'+e.file+'/delete<% if(config.useUTC === true){%>?isUTC=true<%}%>'
             }
+            console.log(href)
             $.confirm.e.modal('show');
             $.confirm.title.text('<%-cleanLang(lang['Delete Video'])%> : '+e.file)
             e.html='<%-cleanLang(lang.DeleteVideoMsg)%>'
-            e.html+='<video class="video_video" autoplay loop controls><source src="'+e.href+'" type="video/'+e.mon.ext+'"></video>';
+            e.html+='<video class="video_video" autoplay loop controls><source src="'+videoLink+'" type="video/'+e.mon.ext+'"></video>';
             $.confirm.body.html(e.html)
             $.confirm.click({title:'Delete Video',class:'btn-danger'},function(){
-                $.getJSON($.ccio.init('location',$.users[e.auth])+e.auth+'/videos/'+e.ke+'/'+e.mid+'/'+e.file+'/delete',function(d){
+                $.getJSON(href,function(d){
                     $.ccio.log(d)
                 })
             });
@@ -5072,7 +5173,7 @@ $('body')
                                     var n=$.ccio.mon[v.ke+v.mid+user.auth_token];
                                     if(n){v.title=n.name+' - '+(parseInt(v.size)/1000000).toFixed(2)+'mb';}
                                     v.start=v.time;
-                                    v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
+//                                    v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
                                     e.ar.push(v);
                                 }
                             })
@@ -5089,7 +5190,7 @@ $('body')
                                 eventLimit: true,
                                 events:e.ar,
                                 eventClick:function(f){
-                                    $('#temp').html('<div mid="'+f.mid+'" ke="'+f.ke+'" auth="'+user.auth_token+'" file="'+f.filename+'"><div video="launch" href="'+f.href+'"></div></div>').find('[video="launch"]').click();
+                                    $('#temp').html('<div mid="'+f.mid+'" ke="'+f.ke+'" auth="'+user.auth_token+'" file="'+f.filename+'"><div video="launch" href="'+$.ccio.init('videoUrlBuild',f)+'"></div></div>').find('[video="launch"]').click();
                                     $(this).css('border-color', 'red');
                                 }
                             });
@@ -5120,10 +5221,10 @@ $('body')
                         e.tmp+='<tbody>';
                         $.each(d.videos,function(n,v){
                             if(v.status!==0){
-                                var href = $.ccio.init('location',user)+v.href
+                                var href = $.ccio.init('videoUrlBuild',v)
                                 v.mon=$.ccio.mon[v.ke+v.mid+user.auth_token];
                                 v.start=v.time;
-                                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
+//                                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
                                 e.tmp+='<tr data-ke="'+v.ke+'" data-status="'+v.status+'" data-mid="'+v.mid+'" data-file="'+v.filename+'" data-auth="'+v.mon.user.auth_token+'">';
                                 e.tmp+='<td><div class="checkbox"><input id="'+v.ke+'_'+v.filename+'" name="'+v.filename+'" value="'+v.mid+'" type="checkbox"><label for="'+v.ke+'_'+v.filename+'"></label></div></td>';
                                 e.tmp+='<td><span class="livestamp" title="'+v.end+'"></span></td>';
@@ -5135,7 +5236,7 @@ $('body')
                                 e.tmp+='<td><a class="btn btn-sm btn-default preview" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a></td>';
                                 e.tmp+='<td><a class="btn btn-sm btn-primary" video="launch" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a></td>';
                                 e.tmp+='<td><a class="btn btn-sm btn-success" download="'+v.mid+'-'+v.filename+'" href="'+href+'">&nbsp;<i class="fa fa-download"></i>&nbsp;</a></td>';
-                                e.tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-danger" video="delete">&nbsp;<i class="fa fa-trash"></i>&nbsp;</a></td>';
+                                e.tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-danger" video="delete" href="'+$.ccio.init('videoHrefToDelete',href)+'">&nbsp;<i class="fa fa-trash"></i>&nbsp;</a></td>';
 //                                e.tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-warning" video="fix">&nbsp;<i class="fa fa-wrench"></i>&nbsp;</a></td>';
                                 e.tmp+='</tr>';
                             }
