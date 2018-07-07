@@ -2643,7 +2643,7 @@ console.log('%cLeaving the developer console open is fine if you turn off "Netwo
 if(!$.ccio.permissionCheck('monitor_create')){
     $('#add_monitor_button_main').remove()
 }
-$.each(['user_change','monitor_create'],function(n,permission){
+$.each(['user_change','monitor_create','view_logs'],function(n,permission){
     if(!$.ccio.permissionCheck(permission)){
         $('.permission_'+permission).remove()
     }

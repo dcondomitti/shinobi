@@ -5812,7 +5812,7 @@ app.get(['/:auth/logs/:ke','/:auth/logs/:ke/:id'], function (req,res){
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
-        if(user.permissions.get_logs==="0"){
+        if(user.permissions.get_logs==="0" || user.details.sub && user.details.view_logs !== '1'){
             res.end(s.s([]))
             return
         }
