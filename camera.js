@@ -350,7 +350,7 @@ s.txWithSubPermissions = function(z,y,permissionChoices){
                     var valid=0
                     var checked=permissionChoices.length
                     permissionChoices.forEach(function(b){
-                        if(user.details[b].indexOf(z.mid)!==-1){
+                        if(user.details[b] && user.details[b].indexOf(z.mid)!==-1){
                             ++valid
                         }
                     })
@@ -3871,6 +3871,7 @@ var tx;
                                         d.form.details.sub=d.d.sub;
                                         if(d.d.monitors){d.form.details.monitors=d.d.monitors;}
                                         if(d.d.allmonitors){d.form.details.allmonitors=d.d.allmonitors;}
+                                        if(d.d.monitor_create){d.form.details.monitor_create=d.d.monitor_create;}
                                         if(d.d.video_delete){d.form.details.video_delete=d.d.video_delete;}
                                         if(d.d.video_view){d.form.details.video_view=d.d.video_view;}
                                         if(d.d.monitor_edit){d.form.details.monitor_edit=d.d.monitor_edit;}
@@ -4407,10 +4408,24 @@ var tx;
                                     d.value=d.value.concat([d.ke,d.$uid])
                                     s.sqlQuery("UPDATE Users SET "+d.condition.join(',')+" WHERE ke=? AND uid=?",d.value)
                                     s.tx({f:'edit_sub_account',ke:d.ke,uid:d.$uid,mail:d.mail,form:d.form},'ADM_'+d.ke);
+                                    s.sqlQuery("SELECT * FROM API WHERE ke=? AND uid=?",[d.ke,d.$uid],function(err,rows){
+                                        if(rows && rows[0]){
+                                            rows.forEach(function(row){
+                                                delete(s.api[row.code])
+                                            })
+                                        }
+                                    })
                                 break;
                                 case'delete':
                                     s.sqlQuery('DELETE FROM Users WHERE uid=? AND ke=? AND mail=?',[d.$uid,d.ke,d.mail])
-                                    s.sqlQuery('DELETE FROM API WHERE uid=? AND ke=?',[d.$uid,d.ke])
+                                    s.sqlQuery("SELECT * FROM API WHERE ke=? AND uid=?",[d.ke,d.$uid],function(err,rows){
+                                        if(rows && rows[0]){
+                                            rows.forEach(function(row){
+                                                delete(s.api[row.code])
+                                            })
+                                            s.sqlQuery('DELETE FROM API WHERE uid=? AND ke=?',[d.$uid,d.ke])
+                                        }
+                                    })
                                     s.tx({f:'delete_sub_account',ke:d.ke,uid:d.$uid,mail:d.mail},'ADM_'+d.ke);
                                 break;
                             }
@@ -5638,7 +5653,11 @@ app.get(['/:auth/videos/:ke','/:auth/videos/:ke/:id'], function (req,res){
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
-        if(user.permissions.watch_videos==="0"||user.details.sub&&user.details.allmonitors!=='1'&&user.details.video_view.indexOf(req.params.id)===-1){
+        var hasRestrictions = user.details.sub && user.details.allmonitors !== '1'
+        if(
+            user.permissions.watch_videos==="0" ||
+            hasRestrictions && (!user.details.video_view || user.details.video_view.indexOf(req.params.id)===-1)
+        ){
             res.end(s.s([]))
             return
         }
@@ -5889,7 +5908,8 @@ app.all(['/:auth/configureMonitor/:ke/:id','/:auth/configureMonitor/:ke/:id/:f']
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
-        if(req.params.f!=='delete'){
+        var hasRestrictions = user.details.sub && user.details.allmonitors !== '1'
+        if(req.params.f !== 'delete'){
             if(!req.body.data&&!req.query.data){
                 req.ret.msg='No Monitor Data found.'
                 res.end(s.s(req.ret, null, 3))
@@ -5908,7 +5928,10 @@ app.all(['/:auth/configureMonitor/:ke/:id','/:auth/configureMonitor/:ke/:id/:f']
                 }
                 return
             }
-            if(!user.details.sub||user.details.allmonitors==='1'||user.details.monitor_edit.indexOf(req.monitor.mid)>-1){
+            if(!user.details.sub ||
+               user.details.allmonitors === '1' ||
+               hasRestrictions && user.details.monitor_edit.indexOf(req.monitor.mid) >- 1 ||
+               hasRestrictions && user.details.monitor_create === '1'){
                     if(req.monitor&&req.monitor.mid&&req.monitor.name){
                         req.set=[],req.ar=[];
                         req.monitor.mid=req.params.id.replace(/[^\w\s]/gi,'').replace(/ /g,'');
