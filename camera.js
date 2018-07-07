@@ -3846,58 +3846,60 @@ var tx;
                                 if(r&&r[0]){
                                     r=r[0];
                                     d.d=JSON.parse(r.details);
-                                    if(d.d.get_server_log==='1'){
-                                        cn.join('GRPLOG_'+d.ke)
-                                    }else{
-                                        cn.leave('GRPLOG_'+d.ke)
-                                    }
-                                    ///unchangeable from client side, so reset them in case they did.
-                                    d.form.details=JSON.parse(d.form.details)
-                                    //admin permissions
-                                    d.form.details.permissions=d.d.permissions
-                                    d.form.details.edit_size=d.d.edit_size
-                                    d.form.details.edit_days=d.d.edit_days
-                                    d.form.details.use_admin=d.d.use_admin
-                                    d.form.details.use_webdav=d.d.use_webdav
-                                    d.form.details.use_ldap=d.d.use_ldap
-                                    //check
-                                    if(d.d.edit_days=="0"){
-                                        d.form.details.days=d.d.days;
-                                    }
-                                    if(d.d.edit_size=="0"){
-                                        d.form.details.size=d.d.size;
-                                    }
-                                    if(d.d.sub){
-                                        d.form.details.sub=d.d.sub;
-                                        if(d.d.monitors){d.form.details.monitors=d.d.monitors;}
-                                        if(d.d.allmonitors){d.form.details.allmonitors=d.d.allmonitors;}
-                                        if(d.d.monitor_create){d.form.details.monitor_create=d.d.monitor_create;}
-                                        if(d.d.video_delete){d.form.details.video_delete=d.d.video_delete;}
-                                        if(d.d.video_view){d.form.details.video_view=d.d.video_view;}
-                                        if(d.d.monitor_edit){d.form.details.monitor_edit=d.d.monitor_edit;}
-                                        if(d.d.size){d.form.details.size=d.d.size;}
-                                        if(d.d.days){d.form.details.days=d.d.days;}
-                                        delete(d.form.details.mon_groups)
-                                    }
-                                    var newSize = d.form.details.size
-                                    d.form.details=JSON.stringify(d.form.details)
-                                    ///
-                                    d.set=[],d.ar=[];
-                                    if(d.form.pass&&d.form.pass!==''){d.form.pass=s.md5(d.form.pass);}else{delete(d.form.pass)};
-                                    delete(d.form.password_again);
-                                    d.for=Object.keys(d.form);
-                                    d.for.forEach(function(v){
-                                        d.set.push(v+'=?'),d.ar.push(d.form[v]);
-                                    });
-                                    d.ar.push(d.ke),d.ar.push(d.uid);
-                                    s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE ke=? AND uid=?',d.ar,function(err,r){
-                                        if(!d.d.sub){
-                                            s.group[d.ke].sizeLimit = parseFloat(newSize)
-                                            delete(s.group[d.ke].webdav)
-                                            s.init('apps',d)
+                                    if(!d.d.sub || d.d.user_change === "1"){
+                                        if(d.d.get_server_log==='1'){
+                                            cn.join('GRPLOG_'+d.ke)
+                                        }else{
+                                            cn.leave('GRPLOG_'+d.ke)
                                         }
-                                        tx({f:'user_settings_change',uid:d.uid,ke:d.ke,form:d.form});
-                                    });
+                                        ///unchangeable from client side, so reset them in case they did.
+                                        d.form.details=JSON.parse(d.form.details)
+                                        //admin permissions
+                                        d.form.details.permissions=d.d.permissions
+                                        d.form.details.edit_size=d.d.edit_size
+                                        d.form.details.edit_days=d.d.edit_days
+                                        d.form.details.use_admin=d.d.use_admin
+                                        d.form.details.use_webdav=d.d.use_webdav
+                                        d.form.details.use_ldap=d.d.use_ldap
+                                        //check
+                                        if(d.d.edit_days=="0"){
+                                            d.form.details.days=d.d.days;
+                                        }
+                                        if(d.d.edit_size=="0"){
+                                            d.form.details.size=d.d.size;
+                                        }
+                                        if(d.d.sub){
+                                            d.form.details.sub=d.d.sub;
+                                            if(d.d.monitors){d.form.details.monitors=d.d.monitors;}
+                                            if(d.d.allmonitors){d.form.details.allmonitors=d.d.allmonitors;}
+                                            if(d.d.monitor_create){d.form.details.monitor_create=d.d.monitor_create;}
+                                            if(d.d.video_delete){d.form.details.video_delete=d.d.video_delete;}
+                                            if(d.d.video_view){d.form.details.video_view=d.d.video_view;}
+                                            if(d.d.monitor_edit){d.form.details.monitor_edit=d.d.monitor_edit;}
+                                            if(d.d.size){d.form.details.size=d.d.size;}
+                                            if(d.d.days){d.form.details.days=d.d.days;}
+                                            delete(d.form.details.mon_groups)
+                                        }
+                                        var newSize = d.form.details.size
+                                        d.form.details=JSON.stringify(d.form.details)
+                                        ///
+                                        d.set=[],d.ar=[];
+                                        if(d.form.pass&&d.form.pass!==''){d.form.pass=s.md5(d.form.pass);}else{delete(d.form.pass)};
+                                        delete(d.form.password_again);
+                                        d.for=Object.keys(d.form);
+                                        d.for.forEach(function(v){
+                                            d.set.push(v+'=?'),d.ar.push(d.form[v]);
+                                        });
+                                        d.ar.push(d.ke),d.ar.push(d.uid);
+                                        s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE ke=? AND uid=?',d.ar,function(err,r){
+                                            if(!d.d.sub){
+                                                s.group[d.ke].sizeLimit = parseFloat(newSize)
+                                                delete(s.group[d.ke].webdav)
+                                                s.init('apps',d)
+                                            }
+                                            tx({f:'user_settings_change',uid:d.uid,ke:d.ke,form:d.form});
+                                        });
+                                    }
                                 }
                             })
                         break;
