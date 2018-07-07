@@ -6151,6 +6151,95 @@ app.get('/:auth/fileBin/:ke/:id/:year/:month/:day/:file', function (req,res){
     }
     s.auth(req.params,req.fn,res,req);
 });
+//zip videos and get link from fileBin
+app.get('/:auth/zipVideos/:ke', function (req,res){
+    res.header("Access-Control-Allow-Origin",req.headers.origin);
+    var failed = function(resp){
+        res.setHeader('Content-Type', 'application/json');
+        res.end(s.s(resp))
+    }
+    if(req.query.videos && req.query.videos !== ''){
+        s.auth(req.params,function(user){
+            var videosSelected = JSON.parse(req.query.videos)
+            var where = []
+            var values = []
+            videosSelected.forEach(function(video){
+                where.push("(ke=? AND mid=? AND `time`=?)")
+                if(!video.ke)video.ke = req.params.ke
+                values.push(video.ke)
+                values.push(video.mid)
+                var time = s.nameToTime(video.filename)
+                if(req.query.isUTC === 'true'){
+                    time = s.utcToLocal(time)
+                }
+                time = new Date(time)
+                values.push(time)
+            })
+            s.sqlQuery('SELECT * FROM Videos WHERE '+where.join(' OR '),values,function(err,r){
+                var resp = {ok:false}
+                if(r && r[0]){
+                    resp.ok = true
+                    var zipDownload = null
+                    var tempFiles = []
+                    var fileId = s.gid()
+                    var fileBinDir = s.dir.fileBin+req.params.ke+'/'
+                    var tempScript = s.dir.streams+req.params.ke+'/'+fileId+'.sh'
+                    var zippedFilename = s.formattedTime()+'-'+fileId+'-Shinobi_Recordings.zip'
+                    var zippedFile = fileBinDir+zippedFilename
+                    var script = 'cd '+fileBinDir+' && zip -9 -r '+zippedFile
+                    res.on('close', () => {
+                        if(zipDownload && zipDownload.destroy){
+                            zipDownload.destroy()
+                        }
+                        fs.unlink(zippedFile);
+                    })
+                    if(!fs.existsSync(fileBinDir)){
+                        fs.mkdirSync(fileBinDir);
+                    }
+                    r.forEach(function(video){
+                        timeFormatted = s.formattedTime(video.time)
+                        video.filename = timeFormatted+'.'+video.ext
+                        var dir = s.video('getDir',video)+video.filename
+                        var tempVideoFile = timeFormatted+' - '+video.mid+'.'+video.ext
+                        fs.writeFileSync(fileBinDir+tempVideoFile, fs.readFileSync(dir))
+                        tempFiles.push(fileBinDir+tempVideoFile)
+                        script += ' "'+tempVideoFile+'"'
+                    })
+                    console.log(script)
+                    fs.writeFileSync(tempScript,script,'utf8')
+                    var zipCreate = spawn('sh',(tempScript).split(' '),{detached: true})
+                    zipCreate.stderr.on('data',function(data){
+                        s.log({ke:req.params.ke,mid:'$USER'},{title:'Zip Create Error',msg:data.toString()})
+                    })
+                    zipCreate.on('exit',function(data){
+                        fs.unlinkSync(tempScript)
+                        tempFiles.forEach(function(file){
+                            fs.unlink(file,function(){})
+                        })
+                        res.setHeader('Content-Disposition', 'attachment; filename="'+zippedFilename+'"')
+                        var zipDownload = fs.createReadStream(zippedFile)
+                        zipDownload.pipe(res)
+                        zipDownload.on('error', function (error) {
+                            s.log({ke:req.params.ke,mid:'$USER'},{title:'Zip Download Error',msg:error.toString()})
+                            if(zipDownload && zipDownload.destroy){
+                                zipDownload.destroy()
+                            }
+                        });
+                        zipDownload.on('close', function () {
+                            res.end()
+                            zipDownload.destroy();
+                            fs.unlinkSync(zippedFile);
+                        });
+                    })
+                }else{
+                    failed({ok:false,msg:'No Videos Found'})
+                }
+            })
+        },res,req);
+    }else{
+        failed({ok:false,msg:'"videos" query variable is missing from request.'})
+    }
+});
 // Get video file
 app.get('/:auth/videos/:ke/:id/:file', function (req,res){
     s.auth(req.params,function(user){

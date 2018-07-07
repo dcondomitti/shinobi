@@ -102,6 +102,7 @@ Courthouse Vancouver Robson Square
     Node.js - https://nodejs.org/en/
     MariaDB - https://mariadb.org/
     FFmpeg - https://www.ffmpeg.org/
+    request - https://www.npmjs.com/package/request
     Express (npm) - https://expressjs.com/ https://www.npmjs.com/package/express
     EJS (npm) - http://ejs.co/ https://www.npmjs.com/package/ejs
     pam-diff (npm) (Motion Detector) - https://github.com/kevinGodell/pam-diff

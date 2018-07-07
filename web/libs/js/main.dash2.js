@@ -12,6 +12,20 @@ $.ccio={
     fr:$('#files_recent'),
     mon:{}
 };
+$.ccio.permissionCheck = function(monitorId,toCheck){
+    var details = $user.details
+    if(details.sub && details.allmonitors === '0'){
+        var chosenValue = details[toCheck]
+        if(details[toCheck] instanceof Array && chosenValue.indexOf(monitorId) > -1){
+            return true
+        }else if(chosenValue === '1'){
+            return true
+        }
+    }else{
+        return true
+    }
+    return false
+}
 $.ccio.downloadJSON = function(jsonToDownload,filename,errorResponse){
     var arr = jsonToDownload;
     if(arr.length===0 && errorResponse){
@@ -922,23 +936,90 @@ switch($user.details.lang){
                 tmp+='<div><span class="monitor_name">'+d.name+'</span><span class="monitor_not_record_copy">, <%-cleanLang(lang['Recording FPS'])%> : <span class="monitor_fps">'+d.fps+'</span></span></div>';
                 tmp+='</div>';
                 tmp+='<div class="btn-group btn-group-sm">'//start of btn list
-                    $.each([
-                        {label:"<%-cleanLang(lang.Snapshot)%>",attr:'monitor="snapshot"',class:'primary',icon:'camera'},
-                        {label:"<%-cleanLang(lang['Show Logs'])%>",attr:'monitor="show_data"',class:'warning',icon:'exclamation-triangle'},
-//                        {label:"<%-cleanLang(lang['Show Logs'])%>",attr:'class_toggle="show_data" data-target="'+dataTarget+'"',class:'warning',icon:'exclamation-triangle'},
-                        {label:"<%-cleanLang(lang.Control)%>",attr:'monitor="control_toggle"',class:'default arrows',icon:'arrows'},
-                        {label:"<%-cleanLang(lang['Status Indicator'])%>",attr:'monitor="watch_on"',class:'success signal',icon:'plug'},
-                        {label:"<%-cleanLang(lang['Detector'])%>",attr:'monitor="motion"',class:'warning',icon:'grav'},
-                        {label:"<%-cleanLang(lang.Pop)%>",attr:'monitor="pop"',class:'default',icon:'external-link'},
-//                        {label:"<%-cleanLang(lang.Magnify)%>",attr:'monitor="magnify"',class:'default',icon:'search-plus'},
-                        {label:"<%-cleanLang(lang.Calendar)%>",attr:'monitor="calendar"',class:'default',icon:'calendar'},
-                        {label:"<%-cleanLang(lang['Power Viewer'])%>",attr:'monitor="powerview"',class:'default',icon:'map-marker'},
-                        {label:"<%-cleanLang(lang['Time-lapse'])%>",attr:'monitor="timelapse"',class:'default',icon:'angle-double-right'},
-                        {label:"<%-cleanLang(lang['Videos List'])%>",attr:'monitor="videos_table"',class:'default',icon:'film'},
-                        {label:"<%-cleanLang(lang['Monitor Settings'])%>",attr:'monitor="edit"',class:'default permission_monitor_edit',icon:'wrench'},
-                        {label:"<%-cleanLang(lang.Fullscreen)%>",attr:'monitor="fullscreen"',class:'default',icon:'arrows-alt'},
-                        {label:"<%-cleanLang(lang.Close)%>",attr:'monitor="watch_off"',class:'danger',icon:'times'},
-                    ],function(n,v){
+                    var buttons = {
+                       "Snapshot": {
+                          "label": "Snapshot",
+                          "attr": "monitor=\"snapshot\"",
+                          "class": "primary",
+                          "icon": "camera"
+                       },
+                       "Show Logs": {
+                          "label": "Show Logs",
+                          "attr": "monitor=\"show_data\"",
+                          "class": "warning",
+                          "icon": "exclamation-triangle"
+                       },
+                       "Control": {
+                          "label": "Control",
+                          "attr": "monitor=\"control_toggle\"",
+                          "class": "default arrows",
+                          "icon": "arrows"
+                       },
+                       "Status Indicator": {
+                          "label": "Status Indicator",
+                          "attr": "monitor=\"watch_on\"",
+                          "class": "success signal",
+                          "icon": "plug"
+                       },
+                       "Detector": {
+                          "label": "Detector",
+                          "attr": "monitor=\"motion\"",
+                          "class": "warning",
+                          "icon": "grav"
+                       },
+                       "Pop": {
+                          "label": "Pop",
+                          "attr": "monitor=\"pop\"",
+                          "class": "default",
+                          "icon": "external-link"
+                       },
+                       "Calendar": {
+                          "label": "Calendar",
+                          "attr": "monitor=\"calendar\"",
+                          "class": "default ",
+                          "icon": "calendar"
+                       },
+                       "Power Viewer": {
+                          "label": "Power Viewer",
+                          "attr": "monitor=\"powerview\"",
+                          "class": "default",
+                          "icon": "map-marker"
+                       },
+                       "Time-lapse": {
+                          "label": "Time-lapse",
+                          "attr": "monitor=\"timelapse\"",
+                          "class": "default",
+                          "icon": "angle-double-right"
+                       },
+                       "Videos List": {
+                          "label": "Videos List",
+                          "attr": "monitor=\"videos_table\"",
+                          "class": "default",
+                          "icon": "film"
+                       },
+                       "Monitor Settings": {
+                          "label": "Monitor Settings",
+                          "attr": "monitor=\"edit\"",
+                          "class": "default permission_monitor_edit",
+                          "icon": "wrench"
+                       },
+                       "Fullscreen": {
+                          "label": "Fullscreen",
+                          "attr": "monitor=\"fullscreen\"",
+                          "class": "default",
+                          "icon": "arrows-alt"
+                       },
+                       "Close": {
+                          "label": "Close",
+                          "attr": "monitor=\"watch_off\"",
+                          "class": "danger",
+                          "icon": "times"
+                       }
+                    }
+//                    if($.ccio.permissionCheck(d.mid,'video_view')){
+//                        
+//                    }
+                    $.each(buttons,function(n,v){
                         tmp+='<a class="btn btn-'+v.class+'" '+v.attr+' title="'+v.label+'"><i class="fa fa-'+v.icon+'"></i></a>'
                     })
                 tmp+='</div>';//end of btn list
@@ -1802,6 +1883,7 @@ $.ccio.globalWebsocket=function(d,user){
                 delete($.timelapse.currentVideosArray.videos[$.timelapse.currentVideos[d.filename].position])
                 $.timelapse.drawTimeline(false)
             }
+            if($.vidview.loadedVideos && $.vidview.loadedVideos[d.filename])delete($.vidview.loadedVideos[d.filename])
         break;
         case'video_build_success':
             if(!d.mid){d.mid=d.id;};d.status=1;
@@ -4068,25 +4150,76 @@ $.vidview.f.submit(function(e){
 $('#videos_viewer_limit,#videos_viewer_daterange').change(function(){
     $.vidview.f.submit()
 })
-$.vidview.e.find('.delete_selected').click(function(e){
-    e.s={}
+$.vidview.getSelected = function(getArray){
+    var arr = {}
+    if(getArray){
+        arr = []
+    }
     $.vidview.f.find('[data-ke] input:checked').each(function(n,v){
         v=$(v).parents('tr')
-        e.s[v.attr('data-file')]={mid:v.attr('data-mid'),auth:v.attr('data-auth')}
+        if(getArray){
+            arr.push({filename:v.attr('data-file'),mid:v.attr('data-mid'),auth:v.attr('data-auth')})
+        }else{
+            arr[v.attr('data-file')]={mid:v.attr('data-mid'),auth:v.attr('data-auth')}
+        }
     })
+    return arr
+}
+$.vidview.e.find('.delete_selected').click(function(){
+    e = {}
+    e.s = $.vidview.getSelected()
+    if(Object.keys(e.s).length === 0){
+        $.ccio.init('note',{
+            title:'No Videos Selected',
+            text:'You must choose at least one video.',
+            type:'error'
+        },$user);
+        return
+    }
     $.confirm.e.modal('show');
     $.confirm.title.text('<%-cleanLang(lang['Delete Selected Videos'])%>')
     e.html='<%-cleanLang(lang.DeleteSelectedVideosMsg)%><div style="margin-bottom:15px"></div>'
+    var deleteLinks = []
     $.each(e.s,function(n,v){
         e.html+=n+'<br>';
+        if($.vidview.loadedVideos[n])deleteLinks.push($.vidview.loadedVideos[n].links.deleteVideo)
     })
     $.confirm.body.html(e.html)
     $.confirm.click({title:'Delete Video',class:'btn-danger'},function(){
-        $.each(e.s,function(n,v){
-            $.getJSON($.ccio.init('location',$.users[v.auth])+v.auth+'/videos/'+$user.ke+'/'+v.mid+'/'+n+'/delete',function(d){
+        $.each(deleteLinks,function(n,link){
+            $.getJSON(link,function(d){
                 $.ccio.log(d)
             })
         })
+    });
+})
+$.vidview.e.find('.export_selected').click(function(){
+    e = {}
+    var videos = $.vidview.getSelected(true)
+    if(videos.length === 0){
+        $.ccio.init('note',{
+            title:'No Videos Selected',
+            text:'You must choose at least one video.',
+            type:'error'
+        },$user);
+        return
+    }
+    $.confirm.e.modal('show');
+    $.confirm.title.text('<%-cleanLang(lang['Export Selected Videos'])%>')
+    var html = '<%-cleanLang(lang.ExportSelectedVideosMsg)%><div style="margin-bottom:15px"></div>'
+    $.each(videos,function(n,v){
+        html+=v.filename+'<br>';
+    })
+    $.confirm.body.html(html)
+    $.confirm.click({title:'Export Video',class:'btn-danger'},function(){
+        var queryVariables = []
+        queryVariables.push('videos='+JSON.stringify(videos))
+        if(<%-config.useUTC%> === true){
+            queryVariables.push('isUTC=true')
+        }
+        console.log(queryVariables)
+        var downloadZip = $.ccio.init('location',$user)+$user.auth_token+'/zipVideos/'+$user.ke+'?'+queryVariables.join('&')
+        $('#temp').html('<iframe>a</iframe>').find('iframe').attr('src',downloadZip);
     });
 })
 $.vidview.pages.on('click','[page]',function(e){
@@ -5161,6 +5294,7 @@ $('body')
                 d.fn()
                 $.vidview.pages.find('[page="'+$.vidview.current_page+'"]').addClass('active')
                 e.v=$.vidview.e;
+                $.vidview.loadedVideos = {}
                 e.b=e.v.modal('show').find('.modal-body .contents');
                 e.t=e.v.find('.modal-title i');
                 switch(e.a){
@@ -5169,7 +5303,8 @@ $('body')
                        e.ar=[];
                         if(d.videos[0]){
                             $.each(d.videos,function(n,v){
-                                if(v.status!==0){
+                                if(v.status !== 0){
+                                    $.vidview.loadedVideos[v.filename] = Object.assign(v,{})
                                     var n=$.ccio.mon[v.ke+v.mid+user.auth_token];
                                     if(n){v.title=n.name+' - '+(parseInt(v.size)/1000000).toFixed(2)+'mb';}
                                     v.start=v.time;
@@ -5221,13 +5356,14 @@ $('body')
                         e.tmp+='<tbody>';
                         $.each(d.videos,function(n,v){
                             if(v.status!==0){
+                                $.vidview.loadedVideos[v.filename] = Object.assign(v,{})
                                 var href = $.ccio.init('videoUrlBuild',v)
                                 v.mon=$.ccio.mon[v.ke+v.mid+user.auth_token];
                                 v.start=v.time;
 //                                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
                                 e.tmp+='<tr data-ke="'+v.ke+'" data-status="'+v.status+'" data-mid="'+v.mid+'" data-file="'+v.filename+'" data-auth="'+v.mon.user.auth_token+'">';
                                 e.tmp+='<td><div class="checkbox"><input id="'+v.ke+'_'+v.filename+'" name="'+v.filename+'" value="'+v.mid+'" type="checkbox"><label for="'+v.ke+'_'+v.filename+'"></label></div></td>';
-                                e.tmp+='<td><span class="livestamp" title="'+v.end+'"></span></td>';
+                                e.tmp+='<td><span class="livestamp" title="'+$.ccio.timeObject(v.end).format('YYYY-MM-DD HH:mm:ss')+'"></span></td>';
                                 e.tmp+='<td title="'+v.end+'">'+$.ccio.timeObject(v.end).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
                                 e.tmp+='<td title="'+v.time+'">'+$.ccio.timeObject(v.time).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
                                 e.tmp+='<td>'+v.mon.name+'</td>';
