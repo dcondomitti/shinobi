@@ -19,21 +19,12 @@
 <%= details.css %>
 </style>
 <style>
-<% if(details.sub&&details.allmonitors==='0'){
-    if(details.monitor_edit&&details.monitor_edit!==''){
-        details.monitor_edit.forEach(function(v,n){ %>
-            [mid="<%= v %>"] .permission_monitor_edit{display:inline-block}
-  <% 
-        })
-    }
-    if(details.video_delete&&details.video_delete!==''){
-        details.video_delete.forEach(function(v,n){ %>
-            [mid="<%= v %>"] .permission_video_delete{display:inline-block}
-  <%
-        })
-    }
+<% if(details.video_delete&&details.video_delete!==''){
+    details.video_delete.forEach(function(v,n){ %>
+        [mid="<%= v %>"] .permission_video_delete{display:inline-block}
+<%
+    })
 }else{ %>
-    .permission_video_delete,.permission_monitor_edit{display:inline-block}
     th.permission_video_delete,td.permission_video_delete{display:table-cell}
 <% } %>
 </style>
@@ -50,7 +41,7 @@
         <div class="mdl-layout__header-row">
         <ul class="nav navbar-nav">
             <li title="<%-lang['Toggle Sidebar']%>" class_toggle="hide-side" data-target=".mdl-js-layout"><a>&nbsp;<i class="fa fa-bars"></i>&nbsp;</a></li>
-            <li title="<%-lang['Add Monitor']%>" mid="" ke="" class="hidden-xs permission_monitor_edit"><a monitor="edit">&nbsp;<i class="fa fa-plus"></i>&nbsp;</a></li>
+            <li title="<%-lang['Add Monitor']%>" mid="" ke="" class="hidden-xs" id="add_monitor_button_main"><a monitor="edit">&nbsp;<i class="fa fa-plus"></i>&nbsp;</a></li>
             <li title="<%-lang['Power Video Viewer']%>" class="hidden-xs" mid="" ke=""><a monitor="powerview">&nbsp;<i class="fa fa-map-marker"></i>&nbsp;</a></li>
             <li>
                 <a title="<%-lang['Monitor Groups']%>" id="group_list_button" class="mdl-js-button">&nbsp;<i class="fa fa-video-camera"></i>&nbsp;</a>

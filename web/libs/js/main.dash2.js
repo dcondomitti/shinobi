@@ -12,7 +12,7 @@ $.ccio={
     fr:$('#files_recent'),
     mon:{}
 };
-$.ccio.permissionCheck = function(monitorId,toCheck){
+$.ccio.permissionCheck = function(toCheck,monitorId){
     var details = $user.details
     if(details.sub && details.allmonitors === '0'){
         var chosenValue = details[toCheck]
@@ -913,7 +913,46 @@ switch($user.details.lang){
             break;
             case 1://monitor icon
                 d.src=placeholder.getData(placeholder.plcimg({bgcolor:'#b57d00',text:'...'}));
-                tmp+='<div auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" title="'+d.mid+' : '+d.name+'" class="monitor_block glM'+d.mid+user.auth_token+' col-md-4"><img monitor="watch" class="snapshot" src="'+d.src+'"><div class="box"><div class="title monitor_name truncate">'+d.name+'</div><div class="list-data"><div class="monitor_mid">'+d.mid+'</div><div><b><%-cleanLang(lang['Save as'])%> :</b> <span class="monitor_ext">'+d.ext+'</span></div><div><b>Status :</b> <span class="monitor_status">'+d.status+'</span></div></div><div class="icons text-center"><div class="btn-group"><a class="btn btn-xs btn-default permission_monitor_edit" monitor="edit"><i class="fa fa-wrench"></i></a> <a monitor="videos_table" class="btn btn-xs btn-default"><i class="fa fa-film"></i></a> <a monitor="pop" class="btn btn-xs btn-success"><i class="fa fa-external-link"></i></a></div></div></div></div>';
+                tmp+='<div auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" title="'+d.mid+' : '+d.name+'" class="monitor_block glM'+d.mid+user.auth_token+' col-md-4"><img monitor="watch" class="snapshot" src="'+d.src+'"><div class="box"><div class="title monitor_name truncate">'+d.name+'</div><div class="list-data"><div class="monitor_mid">'+d.mid+'</div><div><b><%-cleanLang(lang['Save as'])%> :</b> <span class="monitor_ext">'+d.ext+'</span></div><div><b>Status :</b> <span class="monitor_status">'+d.status+'</span></div></div><div class="icons text-center">'
+                tmp+='<div class="btn-group btn-group-xs">'
+                    var buttons = {
+                       "Pop": {
+                          "label": "Pop",
+                          "attr": "monitor=\"pop\"",
+                          "class": "default",
+                          "icon": "external-link"
+                       },
+                       "Power Viewer": {
+                          "label": "Power Viewer",
+                          "attr": "monitor=\"powerview\"",
+                          "class": "default",
+                          "icon": "map-marker"
+                       },
+                       "Videos List": {
+                          "label": "Videos List",
+                          "attr": "monitor=\"videos_table\"",
+                          "class": "default",
+                          "icon": "film"
+                       },
+                       "Monitor Settings": {
+                          "label": "Monitor Settings",
+                          "attr": "monitor=\"edit\"",
+                          "class": "default",
+                          "icon": "wrench"
+                       }
+                    }
+                    if(!$.ccio.permissionCheck('video_view',d.mid)){
+                        delete(buttons["Videos List"])
+                        delete(buttons["Power Viewer"])
+                    }
+                    if(!$.ccio.permissionCheck('monitor_edit',d.mid)){
+                        delete(buttons["Monitor Settings"])
+                    }
+                    $.each(buttons,function(n,v){
+                        tmp+='<a class="btn btn-'+v.class+'" '+v.attr+' title="'+v.label+'"><i class="fa fa-'+v.icon+'"></i></a>'
+                    })
+                tmp+='</div>\
+                </div></div></div>';
                 delete(d.src);
             break;
             case 2://monitor stream
@@ -961,12 +1000,6 @@ switch($user.details.lang){
                           "class": "success signal",
                           "icon": "plug"
                        },
-                       "Detector": {
-                          "label": "Detector",
-                          "attr": "monitor=\"motion\"",
-                          "class": "warning",
-                          "icon": "grav"
-                       },
                        "Pop": {
                           "label": "Pop",
                           "attr": "monitor=\"pop\"",
@@ -1000,7 +1033,7 @@ switch($user.details.lang){
                        "Monitor Settings": {
                           "label": "Monitor Settings",
                           "attr": "monitor=\"edit\"",
-                          "class": "default permission_monitor_edit",
+                          "class": "default",
                           "icon": "wrench"
                        },
                        "Fullscreen": {
@@ -1016,9 +1049,15 @@ switch($user.details.lang){
                           "icon": "times"
                        }
                     }
-//                    if($.ccio.permissionCheck(d.mid,'video_view')){
-//                        
-//                    }
+                    if(!$.ccio.permissionCheck('video_view',d.mid)){
+                        delete(buttons["Videos List"])
+                        delete(buttons["Time-lapse"])
+                        delete(buttons["Power Viewer"])
+                        delete(buttons["Calendar"])
+                    }
+                    if(!$.ccio.permissionCheck('monitor_edit',d.mid)){
+                        delete(buttons["Monitor Settings"])
+                    }
                     $.each(buttons,function(n,v){
                         tmp+='<a class="btn btn-'+v.class+'" '+v.attr+' title="'+v.label+'"><i class="fa fa-'+v.icon+'"></i></a>'
                     })
@@ -2601,6 +2640,9 @@ $.ccio.cx=function(x,user){
 $(document).ready(function(e){
 console.log("%cWarning!", "font: 2em monospace; color: red;");
 console.log('%cLeaving the developer console open is fine if you turn off "Network Recording". This is because it will keep a log of all files, including frames and videos segments.', "font: 1.2em monospace; ");
+if(!$.ccio.permissionCheck('monitor_create')){
+    $('#add_monitor_button_main').remove()
+}
 //global form functions
 $.ccio.form={};
 $.ccio.form.details=function(e){
@@ -3166,7 +3208,7 @@ $.multimon.e.on('shown.bs.modal',function() {
         tmp+='<td><div class="checkbox"><input id="multimonCheck_'+v.ke+v.mid+v.user.auth_token+'" type="checkbox" name="'+v.ke+v.mid+v.user.auth_token+'" value="1"><label for="multimonCheck_'+v.ke+v.mid+v.user.auth_token+'"></label></div></td>'
         tmp+='<td><a monitor="watch"><img class="small-square-img" src="'+img+'"></a></td><td>'+v.name+'<br><small>'+v.mid+'</small></td><td class="monitor_status">'+v.status+'</td><td>'+streamURL+'</td>'
         //buttons
-        tmp+='<td class="text-right"><a title="<%-cleanLang(lang.Pop)%>" monitor="pop" class="btn btn-primary"><i class="fa fa-external-link"></i></a> <a title="<%-cleanLang(lang.Calendar)%>" monitor="calendar" class="btn btn-default"><i class="fa fa-calendar"></i></a> <a title="<%-cleanLang(lang['Power Viewer'])%>" class="btn btn-default" monitor="powerview"><i class="fa fa-map-marker"></i></a> <a title="<%-cleanLang(lang['Time-lapse'])%>" class="btn btn-default" monitor="timelapse"><i class="fa fa-angle-double-right"></i></a> <a title="<%-cleanLang(lang['Videos List'])%>" monitor="videos_table" class="btn btn-default"><i class="fa fa-film"></i></a> <a title="<%-cleanLang(lang['Monitor Settings'])%>" class="btn btn-default permission_monitor_edit" monitor="edit"><i class="fa fa-wrench"></i></a></td>'
+        tmp+='<td class="text-right"><a title="<%-cleanLang(lang.Pop)%>" monitor="pop" class="btn btn-primary"><i class="fa fa-external-link"></i></a> <a title="<%-cleanLang(lang.Calendar)%>" monitor="calendar" class="btn btn-default"><i class="fa fa-calendar"></i></a> <a title="<%-cleanLang(lang['Power Viewer'])%>" class="btn btn-default" monitor="powerview"><i class="fa fa-map-marker"></i></a> <a title="<%-cleanLang(lang['Time-lapse'])%>" class="btn btn-default" monitor="timelapse"><i class="fa fa-angle-double-right"></i></a> <a title="<%-cleanLang(lang['Videos List'])%>" monitor="videos_table" class="btn btn-default"><i class="fa fa-film"></i></a> <a title="<%-cleanLang(lang['Monitor Settings'])%>" class="btn btn-default" monitor="edit"><i class="fa fa-wrench"></i></a></td>'
         tmp+='</tr>'
     })
     $.multimon.table.html(tmp)
