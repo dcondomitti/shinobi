@@ -116,7 +116,6 @@ if(config.databaseType===undefined){config.databaseType='mysql'}
 if(config.pluginKeys===undefined)config.pluginKeys={};
 if(config.databaseLogs===undefined){config.databaseLogs=false}
 if(config.useUTC===undefined){config.useUTC=false}
-if(config.strictDatabase===undefined){config.strictDatabase=false}
 if(config.pipeAddition===undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
 //Web Paths
 if(config.webPaths===undefined){config.webPaths={}}
@@ -241,21 +240,20 @@ s.mergeQueryValues = function(query,values){
     if(!values){values=[]}
     var valuesNotFunction = true;
     if(typeof values === 'function'){
-        var onMoveOn = values;
         var values = [];
         valuesNotFunction = false;
     }
-    if(!onMoveOn){onMoveOn=function(){}}
     if(values&&valuesNotFunction){
         var splitQuery = query.split('?')
         var newQuery = ''
         splitQuery.forEach(function(v,n){
             newQuery += v
-            if(values[n]){
-                if(isNaN(values[n])){
-                    newQuery += "'"+values[n]+"'"
+            var value = values[n]
+            if(value){
+                if(isNaN(value) || value instanceof Date){
+                    newQuery += "'"+value+"'"
                 }else{
-                    newQuery += values[n]
+                    newQuery += value
                 }
             }
         })
@@ -264,7 +262,11 @@ s.mergeQueryValues = function(query,values){
     }
     return newQuery
 }
-s.sqlQuery = function(query,values,onMoveOn,hideLog){
+s.stringToSqlTime = function(value){
+    newValue = new Date(value.replace('T',' '))
+    return newValue
+}
+s.sqlQuery = function(query,values,onMoveOn){
     if(!values){values=[]}
     if(typeof values === 'function'){
         var onMoveOn = values;
@@ -272,11 +274,13 @@ s.sqlQuery = function(query,values,onMoveOn,hideLog){
     }
     if(!onMoveOn){onMoveOn=function(){}}
     var mergedQuery = s.mergeQueryValues(query,values)
-    return s.databaseEngine.raw(query,values)
+    s.debugLog('s.sqlQuery QUERY',mergedQuery)
+    return s.databaseEngine
+        .raw(query,values)
         .asCallback(function(err,r){
-            if(err&&config.databaseLogs){
-                s.systemLog('s.sqlQuery QUERY',query)
-                s.systemLog('s.sqlQuery ERROR',err)
+            if(err){
+                console.log('s.sqlQuery QUERY ERRORED',query)
+                console.log('s.sqlQuery ERROR',err)
             }
             if(onMoveOn && typeof onMoveOn === 'function'){
                 switch(databaseOptions.client){
@@ -291,6 +295,7 @@ s.sqlQuery = function(query,values,onMoveOn,hideLog){
             }
         })
 }
+
 //kill any ffmpeg running
 s.ffmpegKill=function(){
     var cmd=''
@@ -549,7 +554,7 @@ s.log=function(e,x){
 //    s.systemLog('s.log : ',{f:'log',ke:e.ke,mid:e.mid,log:x,time:s.timeObject()},'GRP_'+e.ke)
 }
 //system log
-s.systemLog=function(q,w,e){
+s.systemLog = function(q,w,e){
     if(!w){w=''}
     if(!e){e=''}
     if(config.systemLog===true){
@@ -558,6 +563,17 @@ s.systemLog=function(q,w,e){
             s.tx({f:'log',log:{time:s.timeObject(),ke:'$',mid:'$SYSTEM',time:s.timeObject(),info:s.s({type:q,msg:w})}},'$');
         }
         return console.log(s.timeObject().format(),q,w,e)
+    }
+}
+//system log
+s.debugLog = function(q,w,e){
+    if(!w){w = ''}
+    if(!e){e = ''}
+    if(config.debugLog === true){
+        console.log(s.timeObject().format(),q,w,e)
+        if(config.debugLogVerbose === true){
+            console.log(new Error())
+        }
     }
 }
 //SSL options
@@ -918,15 +934,12 @@ s.video=function(x,e,k){
                 time = e.time
             }
             time = new Date(time)
-            if(config.databaseType !== 'sqlite'){
-                time = moment(time).format('YYYY-MM-DD HH:mm:ss')
-            }
             e.save=[e.id,e.ke,time];
-            s.sqlQuery('SELECT * FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=? LIMIT 1',e.save,function(err,r){
+            s.sqlQuery('SELECT * FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',e.save,function(err,r){
                 if(r&&r[0]){
                     r=r[0]
                     var dir=s.video('getDir',r)
-                    s.sqlQuery('DELETE FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=? LIMIT 1',e.save,function(){
+                    s.sqlQuery('DELETE FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',e.save,function(){
                         fs.stat(dir+filename,function(err,file){
                             if(err){
                                 s.systemLog('File Delete Error : '+e.ke+' : '+' : '+e.mid,err)
@@ -1093,7 +1106,7 @@ s.video=function(x,e,k){
                                             if(!evs)return console.log(err)
                                             evs.forEach(function(ev){
                                                 ev.dir=s.video('getDir',ev)+s.formattedTime(ev.time)+'.'+ev.ext;
-                                                k.del.push('(mid=? AND time=?)');
+                                                k.del.push('(mid=? AND `time`=?)');
                                                 k.ar.push(ev.mid),k.ar.push(ev.time);
                                                 s.file('delete',ev.dir);
                                                 s.init('diskUsedSet',e,-(ev.size/1000000))
@@ -1238,10 +1251,6 @@ s.video=function(x,e,k){
                         k.details.dir = e.details.dir
                     }
                     if(config.useUTC === true)k.details.isUTC = config.useUTC;
-                    if(config.strictDatabase === true){
-                        e.startTime = s.formattedTime(e.startTime)
-                        e.endTime = s.formattedTime(e.endTime)
-                    }
                     var save = [
                         e.mid,
                         e.ke,
@@ -2442,9 +2451,7 @@ s.camera=function(x,e,cn,tx){
                 e.details.fatal_max = parseFloat(e.details.fatal_max)
             }
             var errorFatal = function(errorMessage){
-                if(config.debugSystem === true){
-                    console.log(errorMessage,(new Error()).stack)
-                }
+                s.debugLog(errorMessage)
                 clearTimeout(s.group[e.ke].mon[e.id].err_fatal_timeout);
                 ++errorFatalCount;
                 if(s.group[e.ke].mon[e.id].started===1){
@@ -2518,7 +2525,7 @@ s.camera=function(x,e,cn,tx){
                         cutoff *= 100
                     }
                     s.group[e.ke].mon[e.id].checker=setTimeout(function(){
-                        if(s.group[e.ke].mon[e.id].started === 1){
+                        if(s.group[e.ke].mon[e.id].started === 1 && s.group[e.ke].mon_conf[e.id].mode === 'record'){
                             launchMonitorProcesses();
                             s.init('monitorStatus',{id:e.id,ke:e.ke,status:lang.Restarting});
                             s.log(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
@@ -3901,15 +3908,15 @@ var tx;
                             switch(d.fff){
                                 case'videos&events':
                                     if(!d.eventLimit){
-                                        d.eventLimit=500
+                                        d.eventLimit = 500
                                     }else{
                                         d.eventLimit = parseInt(d.eventLimit);
                                     }
                                     if(!d.eventStartDate&&d.startDate){
-                                        d.eventStartDate=d.startDate
+                                        d.eventStartDate = s.stringToSqlTime(d.startDate)
                                     }
                                     if(!d.eventEndDate&&d.endDate){
-                                        d.eventEndDate=d.endDate
+                                        d.eventEndDate = s.stringToSqlTime(d.endDate)
                                     }
                                     var monitorQuery = ''
                                     var monitorValues = []
@@ -3932,15 +3939,13 @@ var tx;
                                         var eventQuery = 'SELECT * FROM Events WHERE ke=?';
                                         var eventQueryValues = [cn.ke];
                                         if(d.eventStartDate&&d.eventStartDate!==''){
-                                            d.eventStartDate=d.eventStartDate.replace('T',' ')
                                             if(d.eventEndDate&&d.eventEndDate!==''){
-                                                d.eventEndDate=d.eventEndDate.replace('T',' ')
                                                 eventQuery+=' AND `time` >= ? AND `time` <= ?';
-                                                eventQueryValues.push(decodeURIComponent(d.eventStartDate))
-                                                eventQueryValues.push(decodeURIComponent(d.eventEndDate))
+                                                eventQueryValues.push(d.eventStartDate)
+                                                eventQueryValues.push(d.eventEndDate)
                                             }else{
                                                 eventQuery+=' AND `time` >= ?';
-                                                eventQueryValues.push(decodeURIComponent(d.eventStartDate))
+                                                eventQueryValues.push(d.eventStartDate)
                                             }
                                         }
                                         if(monitorValues.length>0){
@@ -3969,10 +3974,10 @@ var tx;
                                         eventQuery.push()
                                     }
                                     if(!d.videoStartDate&&d.startDate){
-                                        d.videoStartDate=d.startDate
+                                        d.videoStartDate = s.stringToSqlTime(d.startDate)
                                     }
                                     if(!d.videoEndDate&&d.endDate){
-                                        d.videoEndDate=d.endDate
+                                        d.videoEndDate = s.stringToSqlTime(d.endDate)
                                     }
                                      var getVideos = function(callback){
                                         var videoQuery='SELECT * FROM Videos WHERE ke=?';
@@ -3986,19 +3991,15 @@ var tx;
                                             }
                                             switch(true){
                                                 case(d.videoStartDate&&d.videoStartDate!==''&&d.videoEndDate&&d.videoEndDate!==''):
-                                                    d.videoStartDate=d.videoStartDate.replace('T',' ')
-                                                    d.videoEndDate=d.videoEndDate.replace('T',' ')
                                                     videoQuery+=' AND `time` '+d.videoStartDateOperator+' ? AND `end` '+d.videoEndDateOperator+' ?';
                                                     videoQueryValues.push(d.videoStartDate)
                                                     videoQueryValues.push(d.videoEndDate)
                                                 break;
                                                 case(d.videoStartDate&&d.videoStartDate!==''):
-                                                    d.videoStartDate=d.videoStartDate.replace('T',' ')
                                                     videoQuery+=' AND `time` '+d.videoStartDateOperator+' ?';
                                                     videoQueryValues.push(d.videoStartDate)
                                                 break;
                                                 case(d.videoEndDate&&d.videoEndDate!==''):
-                                                    d.videoEndDate=d.videoEndDate.replace('T',' ')
                                                     videoQuery+=' AND `end` '+d.videoEndDateOperator+' ?';
                                                     videoQueryValues.push(d.videoEndDate)
                                                 break;
@@ -4569,7 +4570,7 @@ var tx;
                 }
                 s.log({ke:cn.ke,mid:'$USER'},{type:lang['Websocket Disconnected'],msg:{mail:s.group[cn.ke].users[cn.auth].mail,id:cn.uid,ip:cn.ip}})
                 delete(s.group[cn.ke].users[cn.auth]);
-                delete(s.group[cn.ke].dashcamUsers[cn.auth]);
+                if(s.group[cn.ke].dashcamUsers && s.group[cn.ke].dashcamUsers[cn.auth])delete(s.group[cn.ke].dashcamUsers[cn.auth]);
             }
         }
         if(cn.pluginEngine){
@@ -5667,6 +5668,12 @@ app.get(['/:auth/videos/:ke','/:auth/videos/:ke/:id'], function (req,res){
             }
         }
         if(req.query.start||req.query.end){
+            if(req.query.start && req.query.start !== ''){
+                req.query.start = s.stringToSqlTime(req.query.start)
+            }
+            if(req.query.end && req.query.end !== ''){
+                req.query.end = s.stringToSqlTime(req.query.end)
+            }
             if(!req.query.startOperator||req.query.startOperator==''){
                 req.query.startOperator='>='
             }
@@ -5675,8 +5682,6 @@ app.get(['/:auth/videos/:ke','/:auth/videos/:ke/:id'], function (req,res){
             }
             switch(true){
                 case(req.query.start&&req.query.start!==''&&req.query.end&&req.query.end!==''):
-                    req.query.start=req.query.start.replace('T',' ')
-                    req.query.end=req.query.end.replace('T',' ')
                     req.sql+=' AND `time` '+req.query.startOperator+' ? AND `end` '+req.query.endOperator+' ?';
                     req.count_sql+=' AND `time` '+req.query.startOperator+' ? AND `end` '+req.query.endOperator+' ?';
                     req.ar.push(req.query.start)
@@ -5685,14 +5690,12 @@ app.get(['/:auth/videos/:ke','/:auth/videos/:ke/:id'], function (req,res){
                     req.count_ar.push(req.query.end)
                 break;
                 case(req.query.start&&req.query.start!==''):
-                    req.query.start=req.query.start.replace('T',' ')
                     req.sql+=' AND `time` '+req.query.startOperator+' ?';
                     req.count_sql+=' AND `time` '+req.query.startOperator+' ?';
                     req.ar.push(req.query.start)
                     req.count_ar.push(req.query.start)
                 break;
                 case(req.query.end&&req.query.end!==''):
-                    req.query.end=req.query.end.replace('T',' ')
                     req.sql+=' AND `end` '+req.query.endOperator+' ?';
                     req.count_sql+=' AND `end` '+req.query.endOperator+' ?';
                     req.ar.push(req.query.end)
@@ -5712,17 +5715,17 @@ app.get(['/:auth/videos/:ke','/:auth/videos/:ke/:id'], function (req,res){
                 res.end(s.s({total:0,limit:req.query.limit,skip:0,videos:[]}, null, 3));
                 return
             }
-        s.sqlQuery(req.count_sql,req.count_ar,function(err,count){
-            s.video('linkBuild',r,req.params.auth)
-            if(req.query.limit.indexOf(',')>-1){
-                req.skip=parseInt(req.query.limit.split(',')[0])
-                req.query.limit=parseInt(req.query.limit.split(',')[0])
-            }else{
-                req.skip=0
-                req.query.limit=parseInt(req.query.limit)
-            }
-            res.end(s.s({isUTC:config.useUTC,total:count[0]['COUNT(*)'],limit:req.query.limit,skip:req.skip,videos:r}, null, 3));
-        })
+            s.sqlQuery(req.count_sql,req.count_ar,function(err,count){
+                s.video('linkBuild',r,req.params.auth)
+                if(req.query.limit.indexOf(',')>-1){
+                    req.skip=parseInt(req.query.limit.split(',')[0])
+                    req.query.limit=parseInt(req.query.limit.split(',')[0])
+                }else{
+                    req.skip=0
+                    req.query.limit=parseInt(req.query.limit)
+                }
+                res.end(s.s({isUTC:config.useUTC,total:count[0]['COUNT(*)'],limit:req.query.limit,skip:req.skip,videos:r}, null, 3));
+            })
         })
     },res,req);
 });
@@ -5755,9 +5758,9 @@ app.get(['/:auth/events/:ke','/:auth/events/:ke/:id','/:auth/events/:ke/:id/:lim
             }
         }
         if(req.params.start&&req.params.start!==''){
-            req.params.start=req.params.start.replace('T',' ')
+            req.params.start = s.stringToSqlTime(req.params.start)
             if(req.params.end&&req.params.end!==''){
-                req.params.end=req.params.end.replace('T',' ')
+                req.params.end = s.stringToSqlTime(req.params.end)
                 req.sql+=' AND `time` >= ? AND `time` <= ?';
                 req.ar.push(decodeURIComponent(req.params.start))
                 req.ar.push(decodeURIComponent(req.params.end))
@@ -5818,13 +5821,13 @@ app.get(['/:auth/logs/:ke','/:auth/logs/:ke/:id'], function (req,res){
                 req.query.endOperator='<='
             }
             if(req.query.start && req.query.start !== '' && req.query.end && req.query.end !== ''){
-                req.query.start=req.query.start.replace('T',' ')
-                req.query.end=req.query.end.replace('T',' ')
+                req.query.start = s.stringToSqlTime(req.query.start)
+                req.query.end = s.stringToSqlTime(req.query.end)
                 req.sql+=' AND `time` '+req.query.startOperator+' ? AND `time` '+req.query.endOperator+' ?';
                 req.ar.push(req.query.start)
                 req.ar.push(req.query.end)
             }else if(req.query.start && req.query.start !== ''){
-                req.query.start=req.query.start.replace('T',' ')
+                req.query.start = s.stringToSqlTime(req.query.start)
                 req.sql+=' AND `time` '+req.query.startOperator+' ?';
                 req.ar.push(req.query.start)
             }
@@ -6160,7 +6163,7 @@ app.get('/:auth/videos/:ke/:id/:file', function (req,res){
             time = s.utcToLocal(time)
         }
         time = new Date(time)
-        s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND time=?',[req.params.ke,req.params.id,time],function(err,r){
+        s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND `time`=?',[req.params.ke,req.params.id,time],function(err,r){
             if(r&&r[0]){
                 req.dir=s.video('getDir',r[0])+req.params.file
                 if (fs.existsSync(req.dir)){
@@ -6256,7 +6259,7 @@ app.get(['/:auth/videos/:ke/:id/:file/:mode','/:auth/videos/:ke/:id/:file/:mode/
             time = s.utcToLocal(time)
         }
         time = new Date(time)
-        req.sql='SELECT * FROM Videos WHERE ke=? AND mid=? AND time=?';
+        req.sql='SELECT * FROM Videos WHERE ke=? AND mid=? AND `time`=?';
         req.ar=[req.params.ke,req.params.id,time];
         s.sqlQuery(req.sql,req.ar,function(err,r){
             if(r&&r[0]){
@@ -6273,7 +6276,7 @@ app.get(['/:auth/videos/:ke/:id/:file/:mode','/:auth/videos/:ke/:id/:file/:mode/
                             req.ret.msg='Not a valid value.';
                         }else{
                             req.ret.ok=true;
-                            s.sqlQuery('UPDATE Videos SET status=? WHERE ke=? AND mid=? AND time=?',[req.params.f,req.params.ke,req.params.id,time])
+                            s.sqlQuery('UPDATE Videos SET status=? WHERE ke=? AND mid=? AND `time`=?',[req.params.f,req.params.ke,req.params.id,time])
                             s.tx(r,'GRP_'+r.ke);
                         }
                     break;
