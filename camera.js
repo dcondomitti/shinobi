@@ -6205,7 +6205,6 @@ app.get('/:auth/zipVideos/:ke', function (req,res){
                         tempFiles.push(fileBinDir+tempVideoFile)
                         script += ' "'+tempVideoFile+'"'
                     })
-                    console.log(script)
                     fs.writeFileSync(tempScript,script,'utf8')
                     var zipCreate = spawn('sh',(tempScript).split(' '),{detached: true})
                     zipCreate.stderr.on('data',function(data){
