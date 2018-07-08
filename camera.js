@@ -499,7 +499,7 @@ s.getRequest = function(url,callback){
 s.kill=function(x,e,p){
     if(s.group[e.ke]&&s.group[e.ke].mon[e.id]&&s.group[e.ke].mon[e.id].spawn !== undefined){
         if(s.group[e.ke].mon[e.id].spawn){
-            s.group[e.ke].mon[e.mid].allowStdinWrite = false
+            s.group[e.ke].mon[e.id].allowStdinWrite = false
             s.txToDashcamUsers({
                 f : 'disable_stream',
                 ke : e.ke,
