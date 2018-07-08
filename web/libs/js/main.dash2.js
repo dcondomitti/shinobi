@@ -1135,6 +1135,11 @@ switch($user.details.lang){
                     }
                 }
                 k.e.append(tmp).find('.stream-element').resize();
+                if($.ccio.op().switches.monitorMuteAudio === 1){
+                    k.e.find('video').each(function(n,el){
+                        el.muted = "muted"
+                    })
+                }
             break;
             case'user-row':
                 d.e=$('.user-row[uid="'+d.uid+'"][ke="'+d.ke+'"]')
@@ -5127,6 +5132,15 @@ $('body')
                     }else{
                         $('.monitor_item').attr('data-gs-auto-position','no')
                     }
+                break;
+                case'monitorMuteAudio':
+                    $('.monitor_item video').each(function(n,el){
+                        if(e.o[e.switch] === 1){
+                            el.muted = true
+                        }else{
+                            el.muted = false
+                        }
+                    })
                 break;
             }
             switch(e.e.attr('type')){

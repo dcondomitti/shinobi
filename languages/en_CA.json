@@ -440,6 +440,8 @@
    "libx264": "libx264",
    "libx265": "libx265",
    "copy": "copy",
+   "Audio": "Audio",
+   "Mute Audio": "Mute Audio",
    "No Audio": "No Audio",
    "aac": "aac",
    "ac3": "ac3",
