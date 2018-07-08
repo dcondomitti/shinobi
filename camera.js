@@ -276,24 +276,24 @@ s.sqlQuery = function(query,values,onMoveOn){
     var mergedQuery = s.mergeQueryValues(query,values)
     s.debugLog('s.sqlQuery QUERY',mergedQuery)
     return s.databaseEngine
-        .raw(query,values)
-        .asCallback(function(err,r){
-            if(err){
-                console.log('s.sqlQuery QUERY ERRORED',query)
-                console.log('s.sqlQuery ERROR',err)
+    .raw(query,values)
+    .asCallback(function(err,r){
+        if(err){
+            console.log('s.sqlQuery QUERY ERRORED',query)
+            console.log('s.sqlQuery ERROR',err)
+        }
+        if(onMoveOn && typeof onMoveOn === 'function'){
+            switch(databaseOptions.client){
+                case'sqlite3':
+                    if(!r)r=[]
+                break;
+                default:
+                    if(r)r=r[0]
+                break;
             }
-            if(onMoveOn && typeof onMoveOn === 'function'){
-                switch(databaseOptions.client){
-                    case'sqlite3':
-                        if(!r)r=[]
-                    break;
-                    default:
-                        if(r)r=r[0]
-                    break;
-                }
-                onMoveOn(err,r)
-            }
-        })
+            onMoveOn(err,r)
+        }
+    })
 }
 
 //kill any ffmpeg running
