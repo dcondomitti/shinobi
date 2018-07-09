@@ -279,39 +279,30 @@ s.sqlQuery = function(query,values,onMoveOn){
     })
 }
 //discord bot
-s.sendDiscordAlert = function(){}
-if(config.discordBot && config.discordBot.token && config.discordBot.alertChannel){
+if(config.discordBot === true){
     try{
-        const Discord = require("discord.js")
-        const discordBot = new Discord.Client()
-        
-        if(config.discordBot.sendAlert===undefined)config.discordBot.sendAlert = true
-        
-        discordBot.on('ready', () => {
-            console.log(`Discord Bot Logged in as ${discordBot.user.tag}!`);
-            s.sendDiscordAlert = function(data,files){
-                if(config.discordBot.sendAlert === false)return false;
-                if(!data)data = {};
-                var sendBody = Object.assign({
-                    color: 3447003,
-                    title: 'Alert from Shinobi',
-                    description: "",
-                    fields: [],
-                    timestamp: new Date(),
-                    footer: {
-                      icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
-                      text: "Shinobi Systems"
-                    }
-                },data)
-                discordBot.channels.get(config.discordBot.alertChannel).send({
-                    embed: sendBody,
-                    files: files
-                })
-            }
-        })
-        discordBot.login(config.discordBot.token)
+        var Discord = require("discord.js")
+        s.sendDiscordAlert = function(data,files,groupKey){
+            if(!data)data = {};
+            var sendBody = Object.assign({
+                color: 3447003,
+                title: 'Alert from Shinobi',
+                description: "",
+                fields: [],
+                timestamp: new Date(),
+                footer: {
+                  icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
+                  text: "Shinobi Systems"
+                }
+            },data)
+            s.group[groupKey].discordBot.channels.get(s.group[groupKey].init.discordbot_channel).send({
+                embed: sendBody,
+                files: files
+            })
+        }
     }catch(err){
         console.log('Could not start Discord bot, please run "npm install discord.js" inside the Shinobi folder.')
+        s.sendDiscordAlert = function(){}
     }
 }
 //kill any ffmpeg running
@@ -708,12 +699,7 @@ s.init=function(x,e,k,fn){
     switch(x){
         case 0://init camera
             if(!s.group[e.ke]){s.group[e.ke]={}};
-            if(!s.group[e.ke].fileBin){s.group[e.ke].fileBin={}};
             if(!s.group[e.ke].mon){s.group[e.ke].mon={}}
-            if(!s.group[e.ke].sizeChangeQueue){s.group[e.ke].sizeChangeQueue=[]}
-            if(!s.group[e.ke].sizePurgeQueue){s.group[e.ke].sizePurgeQueue=[]}
-            if(!s.group[e.ke].users){s.group[e.ke].users={}}
-            if(!s.group[e.ke].dashcamUsers){s.group[e.ke].dashcamUsers={}}
             if(!s.group[e.ke].mon[e.mid]){s.group[e.ke].mon[e.mid]={}}
             if(!s.group[e.ke].mon[e.mid].streamIn){s.group[e.ke].mon[e.mid].streamIn={}};
             if(!s.group[e.ke].mon[e.mid].emitterChannel){s.group[e.ke].mon[e.mid].emitterChannel={}};
@@ -728,7 +714,6 @@ s.init=function(x,e,k,fn){
             if(!s.group[e.ke].mon[e.mid].started){s.group[e.ke].mon[e.mid].started=0};
             if(s.group[e.ke].mon[e.mid].delete){clearTimeout(s.group[e.ke].mon[e.mid].delete)}
             if(!s.group[e.ke].mon_conf){s.group[e.ke].mon_conf={}}
-            s.init('apps',e)
         break;
         case'group':
             if(!s.group[e.ke]){
@@ -737,6 +722,11 @@ s.init=function(x,e,k,fn){
             if(!s.group[e.ke].init){
                 s.group[e.ke].init={}
             }
+            if(!s.group[e.ke].fileBin){s.group[e.ke].fileBin={}};
+            if(!s.group[e.ke].sizeChangeQueue){s.group[e.ke].sizeChangeQueue=[]}
+            if(!s.group[e.ke].sizePurgeQueue){s.group[e.ke].sizePurgeQueue=[]}
+            if(!s.group[e.ke].users){s.group[e.ke].users={}}
+            if(!s.group[e.ke].dashcamUsers){s.group[e.ke].dashcamUsers={}}
             if(!e.limit||e.limit===''){e.limit=10000}else{e.limit=parseFloat(e.limit)}
             //save global space limit for group key (mb)
             s.group[e.ke].sizeLimit=e.limit;
@@ -771,6 +761,18 @@ s.init=function(x,e,k,fn){
                                 ar.webdav_user,
                                 ar.webdav_pass
                             );
+                        }
+                        //discordbot
+                        if(!s.group[e.ke].discordBot &&
+                           config.discordBot === true &&
+                           ar.discordbot === '1' &&
+                           ar.discordbot_token !== ''
+                          ){
+                            s.group[e.ke].discordBot = new Discord.Client()
+                            s.group[e.ke].discordBot.on('ready', () => {
+                                console.log(`${r.mail} : Discord Bot Logged in as ${s.group[e.ke].discordBot.user.tag}!`)
+                            })
+                            s.group[e.ke].discordBot.login(ar.discordbot_token)
                         }
                         Object.keys(ar).forEach(function(v){
                             s.group[e.ke].init[v]=ar[v]
@@ -3266,7 +3268,7 @@ s.camera=function(x,e,cn,tx){
                               icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
                               text: "Shinobi Systems"
                             }
-                        },files)
+                        },files,d.ke)
                     }
                     if(!detectorStreamBuffers){
                         detectorStreamBuffers = s.getDetectorStreams(d)
@@ -4009,6 +4011,10 @@ var tx;
                                             if(!d.d.sub){
                                                 s.group[d.ke].sizeLimit = parseFloat(newSize)
                                                 delete(s.group[d.ke].webdav)
+                                                if(s.group[d.ke].discordBot && s.group[d.ke].discordBot.destroy){
+                                                    s.group[d.ke].discordBot.destroy()
+                                                    delete(s.group[d.ke].discordBot)
+                                                }
                                                 s.init('apps',d)
                                             }
                                             tx({f:'user_settings_change',uid:d.uid,ke:d.ke,form:d.form});
@@ -7120,6 +7126,7 @@ if(config.childNodes.mode === 'child'){
                         }
                         s.systemLog(v.mail+' : '+lang.startUpText0+' : '+rr.length,v.size)
                         s.init('group',v)
+                        s.init('apps',v)
                         s.systemLog(v.mail+' : '+lang.startUpText1,countFinished+'/'+count)
                         if(countFinished===count){
                             s.systemLog(lang.startUpText4)

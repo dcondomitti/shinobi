@@ -179,6 +179,31 @@
                 </div>
             </div>
             <% } %>
+            <% if(details.use_discordbot!=='0'){ %>
+          <div class="form-group-group forestgreen">
+                <h4><%-lang['Discord Bot']%></h4>
+                <div class="form-group">
+                    <label><div><span><%-lang.Enabled%></span></div>
+                            <div><select class="form-control" detail="discordbot" selector="u_discord_bot">
+                                <option value="0" selected><%-lang.No%></option>  
+                                <option value="1"><%-lang.Yes%></option>  
+                            </select></div>
+                    </label>
+                </div>
+                <div class="u_discord_bot_input u_discord_bot_1">
+                <div class="form-group">
+                    <label><div><span><%-lang.Token%></span></div>
+                        <div><input type="password" class="form-control" placeholder="XXXXXXXXXXXXXXXXXXXXXXXX.XXXXXXXXXXXXXXX_XXXXXXXXXXXXXXXXXX" detail="discordbot_token"></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang['Channel ID']%></span></div>
+                        <div><input class="form-control" placeholder="xxxxxxxxxxxxxxxxxx" detail="discordbot_channel"></div>
+                    </label>
+                </div>
+                </div>
+            </div>
+            <% } %>
             <% if(details.use_ldap!=='0'){ %>
           <div class="form-group-group forestgreen">
                 <h4><%-lang.LDAP%></h4>
