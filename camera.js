@@ -219,23 +219,6 @@ if(databaseOptions.client === 'sqlite3' && databaseOptions.connection.filename =
     databaseOptions.connection.filename = __dirname+"/shinobi.sqlite"
 }
 s.databaseEngine = knex(databaseOptions)
-s.sqlDate = function(value){
-    var dateQueryFunction = ''
-    if(databaseOptions.client === 'sqlite3'){
-        value = value.toLowerCase()
-        if (value.slice(-1) !== 's') {
-            value = value+'s'
-        }
-        dateQueryFunction = "datetime('now', '-"+value+"')"
-    }else{
-        value = value.toUpperCase()
-        if (value.slice(-1) === 'S') {
-            value = value.slice(0, -1);  
-        }
-        dateQueryFunction = "DATE_SUB(NOW(), INTERVAL "+value+")"
-    }
-    return dateQueryFunction
-}
 s.mergeQueryValues = function(query,values){
     if(!values){values=[]}
     var valuesNotFunction = true;
@@ -295,7 +278,42 @@ s.sqlQuery = function(query,values,onMoveOn){
         }
     })
 }
-
+//discord bot
+s.sendDiscordAlert = function(){}
+if(config.discordBot && config.discordBot.token && config.discordBot.alertChannel){
+    try{
+        const Discord = require("discord.js")
+        const discordBot = new Discord.Client()
+        
+        if(config.discordBot.sendAlert===undefined)config.discordBot.sendAlert = true
+        
+        discordBot.on('ready', () => {
+            console.log(`Discord Bot Logged in as ${discordBot.user.tag}!`);
+            s.sendDiscordAlert = function(data,files){
+                if(config.discordBot.sendAlert === false)return false;
+                if(!data)data = {};
+                var sendBody = Object.assign({
+                    color: 3447003,
+                    title: 'Alert from Shinobi',
+                    description: "",
+                    fields: [],
+                    timestamp: new Date(),
+                    footer: {
+                      icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
+                      text: "Shinobi Systems"
+                    }
+                },data)
+                discordBot.channels.get(config.discordBot.alertChannel).send({
+                    embed: sendBody,
+                    files: files
+                })
+            }
+        })
+        discordBot.login(config.discordBot.token)
+    }catch(err){
+        console.log('Could not start Discord bot, please run "npm install discord.js" inside the Shinobi folder.')
+    }
+}
 //kill any ffmpeg running
 s.ffmpegKill=function(){
     var cmd=''
@@ -453,6 +471,21 @@ s.getFunctionParamNames = function(func) {
   if(result === null)
      result = [];
   return result;
+}
+s.getDetectorStreams = function(monitor){
+    var pathDir = s.dir.streams+monitor.ke+'/'+monitor.id+'/'
+    var streamDirItems = fs.readdirSync(pathDir)
+    var items = []
+    streamDirItems.forEach(function(filename){
+        if(filename.indexOf('detectorStream') > -1 && filename.indexOf('.m3u8') === -1){
+            try{
+                items.push(pathDir+filename)
+            }catch(err){
+                console.log(err)
+            }
+        }
+    })
+    return items
 }
 s.createPamDiffRegionArray = function(regions,globalSensitivity,fullFrame){
     var pamDiffCompliantArray = [],
@@ -3200,8 +3233,71 @@ s.camera=function(x,e,cn,tx){
 
                     }).end();
                 }
+                var screenshotName = 'Motion_'+(d.mon.name.replace(/[^\w\s]/gi,''))+'_'+d.id+'_'+d.ke+'_'+s.formattedTime()
+                var screenshotBuffer = null
+                var detectorStreamBuffers = null
+                
+                //discord bot
+                if(d.mon.details.detector_discordbot === '1' && !s.group[d.ke].mon[d.id].detector_discordbot){
+                    var detector_discordbot_timeout
+                    if(!d.mon.details.detector_discordbot_timeout||d.mon.details.detector_discordbot_timeout===''){
+                        detector_discordbot_timeout = 1000*60*10;
+                    }else{
+                        detector_discordbot_timeout = parseFloat(d.mon.details.detector_discordbot_timeout)*1000*60;
+                    }
+                    //lock mailer so you don't get emailed on EVERY trigger event.
+                    s.group[d.ke].mon[d.id].detector_discordbot=setTimeout(function(){
+                        //unlock so you can mail again.
+                        clearTimeout(s.group[d.ke].mon[d.id].detector_discordbot);
+                        delete(s.group[d.ke].mon[d.id].detector_discordbot);
+                    },detector_discordbot_timeout);
+                    var files = []
+                    var sendAlert = function(){
+                        s.sendDiscordAlert({
+                            author: {
+                              name: s.group[d.ke].mon_conf[d.id].name,
+                              icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"
+                            },
+                            title: lang.Event+' - '+screenshotName,
+                            description: lang.EventText1+' '+s.timeObject(new Date).format(),
+                            fields: [],
+                            timestamp: new Date(),
+                            footer: {
+                              icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
+                              text: "Shinobi Systems"
+                            }
+                        },files)
+                    }
+                    if(!detectorStreamBuffers){
+                        detectorStreamBuffers = s.getDetectorStreams(d)
+                    }
+                    detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
+                        files.push({
+                            attachment: filepath,
+                            name: 'Video Clip '+n+'.ts'
+                        })
+                    })
+                    if(screenshotBuffer){
+                        sendAlert()
+                    }else if(d.mon.details.snap === '1'){
+                        fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
+                            if(err){
+                                s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
+                            }else{
+                                screenshotBuffer = frame
+                                files.push({
+                                    attachment: screenshotBuffer,
+                                    name: screenshotName+'.jpg'
+                                })
+                            }
+                            sendAlert()
+                        })
+                    }else{
+                        sendAlert()
+                    }
+                }
                 //mailer
-                if(config.mail&&!s.group[d.ke].mon[d.id].detector_mail&&d.mon.details.detector_mail==='1'){
+                if(config.mail && !s.group[d.ke].mon[d.id].detector_mail && d.mon.details.detector_mail === '1'){
                     s.sqlQuery('SELECT mail FROM Users WHERE ke=? AND details NOT LIKE ?',[d.ke,'%"sub"%'],function(err,r){
                         r=r[0];
                         var detector_mail_timeout
@@ -3216,35 +3312,53 @@ s.camera=function(x,e,cn,tx){
                             clearTimeout(s.group[d.ke].mon[d.id].detector_mail);
                             delete(s.group[d.ke].mon[d.id].detector_mail);
                         },detector_mail_timeout);
-                        d.frame_filename='Motion_'+(d.mon.name.replace(/[^\w\s]/gi, ''))+'_'+d.id+'_'+d.ke+'_'+s.formattedTime()+'.jpg';
-                        fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
+                        var files = []
+                        var sendMail = function(){
                             d.mailOptions = {
                                 from: '"ShinobiCCTV" <no-reply@shinobi.video>', // sender address
                                 to: r.mail, // list of receivers
-                                subject: lang.Event+' - '+d.frame_filename, // Subject line
+                                subject: lang.Event+' - '+screenshotName, // Subject line
                                 html: '<i>'+lang.EventText1+' '+s.timeObject(new Date).format()+'.</i>',
-                            };
-                            if(err){
-                                s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
-                            }else{
-                                d.mailOptions.attachments=[
-                                    {
-                                        filename: d.frame_filename,
-                                        content: frame
-                                    }
-                                ]
-                                d.mailOptions.html='<i>'+lang.EventText3+'</i>'
+                                attachments: files
                             }
-                                Object.keys(d.details).forEach(function(v,n){
+                            Object.keys(d.details).forEach(function(v,n){
                                 d.mailOptions.html+='<div><b>'+v+'</b> : '+d.details[v]+'</div>'
                             })
                             nodemailer.sendMail(d.mailOptions, (error, info) => {
                                 if (error) {
                                     s.systemLog(lang.MailError,error)
-                                    return ;
+                                    return false;
                                 }
-                            });
+                            })
+                        }
+                        if(!detectorStreamBuffers){
+                            detectorStreamBuffers = s.getDetectorStreams(d)
+                        }
+                        detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
+                            files.push({
+                                attachment: filepath,
+                                name: 'Video Clip '+n+'.ts'
+                            })
                         })
+                        if(screenshotBuffer){
+                            sendMail()
+                        }else if(d.mon.details.snap === '1'){
+                            fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
+                                if(err){
+                                    s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
+                                }else{
+                                    screenshotBuffer = frame
+                                    files.push({
+                                        filename: screenshotName+'.jpg',
+                                        content: frame
+                                    })
+                                    d.mailOptions.html='<i>'+lang.EventText3+'</i>'
+                                }
+                                sendMail()
+                            })
+                        }else{
+                            sendMail()
+                        }
                     });
                 }
                 if(d.mon.details.detector_command_enable==='1'&&!s.group[d.ke].mon[d.id].detector_command){
