@@ -3338,8 +3338,8 @@ s.camera=function(x,e,cn,tx){
                         }
                         detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
                             files.push({
-                                attachment: filepath,
-                                name: 'Video Clip '+n+'.ts'
+                                filename: 'Video Clip '+n+'.ts',
+                                content: fs.readFileSync(filepath)
                             })
                         })
                         if(screenshotBuffer){
