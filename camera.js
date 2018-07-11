@@ -116,7 +116,6 @@ if(config.databaseType===undefined){config.databaseType='mysql'}
 if(config.pluginKeys===undefined)config.pluginKeys={};
 if(config.databaseLogs===undefined){config.databaseLogs=false}
 if(config.useUTC===undefined){config.useUTC=false}
-if(config.strictDatabase===undefined){config.strictDatabase=false}
 if(config.pipeAddition===undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
 //Web Paths
 if(config.webPaths===undefined){config.webPaths={}}
@@ -220,42 +219,24 @@ if(databaseOptions.client === 'sqlite3' && databaseOptions.connection.filename =
     databaseOptions.connection.filename = __dirname+"/shinobi.sqlite"
 }
 s.databaseEngine = knex(databaseOptions)
-s.sqlDate = function(value){
-    var dateQueryFunction = ''
-    if(databaseOptions.client === 'sqlite3'){
-        value = value.toLowerCase()
-        if (value.slice(-1) !== 's') {
-            value = value+'s'
-        }
-        dateQueryFunction = "datetime('now', '-"+value+"')"
-    }else{
-        value = value.toUpperCase()
-        if (value.slice(-1) === 'S') {
-            value = value.slice(0, -1);  
-        }
-        dateQueryFunction = "DATE_SUB(NOW(), INTERVAL "+value+")"
-    }
-    return dateQueryFunction
-}
 s.mergeQueryValues = function(query,values){
     if(!values){values=[]}
     var valuesNotFunction = true;
     if(typeof values === 'function'){
-        var onMoveOn = values;
         var values = [];
         valuesNotFunction = false;
     }
-    if(!onMoveOn){onMoveOn=function(){}}
     if(values&&valuesNotFunction){
         var splitQuery = query.split('?')
         var newQuery = ''
         splitQuery.forEach(function(v,n){
             newQuery += v
-            if(values[n]){
-                if(isNaN(values[n])){
-                    newQuery += "'"+values[n]+"'"
+            var value = values[n]
+            if(value){
+                if(isNaN(value) || value instanceof Date){
+                    newQuery += "'"+value+"'"
                 }else{
-                    newQuery += values[n]
+                    newQuery += value
                 }
             }
         })
@@ -264,7 +245,11 @@ s.mergeQueryValues = function(query,values){
     }
     return newQuery
 }
-s.sqlQuery = function(query,values,onMoveOn,hideLog){
+s.stringToSqlTime = function(value){
+    newValue = new Date(value.replace('T',' '))
+    return newValue
+}
+s.sqlQuery = function(query,values,onMoveOn){
     if(!values){values=[]}
     if(typeof values === 'function'){
         var onMoveOn = values;
@@ -272,24 +257,53 @@ s.sqlQuery = function(query,values,onMoveOn,hideLog){
     }
     if(!onMoveOn){onMoveOn=function(){}}
     var mergedQuery = s.mergeQueryValues(query,values)
-    return s.databaseEngine.raw(query,values)
-        .asCallback(function(err,r){
-            if(err&&config.databaseLogs){
-                s.systemLog('s.sqlQuery QUERY',query)
-                s.systemLog('s.sqlQuery ERROR',err)
+    s.debugLog('s.sqlQuery QUERY',mergedQuery)
+    return s.databaseEngine
+    .raw(query,values)
+    .asCallback(function(err,r){
+        if(err){
+            console.log('s.sqlQuery QUERY ERRORED',query)
+            console.log('s.sqlQuery ERROR',err)
+        }
+        if(onMoveOn && typeof onMoveOn === 'function'){
+            switch(databaseOptions.client){
+                case'sqlite3':
+                    if(!r)r=[]
+                break;
+                default:
+                    if(r)r=r[0]
+                break;
             }
-            if(onMoveOn && typeof onMoveOn === 'function'){
-                switch(databaseOptions.client){
-                    case'sqlite3':
-                        if(!r)r=[]
-                    break;
-                    default:
-                        if(r)r=r[0]
-                    break;
+            onMoveOn(err,r)
+        }
+    })
+}
+//discord bot
+if(config.discordBot === true){
+    try{
+        var Discord = require("discord.js")
+        s.sendDiscordAlert = function(data,files,groupKey){
+            if(!data)data = {};
+            var sendBody = Object.assign({
+                color: 3447003,
+                title: 'Alert from Shinobi',
+                description: "",
+                fields: [],
+                timestamp: new Date(),
+                footer: {
+                  icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
+                  text: "Shinobi Systems"
                 }
-                onMoveOn(err,r)
-            }
-        })
+            },data)
+            s.group[groupKey].discordBot.channels.get(s.group[groupKey].init.discordbot_channel).send({
+                embed: sendBody,
+                files: files
+            })
+        }
+    }catch(err){
+        console.log('Could not start Discord bot, please run "npm install discord.js" inside the Shinobi folder.')
+        s.sendDiscordAlert = function(){}
+    }
 }
 //kill any ffmpeg running
 s.ffmpegKill=function(){
@@ -345,7 +359,7 @@ s.txWithSubPermissions = function(z,y,permissionChoices){
                     var valid=0
                     var checked=permissionChoices.length
                     permissionChoices.forEach(function(b){
-                        if(user.details[b].indexOf(z.mid)!==-1){
+                        if(user.details[b] && user.details[b].indexOf(z.mid)!==-1){
                             ++valid
                         }
                     })
@@ -449,6 +463,21 @@ s.getFunctionParamNames = function(func) {
      result = [];
   return result;
 }
+s.getDetectorStreams = function(monitor){
+    var pathDir = s.dir.streams+monitor.ke+'/'+monitor.id+'/'
+    var streamDirItems = fs.readdirSync(pathDir)
+    var items = []
+    streamDirItems.forEach(function(filename){
+        if(filename.indexOf('detectorStream') > -1 && filename.indexOf('.m3u8') === -1){
+            try{
+                items.push(pathDir+filename)
+            }catch(err){
+                console.log(err)
+            }
+        }
+    })
+    return items
+}
 s.createPamDiffRegionArray = function(regions,globalSensitivity,fullFrame){
     var pamDiffCompliantArray = [],
         arrayForOtherStuff = [],
@@ -494,7 +523,7 @@ s.getRequest = function(url,callback){
 s.kill=function(x,e,p){
     if(s.group[e.ke]&&s.group[e.ke].mon[e.id]&&s.group[e.ke].mon[e.id].spawn !== undefined){
         if(s.group[e.ke].mon[e.id].spawn){
-            s.group[e.ke].mon[e.mid].allowStdinWrite = false
+            s.group[e.ke].mon[e.id].allowStdinWrite = false
             s.txToDashcamUsers({
                 f : 'disable_stream',
                 ke : e.ke,
@@ -549,7 +578,7 @@ s.log=function(e,x){
 //    s.systemLog('s.log : ',{f:'log',ke:e.ke,mid:e.mid,log:x,time:s.timeObject()},'GRP_'+e.ke)
 }
 //system log
-s.systemLog=function(q,w,e){
+s.systemLog = function(q,w,e){
     if(!w){w=''}
     if(!e){e=''}
     if(config.systemLog===true){
@@ -558,6 +587,17 @@ s.systemLog=function(q,w,e){
             s.tx({f:'log',log:{time:s.timeObject(),ke:'$',mid:'$SYSTEM',time:s.timeObject(),info:s.s({type:q,msg:w})}},'$');
         }
         return console.log(s.timeObject().format(),q,w,e)
+    }
+}
+//system log
+s.debugLog = function(q,w,e){
+    if(!w){w = ''}
+    if(!e){e = ''}
+    if(config.debugLog === true){
+        console.log(s.timeObject().format(),q,w,e)
+        if(config.debugLogVerbose === true){
+            console.log(new Error())
+        }
     }
 }
 //SSL options
@@ -659,12 +699,7 @@ s.init=function(x,e,k,fn){
     switch(x){
         case 0://init camera
             if(!s.group[e.ke]){s.group[e.ke]={}};
-            if(!s.group[e.ke].fileBin){s.group[e.ke].fileBin={}};
             if(!s.group[e.ke].mon){s.group[e.ke].mon={}}
-            if(!s.group[e.ke].sizeChangeQueue){s.group[e.ke].sizeChangeQueue=[]}
-            if(!s.group[e.ke].sizePurgeQueue){s.group[e.ke].sizePurgeQueue=[]}
-            if(!s.group[e.ke].users){s.group[e.ke].users={}}
-            if(!s.group[e.ke].dashcamUsers){s.group[e.ke].dashcamUsers={}}
             if(!s.group[e.ke].mon[e.mid]){s.group[e.ke].mon[e.mid]={}}
             if(!s.group[e.ke].mon[e.mid].streamIn){s.group[e.ke].mon[e.mid].streamIn={}};
             if(!s.group[e.ke].mon[e.mid].emitterChannel){s.group[e.ke].mon[e.mid].emitterChannel={}};
@@ -679,7 +714,6 @@ s.init=function(x,e,k,fn){
             if(!s.group[e.ke].mon[e.mid].started){s.group[e.ke].mon[e.mid].started=0};
             if(s.group[e.ke].mon[e.mid].delete){clearTimeout(s.group[e.ke].mon[e.mid].delete)}
             if(!s.group[e.ke].mon_conf){s.group[e.ke].mon_conf={}}
-            s.init('apps',e)
         break;
         case'group':
             if(!s.group[e.ke]){
@@ -688,6 +722,11 @@ s.init=function(x,e,k,fn){
             if(!s.group[e.ke].init){
                 s.group[e.ke].init={}
             }
+            if(!s.group[e.ke].fileBin){s.group[e.ke].fileBin={}};
+            if(!s.group[e.ke].sizeChangeQueue){s.group[e.ke].sizeChangeQueue=[]}
+            if(!s.group[e.ke].sizePurgeQueue){s.group[e.ke].sizePurgeQueue=[]}
+            if(!s.group[e.ke].users){s.group[e.ke].users={}}
+            if(!s.group[e.ke].dashcamUsers){s.group[e.ke].dashcamUsers={}}
             if(!e.limit||e.limit===''){e.limit=10000}else{e.limit=parseFloat(e.limit)}
             //save global space limit for group key (mb)
             s.group[e.ke].sizeLimit=e.limit;
@@ -722,6 +761,18 @@ s.init=function(x,e,k,fn){
                                 ar.webdav_user,
                                 ar.webdav_pass
                             );
+                        }
+                        //discordbot
+                        if(!s.group[e.ke].discordBot &&
+                           config.discordBot === true &&
+                           ar.discordbot === '1' &&
+                           ar.discordbot_token !== ''
+                          ){
+                            s.group[e.ke].discordBot = new Discord.Client()
+                            s.group[e.ke].discordBot.on('ready', () => {
+                                console.log(`${r.mail} : Discord Bot Logged in as ${s.group[e.ke].discordBot.user.tag}!`)
+                            })
+                            s.group[e.ke].discordBot.login(ar.discordbot_token)
                         }
                         Object.keys(ar).forEach(function(v){
                             s.group[e.ke].init[v]=ar[v]
@@ -918,15 +969,12 @@ s.video=function(x,e,k){
                 time = e.time
             }
             time = new Date(time)
-            if(config.databaseType !== 'sqlite'){
-                time = moment(time).format('YYYY-MM-DD HH:mm:ss')
-            }
             e.save=[e.id,e.ke,time];
-            s.sqlQuery('SELECT * FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=? LIMIT 1',e.save,function(err,r){
+            s.sqlQuery('SELECT * FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',e.save,function(err,r){
                 if(r&&r[0]){
                     r=r[0]
                     var dir=s.video('getDir',r)
-                    s.sqlQuery('DELETE FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=? LIMIT 1',e.save,function(){
+                    s.sqlQuery('DELETE FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',e.save,function(){
                         fs.stat(dir+filename,function(err,file){
                             if(err){
                                 s.systemLog('File Delete Error : '+e.ke+' : '+' : '+e.mid,err)
@@ -1093,7 +1141,7 @@ s.video=function(x,e,k){
                                             if(!evs)return console.log(err)
                                             evs.forEach(function(ev){
                                                 ev.dir=s.video('getDir',ev)+s.formattedTime(ev.time)+'.'+ev.ext;
-                                                k.del.push('(mid=? AND time=?)');
+                                                k.del.push('(mid=? AND `time`=?)');
                                                 k.ar.push(ev.mid),k.ar.push(ev.time);
                                                 s.file('delete',ev.dir);
                                                 s.init('diskUsedSet',e,-(ev.size/1000000))
@@ -1238,10 +1286,6 @@ s.video=function(x,e,k){
                         k.details.dir = e.details.dir
                     }
                     if(config.useUTC === true)k.details.isUTC = config.useUTC;
-                    if(config.strictDatabase === true){
-                        e.startTime = s.formattedTime(e.startTime)
-                        e.endTime = s.formattedTime(e.endTime)
-                    }
                     var save = [
                         e.mid,
                         e.ke,
@@ -2442,9 +2486,7 @@ s.camera=function(x,e,cn,tx){
                 e.details.fatal_max = parseFloat(e.details.fatal_max)
             }
             var errorFatal = function(errorMessage){
-                if(config.debugSystem === true){
-                    console.log(errorMessage,(new Error()).stack)
-                }
+                s.debugLog(errorMessage)
                 clearTimeout(s.group[e.ke].mon[e.id].err_fatal_timeout);
                 ++errorFatalCount;
                 if(s.group[e.ke].mon[e.id].started===1){
@@ -2518,7 +2560,7 @@ s.camera=function(x,e,cn,tx){
                         cutoff *= 100
                     }
                     s.group[e.ke].mon[e.id].checker=setTimeout(function(){
-                        if(s.group[e.ke].mon[e.id].started === 1){
+                        if(s.group[e.ke].mon[e.id].started === 1 && s.group[e.ke].mon_conf[e.id].mode === 'record'){
                             launchMonitorProcesses();
                             s.init('monitorStatus',{id:e.id,ke:e.ke,status:lang.Restarting});
                             s.log(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
@@ -3193,8 +3235,71 @@ s.camera=function(x,e,cn,tx){
 
                     }).end();
                 }
+                var screenshotName = 'Motion_'+(d.mon.name.replace(/[^\w\s]/gi,''))+'_'+d.id+'_'+d.ke+'_'+s.formattedTime()
+                var screenshotBuffer = null
+                var detectorStreamBuffers = null
+                
+                //discord bot
+                if(d.mon.details.detector_discordbot === '1' && !s.group[d.ke].mon[d.id].detector_discordbot){
+                    var detector_discordbot_timeout
+                    if(!d.mon.details.detector_discordbot_timeout||d.mon.details.detector_discordbot_timeout===''){
+                        detector_discordbot_timeout = 1000*60*10;
+                    }else{
+                        detector_discordbot_timeout = parseFloat(d.mon.details.detector_discordbot_timeout)*1000*60;
+                    }
+                    //lock mailer so you don't get emailed on EVERY trigger event.
+                    s.group[d.ke].mon[d.id].detector_discordbot=setTimeout(function(){
+                        //unlock so you can mail again.
+                        clearTimeout(s.group[d.ke].mon[d.id].detector_discordbot);
+                        delete(s.group[d.ke].mon[d.id].detector_discordbot);
+                    },detector_discordbot_timeout);
+                    var files = []
+                    var sendAlert = function(){
+                        s.sendDiscordAlert({
+                            author: {
+                              name: s.group[d.ke].mon_conf[d.id].name,
+                              icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"
+                            },
+                            title: lang.Event+' - '+screenshotName,
+                            description: lang.EventText1+' '+s.timeObject(new Date).format(),
+                            fields: [],
+                            timestamp: new Date(),
+                            footer: {
+                              icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
+                              text: "Shinobi Systems"
+                            }
+                        },files,d.ke)
+                    }
+                    if(!detectorStreamBuffers){
+                        detectorStreamBuffers = s.getDetectorStreams(d)
+                    }
+                    detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
+                        files.push({
+                            attachment: filepath,
+                            name: 'Video Clip '+n+'.ts'
+                        })
+                    })
+                    if(screenshotBuffer){
+                        sendAlert()
+                    }else if(d.mon.details.snap === '1'){
+                        fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
+                            if(err){
+                                s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
+                            }else{
+                                screenshotBuffer = frame
+                                files.push({
+                                    attachment: screenshotBuffer,
+                                    name: screenshotName+'.jpg'
+                                })
+                            }
+                            sendAlert()
+                        })
+                    }else{
+                        sendAlert()
+                    }
+                }
                 //mailer
-                if(config.mail&&!s.group[d.ke].mon[d.id].detector_mail&&d.mon.details.detector_mail==='1'){
+                if(config.mail && !s.group[d.ke].mon[d.id].detector_mail && d.mon.details.detector_mail === '1'){
                     s.sqlQuery('SELECT mail FROM Users WHERE ke=? AND details NOT LIKE ?',[d.ke,'%"sub"%'],function(err,r){
                         r=r[0];
                         var detector_mail_timeout
@@ -3209,35 +3314,53 @@ s.camera=function(x,e,cn,tx){
                             clearTimeout(s.group[d.ke].mon[d.id].detector_mail);
                             delete(s.group[d.ke].mon[d.id].detector_mail);
                         },detector_mail_timeout);
-                        d.frame_filename='Motion_'+(d.mon.name.replace(/[^\w\s]/gi, ''))+'_'+d.id+'_'+d.ke+'_'+s.formattedTime()+'.jpg';
-                        fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
+                        var files = []
+                        var sendMail = function(){
                             d.mailOptions = {
                                 from: '"ShinobiCCTV" <no-reply@shinobi.video>', // sender address
                                 to: r.mail, // list of receivers
-                                subject: lang.Event+' - '+d.frame_filename, // Subject line
+                                subject: lang.Event+' - '+screenshotName, // Subject line
                                 html: '<i>'+lang.EventText1+' '+s.timeObject(new Date).format()+'.</i>',
-                            };
-                            if(err){
-                                s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
-                            }else{
-                                d.mailOptions.attachments=[
-                                    {
-                                        filename: d.frame_filename,
-                                        content: frame
-                                    }
-                                ]
-                                d.mailOptions.html='<i>'+lang.EventText3+'</i>'
+                                attachments: files
                             }
-                                Object.keys(d.details).forEach(function(v,n){
+                            Object.keys(d.details).forEach(function(v,n){
                                 d.mailOptions.html+='<div><b>'+v+'</b> : '+d.details[v]+'</div>'
                             })
                             nodemailer.sendMail(d.mailOptions, (error, info) => {
                                 if (error) {
                                     s.systemLog(lang.MailError,error)
-                                    return ;
+                                    return false;
                                 }
-                            });
+                            })
+                        }
+                        if(!detectorStreamBuffers){
+                            detectorStreamBuffers = s.getDetectorStreams(d)
+                        }
+                        detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
+                            files.push({
+                                attachment: filepath,
+                                name: 'Video Clip '+n+'.ts'
+                            })
                         })
+                        if(screenshotBuffer){
+                            sendMail()
+                        }else if(d.mon.details.snap === '1'){
+                            fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
+                                if(err){
+                                    s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
+                                }else{
+                                    screenshotBuffer = frame
+                                    files.push({
+                                        filename: screenshotName+'.jpg',
+                                        content: frame
+                                    })
+                                    d.mailOptions.html='<i>'+lang.EventText3+'</i>'
+                                }
+                                sendMail()
+                            })
+                        }else{
+                            sendMail()
+                        }
                     });
                 }
                 if(d.mon.details.detector_command_enable==='1'&&!s.group[d.ke].mon[d.id].detector_command){
@@ -3839,57 +3962,64 @@ var tx;
                                 if(r&&r[0]){
                                     r=r[0];
                                     d.d=JSON.parse(r.details);
-                                    if(d.d.get_server_log==='1'){
-                                        cn.join('GRPLOG_'+d.ke)
-                                    }else{
-                                        cn.leave('GRPLOG_'+d.ke)
-                                    }
-                                    ///unchangeable from client side, so reset them in case they did.
-                                    d.form.details=JSON.parse(d.form.details)
-                                    //admin permissions
-                                    d.form.details.permissions=d.d.permissions
-                                    d.form.details.edit_size=d.d.edit_size
-                                    d.form.details.edit_days=d.d.edit_days
-                                    d.form.details.use_admin=d.d.use_admin
-                                    d.form.details.use_webdav=d.d.use_webdav
-                                    d.form.details.use_ldap=d.d.use_ldap
-                                    //check
-                                    if(d.d.edit_days=="0"){
-                                        d.form.details.days=d.d.days;
-                                    }
-                                    if(d.d.edit_size=="0"){
-                                        d.form.details.size=d.d.size;
-                                    }
-                                    if(d.d.sub){
-                                        d.form.details.sub=d.d.sub;
-                                        if(d.d.monitors){d.form.details.monitors=d.d.monitors;}
-                                        if(d.d.allmonitors){d.form.details.allmonitors=d.d.allmonitors;}
-                                        if(d.d.video_delete){d.form.details.video_delete=d.d.video_delete;}
-                                        if(d.d.video_view){d.form.details.video_view=d.d.video_view;}
-                                        if(d.d.monitor_edit){d.form.details.monitor_edit=d.d.monitor_edit;}
-                                        if(d.d.size){d.form.details.size=d.d.size;}
-                                        if(d.d.days){d.form.details.days=d.d.days;}
-                                        delete(d.form.details.mon_groups)
-                                    }
-                                    var newSize = d.form.details.size
-                                    d.form.details=JSON.stringify(d.form.details)
-                                    ///
-                                    d.set=[],d.ar=[];
-                                    if(d.form.pass&&d.form.pass!==''){d.form.pass=s.md5(d.form.pass);}else{delete(d.form.pass)};
-                                    delete(d.form.password_again);
-                                    d.for=Object.keys(d.form);
-                                    d.for.forEach(function(v){
-                                        d.set.push(v+'=?'),d.ar.push(d.form[v]);
-                                    });
-                                    d.ar.push(d.ke),d.ar.push(d.uid);
-                                    s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE ke=? AND uid=?',d.ar,function(err,r){
-                                        if(!d.d.sub){
-                                            s.group[d.ke].sizeLimit = parseFloat(newSize)
-                                            delete(s.group[d.ke].webdav)
-                                            s.init('apps',d)
+                                    if(!d.d.sub || d.d.user_change === "1"){
+                                        if(d.d.get_server_log==='1'){
+                                            cn.join('GRPLOG_'+d.ke)
+                                        }else{
+                                            cn.leave('GRPLOG_'+d.ke)
                                         }
-                                        tx({f:'user_settings_change',uid:d.uid,ke:d.ke,form:d.form});
-                                    });
+                                        ///unchangeable from client side, so reset them in case they did.
+                                        d.form.details=JSON.parse(d.form.details)
+                                        //admin permissions
+                                        d.form.details.permissions=d.d.permissions
+                                        d.form.details.edit_size=d.d.edit_size
+                                        d.form.details.edit_days=d.d.edit_days
+                                        d.form.details.use_admin=d.d.use_admin
+                                        d.form.details.use_webdav=d.d.use_webdav
+                                        d.form.details.use_ldap=d.d.use_ldap
+                                        //check
+                                        if(d.d.edit_days=="0"){
+                                            d.form.details.days=d.d.days;
+                                        }
+                                        if(d.d.edit_size=="0"){
+                                            d.form.details.size=d.d.size;
+                                        }
+                                        if(d.d.sub){
+                                            d.form.details.sub=d.d.sub;
+                                            if(d.d.monitors){d.form.details.monitors=d.d.monitors;}
+                                            if(d.d.allmonitors){d.form.details.allmonitors=d.d.allmonitors;}
+                                            if(d.d.monitor_create){d.form.details.monitor_create=d.d.monitor_create;}
+                                            if(d.d.video_delete){d.form.details.video_delete=d.d.video_delete;}
+                                            if(d.d.video_view){d.form.details.video_view=d.d.video_view;}
+                                            if(d.d.monitor_edit){d.form.details.monitor_edit=d.d.monitor_edit;}
+                                            if(d.d.size){d.form.details.size=d.d.size;}
+                                            if(d.d.days){d.form.details.days=d.d.days;}
+                                            delete(d.form.details.mon_groups)
+                                        }
+                                        var newSize = d.form.details.size
+                                        d.form.details=JSON.stringify(d.form.details)
+                                        ///
+                                        d.set=[],d.ar=[];
+                                        if(d.form.pass&&d.form.pass!==''){d.form.pass=s.md5(d.form.pass);}else{delete(d.form.pass)};
+                                        delete(d.form.password_again);
+                                        d.for=Object.keys(d.form);
+                                        d.for.forEach(function(v){
+                                            d.set.push(v+'=?'),d.ar.push(d.form[v]);
+                                        });
+                                        d.ar.push(d.ke),d.ar.push(d.uid);
+                                        s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE ke=? AND uid=?',d.ar,function(err,r){
+                                            if(!d.d.sub){
+                                                s.group[d.ke].sizeLimit = parseFloat(newSize)
+                                                delete(s.group[d.ke].webdav)
+                                                if(s.group[d.ke].discordBot && s.group[d.ke].discordBot.destroy){
+                                                    s.group[d.ke].discordBot.destroy()
+                                                    delete(s.group[d.ke].discordBot)
+                                                }
+                                                s.init('apps',d)
+                                            }
+                                            tx({f:'user_settings_change',uid:d.uid,ke:d.ke,form:d.form});
+                                        });
+                                    }
                                 }
                             })
                         break;
@@ -3901,15 +4031,15 @@ var tx;
                             switch(d.fff){
                                 case'videos&events':
                                     if(!d.eventLimit){
-                                        d.eventLimit=500
+                                        d.eventLimit = 500
                                     }else{
                                         d.eventLimit = parseInt(d.eventLimit);
                                     }
                                     if(!d.eventStartDate&&d.startDate){
-                                        d.eventStartDate=d.startDate
+                                        d.eventStartDate = s.stringToSqlTime(d.startDate)
                                     }
                                     if(!d.eventEndDate&&d.endDate){
-                                        d.eventEndDate=d.endDate
+                                        d.eventEndDate = s.stringToSqlTime(d.endDate)
                                     }
                                     var monitorQuery = ''
                                     var monitorValues = []
@@ -3932,15 +4062,13 @@ var tx;
                                         var eventQuery = 'SELECT * FROM Events WHERE ke=?';
                                         var eventQueryValues = [cn.ke];
                                         if(d.eventStartDate&&d.eventStartDate!==''){
-                                            d.eventStartDate=d.eventStartDate.replace('T',' ')
                                             if(d.eventEndDate&&d.eventEndDate!==''){
-                                                d.eventEndDate=d.eventEndDate.replace('T',' ')
                                                 eventQuery+=' AND `time` >= ? AND `time` <= ?';
-                                                eventQueryValues.push(decodeURIComponent(d.eventStartDate))
-                                                eventQueryValues.push(decodeURIComponent(d.eventEndDate))
+                                                eventQueryValues.push(d.eventStartDate)
+                                                eventQueryValues.push(d.eventEndDate)
                                             }else{
                                                 eventQuery+=' AND `time` >= ?';
-                                                eventQueryValues.push(decodeURIComponent(d.eventStartDate))
+                                                eventQueryValues.push(d.eventStartDate)
                                             }
                                         }
                                         if(monitorValues.length>0){
@@ -3969,10 +4097,10 @@ var tx;
                                         eventQuery.push()
                                     }
                                     if(!d.videoStartDate&&d.startDate){
-                                        d.videoStartDate=d.startDate
+                                        d.videoStartDate = s.stringToSqlTime(d.startDate)
                                     }
                                     if(!d.videoEndDate&&d.endDate){
-                                        d.videoEndDate=d.endDate
+                                        d.videoEndDate = s.stringToSqlTime(d.endDate)
                                     }
                                      var getVideos = function(callback){
                                         var videoQuery='SELECT * FROM Videos WHERE ke=?';
@@ -3986,19 +4114,15 @@ var tx;
                                             }
                                             switch(true){
                                                 case(d.videoStartDate&&d.videoStartDate!==''&&d.videoEndDate&&d.videoEndDate!==''):
-                                                    d.videoStartDate=d.videoStartDate.replace('T',' ')
-                                                    d.videoEndDate=d.videoEndDate.replace('T',' ')
                                                     videoQuery+=' AND `time` '+d.videoStartDateOperator+' ? AND `end` '+d.videoEndDateOperator+' ?';
                                                     videoQueryValues.push(d.videoStartDate)
                                                     videoQueryValues.push(d.videoEndDate)
                                                 break;
                                                 case(d.videoStartDate&&d.videoStartDate!==''):
-                                                    d.videoStartDate=d.videoStartDate.replace('T',' ')
                                                     videoQuery+=' AND `time` '+d.videoStartDateOperator+' ?';
                                                     videoQueryValues.push(d.videoStartDate)
                                                 break;
                                                 case(d.videoEndDate&&d.videoEndDate!==''):
-                                                    d.videoEndDate=d.videoEndDate.replace('T',' ')
                                                     videoQuery+=' AND `end` '+d.videoEndDateOperator+' ?';
                                                     videoQueryValues.push(d.videoEndDate)
                                                 break;
@@ -4406,10 +4530,24 @@ var tx;
                                     d.value=d.value.concat([d.ke,d.$uid])
                                     s.sqlQuery("UPDATE Users SET "+d.condition.join(',')+" WHERE ke=? AND uid=?",d.value)
                                     s.tx({f:'edit_sub_account',ke:d.ke,uid:d.$uid,mail:d.mail,form:d.form},'ADM_'+d.ke);
+                                    s.sqlQuery("SELECT * FROM API WHERE ke=? AND uid=?",[d.ke,d.$uid],function(err,rows){
+                                        if(rows && rows[0]){
+                                            rows.forEach(function(row){
+                                                delete(s.api[row.code])
+                                            })
+                                        }
+                                    })
                                 break;
                                 case'delete':
                                     s.sqlQuery('DELETE FROM Users WHERE uid=? AND ke=? AND mail=?',[d.$uid,d.ke,d.mail])
-                                    s.sqlQuery('DELETE FROM API WHERE uid=? AND ke=?',[d.$uid,d.ke])
+                                    s.sqlQuery("SELECT * FROM API WHERE ke=? AND uid=?",[d.ke,d.$uid],function(err,rows){
+                                        if(rows && rows[0]){
+                                            rows.forEach(function(row){
+                                                delete(s.api[row.code])
+                                            })
+                                            s.sqlQuery('DELETE FROM API WHERE uid=? AND ke=?',[d.$uid,d.ke])
+                                        }
+                                    })
                                     s.tx({f:'delete_sub_account',ke:d.ke,uid:d.$uid,mail:d.mail},'ADM_'+d.ke);
                                 break;
                             }
@@ -4569,7 +4707,7 @@ var tx;
                 }
                 s.log({ke:cn.ke,mid:'$USER'},{type:lang['Websocket Disconnected'],msg:{mail:s.group[cn.ke].users[cn.auth].mail,id:cn.uid,ip:cn.ip}})
                 delete(s.group[cn.ke].users[cn.auth]);
-                delete(s.group[cn.ke].dashcamUsers[cn.auth]);
+                if(s.group[cn.ke].dashcamUsers && s.group[cn.ke].dashcamUsers[cn.auth])delete(s.group[cn.ke].dashcamUsers[cn.auth]);
             }
         }
         if(cn.pluginEngine){
@@ -5637,7 +5775,11 @@ app.get(['/:auth/videos/:ke','/:auth/videos/:ke/:id'], function (req,res){
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
-        if(user.permissions.watch_videos==="0"||user.details.sub&&user.details.allmonitors!=='1'&&user.details.video_view.indexOf(req.params.id)===-1){
+        var hasRestrictions = user.details.sub && user.details.allmonitors !== '1'
+        if(
+            user.permissions.watch_videos==="0" ||
+            hasRestrictions && (!user.details.video_view || user.details.video_view.indexOf(req.params.id)===-1)
+        ){
             res.end(s.s([]))
             return
         }
@@ -5667,6 +5809,12 @@ app.get(['/:auth/videos/:ke','/:auth/videos/:ke/:id'], function (req,res){
             }
         }
         if(req.query.start||req.query.end){
+            if(req.query.start && req.query.start !== ''){
+                req.query.start = s.stringToSqlTime(req.query.start)
+            }
+            if(req.query.end && req.query.end !== ''){
+                req.query.end = s.stringToSqlTime(req.query.end)
+            }
             if(!req.query.startOperator||req.query.startOperator==''){
                 req.query.startOperator='>='
             }
@@ -5675,8 +5823,6 @@ app.get(['/:auth/videos/:ke','/:auth/videos/:ke/:id'], function (req,res){
             }
             switch(true){
                 case(req.query.start&&req.query.start!==''&&req.query.end&&req.query.end!==''):
-                    req.query.start=req.query.start.replace('T',' ')
-                    req.query.end=req.query.end.replace('T',' ')
                     req.sql+=' AND `time` '+req.query.startOperator+' ? AND `end` '+req.query.endOperator+' ?';
                     req.count_sql+=' AND `time` '+req.query.startOperator+' ? AND `end` '+req.query.endOperator+' ?';
                     req.ar.push(req.query.start)
@@ -5685,14 +5831,12 @@ app.get(['/:auth/videos/:ke','/:auth/videos/:ke/:id'], function (req,res){
                     req.count_ar.push(req.query.end)
                 break;
                 case(req.query.start&&req.query.start!==''):
-                    req.query.start=req.query.start.replace('T',' ')
                     req.sql+=' AND `time` '+req.query.startOperator+' ?';
                     req.count_sql+=' AND `time` '+req.query.startOperator+' ?';
                     req.ar.push(req.query.start)
                     req.count_ar.push(req.query.start)
                 break;
                 case(req.query.end&&req.query.end!==''):
-                    req.query.end=req.query.end.replace('T',' ')
                     req.sql+=' AND `end` '+req.query.endOperator+' ?';
                     req.count_sql+=' AND `end` '+req.query.endOperator+' ?';
                     req.ar.push(req.query.end)
@@ -5712,17 +5856,17 @@ app.get(['/:auth/videos/:ke','/:auth/videos/:ke/:id'], function (req,res){
                 res.end(s.s({total:0,limit:req.query.limit,skip:0,videos:[]}, null, 3));
                 return
             }
-        s.sqlQuery(req.count_sql,req.count_ar,function(err,count){
-            s.video('linkBuild',r,req.params.auth)
-            if(req.query.limit.indexOf(',')>-1){
-                req.skip=parseInt(req.query.limit.split(',')[0])
-                req.query.limit=parseInt(req.query.limit.split(',')[0])
-            }else{
-                req.skip=0
-                req.query.limit=parseInt(req.query.limit)
-            }
-            res.end(s.s({isUTC:config.useUTC,total:count[0]['COUNT(*)'],limit:req.query.limit,skip:req.skip,videos:r}, null, 3));
-        })
+            s.sqlQuery(req.count_sql,req.count_ar,function(err,count){
+                s.video('linkBuild',r,req.params.auth)
+                if(req.query.limit.indexOf(',')>-1){
+                    req.skip=parseInt(req.query.limit.split(',')[0])
+                    req.query.limit=parseInt(req.query.limit.split(',')[0])
+                }else{
+                    req.skip=0
+                    req.query.limit=parseInt(req.query.limit)
+                }
+                res.end(s.s({isUTC:config.useUTC,total:count[0]['COUNT(*)'],limit:req.query.limit,skip:req.skip,videos:r}, null, 3));
+            })
         })
     },res,req);
 });
@@ -5755,9 +5899,9 @@ app.get(['/:auth/events/:ke','/:auth/events/:ke/:id','/:auth/events/:ke/:id/:lim
             }
         }
         if(req.params.start&&req.params.start!==''){
-            req.params.start=req.params.start.replace('T',' ')
+            req.params.start = s.stringToSqlTime(req.params.start)
             if(req.params.end&&req.params.end!==''){
-                req.params.end=req.params.end.replace('T',' ')
+                req.params.end = s.stringToSqlTime(req.params.end)
                 req.sql+=' AND `time` >= ? AND `time` <= ?';
                 req.ar.push(decodeURIComponent(req.params.start))
                 req.ar.push(decodeURIComponent(req.params.end))
@@ -5788,7 +5932,7 @@ app.get(['/:auth/logs/:ke','/:auth/logs/:ke/:id'], function (req,res){
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
-        if(user.permissions.get_logs==="0"){
+        if(user.permissions.get_logs==="0" || user.details.sub && user.details.view_logs !== '1'){
             res.end(s.s([]))
             return
         }
@@ -5818,13 +5962,13 @@ app.get(['/:auth/logs/:ke','/:auth/logs/:ke/:id'], function (req,res){
                 req.query.endOperator='<='
             }
             if(req.query.start && req.query.start !== '' && req.query.end && req.query.end !== ''){
-                req.query.start=req.query.start.replace('T',' ')
-                req.query.end=req.query.end.replace('T',' ')
+                req.query.start = s.stringToSqlTime(req.query.start)
+                req.query.end = s.stringToSqlTime(req.query.end)
                 req.sql+=' AND `time` '+req.query.startOperator+' ? AND `time` '+req.query.endOperator+' ?';
                 req.ar.push(req.query.start)
                 req.ar.push(req.query.end)
             }else if(req.query.start && req.query.start !== ''){
-                req.query.start=req.query.start.replace('T',' ')
+                req.query.start = s.stringToSqlTime(req.query.start)
                 req.sql+=' AND `time` '+req.query.startOperator+' ?';
                 req.ar.push(req.query.start)
             }
@@ -5886,7 +6030,8 @@ app.all(['/:auth/configureMonitor/:ke/:id','/:auth/configureMonitor/:ke/:id/:f']
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
-        if(req.params.f!=='delete'){
+        var hasRestrictions = user.details.sub && user.details.allmonitors !== '1'
+        if(req.params.f !== 'delete'){
             if(!req.body.data&&!req.query.data){
                 req.ret.msg='No Monitor Data found.'
                 res.end(s.s(req.ret, null, 3))
@@ -5905,7 +6050,10 @@ app.all(['/:auth/configureMonitor/:ke/:id','/:auth/configureMonitor/:ke/:id/:f']
                 }
                 return
             }
-            if(!user.details.sub||user.details.allmonitors==='1'||user.details.monitor_edit.indexOf(req.monitor.mid)>-1){
+            if(!user.details.sub ||
+               user.details.allmonitors === '1' ||
+               hasRestrictions && user.details.monitor_edit.indexOf(req.monitor.mid) >- 1 ||
+               hasRestrictions && user.details.monitor_create === '1'){
                     if(req.monitor&&req.monitor.mid&&req.monitor.name){
                         req.set=[],req.ar=[];
                         req.monitor.mid=req.params.id.replace(/[^\w\s]/gi,'').replace(/ /g,'');
@@ -6148,6 +6296,94 @@ app.get('/:auth/fileBin/:ke/:id/:year/:month/:day/:file', function (req,res){
     }
     s.auth(req.params,req.fn,res,req);
 });
+//zip videos and get link from fileBin
+app.get('/:auth/zipVideos/:ke', function (req,res){
+    res.header("Access-Control-Allow-Origin",req.headers.origin);
+    var failed = function(resp){
+        res.setHeader('Content-Type', 'application/json');
+        res.end(s.s(resp))
+    }
+    if(req.query.videos && req.query.videos !== ''){
+        s.auth(req.params,function(user){
+            var videosSelected = JSON.parse(req.query.videos)
+            var where = []
+            var values = []
+            videosSelected.forEach(function(video){
+                where.push("(ke=? AND mid=? AND `time`=?)")
+                if(!video.ke)video.ke = req.params.ke
+                values.push(video.ke)
+                values.push(video.mid)
+                var time = s.nameToTime(video.filename)
+                if(req.query.isUTC === 'true'){
+                    time = s.utcToLocal(time)
+                }
+                time = new Date(time)
+                values.push(time)
+            })
+            s.sqlQuery('SELECT * FROM Videos WHERE '+where.join(' OR '),values,function(err,r){
+                var resp = {ok:false}
+                if(r && r[0]){
+                    resp.ok = true
+                    var zipDownload = null
+                    var tempFiles = []
+                    var fileId = s.gid()
+                    var fileBinDir = s.dir.fileBin+req.params.ke+'/'
+                    var tempScript = s.dir.streams+req.params.ke+'/'+fileId+'.sh'
+                    var zippedFilename = s.formattedTime()+'-'+fileId+'-Shinobi_Recordings.zip'
+                    var zippedFile = fileBinDir+zippedFilename
+                    var script = 'cd '+fileBinDir+' && zip -9 -r '+zippedFile
+                    res.on('close', () => {
+                        if(zipDownload && zipDownload.destroy){
+                            zipDownload.destroy()
+                        }
+                        fs.unlink(zippedFile);
+                    })
+                    if(!fs.existsSync(fileBinDir)){
+                        fs.mkdirSync(fileBinDir);
+                    }
+                    r.forEach(function(video){
+                        timeFormatted = s.formattedTime(video.time)
+                        video.filename = timeFormatted+'.'+video.ext
+                        var dir = s.video('getDir',video)+video.filename
+                        var tempVideoFile = timeFormatted+' - '+video.mid+'.'+video.ext
+                        fs.writeFileSync(fileBinDir+tempVideoFile, fs.readFileSync(dir))
+                        tempFiles.push(fileBinDir+tempVideoFile)
+                        script += ' "'+tempVideoFile+'"'
+                    })
+                    fs.writeFileSync(tempScript,script,'utf8')
+                    var zipCreate = spawn('sh',(tempScript).split(' '),{detached: true})
+                    zipCreate.stderr.on('data',function(data){
+                        s.log({ke:req.params.ke,mid:'$USER'},{title:'Zip Create Error',msg:data.toString()})
+                    })
+                    zipCreate.on('exit',function(data){
+                        fs.unlinkSync(tempScript)
+                        tempFiles.forEach(function(file){
+                            fs.unlink(file,function(){})
+                        })
+                        res.setHeader('Content-Disposition', 'attachment; filename="'+zippedFilename+'"')
+                        var zipDownload = fs.createReadStream(zippedFile)
+                        zipDownload.pipe(res)
+                        zipDownload.on('error', function (error) {
+                            s.log({ke:req.params.ke,mid:'$USER'},{title:'Zip Download Error',msg:error.toString()})
+                            if(zipDownload && zipDownload.destroy){
+                                zipDownload.destroy()
+                            }
+                        });
+                        zipDownload.on('close', function () {
+                            res.end()
+                            zipDownload.destroy();
+                            fs.unlinkSync(zippedFile);
+                        });
+                    })
+                }else{
+                    failed({ok:false,msg:'No Videos Found'})
+                }
+            })
+        },res,req);
+    }else{
+        failed({ok:false,msg:'"videos" query variable is missing from request.'})
+    }
+});
 // Get video file
 app.get('/:auth/videos/:ke/:id/:file', function (req,res){
     s.auth(req.params,function(user){
@@ -6160,7 +6396,7 @@ app.get('/:auth/videos/:ke/:id/:file', function (req,res){
             time = s.utcToLocal(time)
         }
         time = new Date(time)
-        s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND time=?',[req.params.ke,req.params.id,time],function(err,r){
+        s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND `time`=?',[req.params.ke,req.params.id,time],function(err,r){
             if(r&&r[0]){
                 req.dir=s.video('getDir',r[0])+req.params.file
                 if (fs.existsSync(req.dir)){
@@ -6256,7 +6492,7 @@ app.get(['/:auth/videos/:ke/:id/:file/:mode','/:auth/videos/:ke/:id/:file/:mode/
             time = s.utcToLocal(time)
         }
         time = new Date(time)
-        req.sql='SELECT * FROM Videos WHERE ke=? AND mid=? AND time=?';
+        req.sql='SELECT * FROM Videos WHERE ke=? AND mid=? AND `time`=?';
         req.ar=[req.params.ke,req.params.id,time];
         s.sqlQuery(req.sql,req.ar,function(err,r){
             if(r&&r[0]){
@@ -6273,7 +6509,7 @@ app.get(['/:auth/videos/:ke/:id/:file/:mode','/:auth/videos/:ke/:id/:file/:mode/
                             req.ret.msg='Not a valid value.';
                         }else{
                             req.ret.ok=true;
-                            s.sqlQuery('UPDATE Videos SET status=? WHERE ke=? AND mid=? AND time=?',[req.params.f,req.params.ke,req.params.id,time])
+                            s.sqlQuery('UPDATE Videos SET status=? WHERE ke=? AND mid=? AND `time`=?',[req.params.f,req.params.ke,req.params.id,time])
                             s.tx(r,'GRP_'+r.ke);
                         }
                     break;
@@ -6890,6 +7126,7 @@ if(config.childNodes.mode === 'child'){
                         }
                         s.systemLog(v.mail+' : '+lang.startUpText0+' : '+rr.length,v.size)
                         s.init('group',v)
+                        s.init('apps',v)
                         s.systemLog(v.mail+' : '+lang.startUpText1,countFinished+'/'+count)
                         if(countFinished===count){
                             s.systemLog(lang.startUpText4)

@@ -107,9 +107,10 @@ if(data.addon.indexOf('gui')>-1){ %>
 <% };
 if(data.addon.indexOf('fullscreen')>-1){ %>
 <style>
-    body,html{overflow: hidden;}
+    body,html{overflow: hidden;height:100%}
     *{margin:0;padding:0;border:0}
-    .stream-element,.shinobi_stream{position:absolute;top:0;left:0;}
+    .stream-element,.shinobi_stream{position:absolute;top:0;left:0;height:100%}
+    .shinobi_stream video{object-fit: fill}
 </style>
 <script>
 $(window).resize(function(){
