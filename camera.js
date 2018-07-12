@@ -284,6 +284,10 @@ if(config.discordBot === true){
         var Discord = require("discord.js")
         s.sendDiscordAlert = function(data,files,groupKey){
             if(!data)data = {};
+            var bot = s.group[groupKey].discordBot
+            if(!bot){
+                s.log({ke:groupKey,mid:'$USER'},{type:lang.DiscordFailedText,msg:lang.DiscordNotEnabledText})
+            }
             var sendBody = Object.assign({
                 color: 3447003,
                 title: 'Alert from Shinobi',
@@ -295,7 +299,7 @@ if(config.discordBot === true){
                   text: "Shinobi Systems"
                 }
             },data)
-            s.group[groupKey].discordBot.channels.get(s.group[groupKey].init.discordbot_channel).send({
+            bot.channels.get(s.group[groupKey].init.discordbot_channel).send({
                 embed: sendBody,
                 files: files
             })
@@ -3443,15 +3447,17 @@ s.camera=function(x,e,cn,tx){
                             }
                         },files,d.ke)
                     }
-                    if(!detectorStreamBuffers){
-                        detectorStreamBuffers = s.getDetectorStreams(d)
-                    }
-                    detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
-                        files.push({
-                            attachment: filepath,
-                            name: 'Video Clip '+n+'.ts'
+                    if(d.mon.details.detector_discordbot_send_video === '1'){
+                        if(!detectorStreamBuffers){
+                            detectorStreamBuffers = s.getDetectorStreams(d)
+                        }
+                        detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
+                            files.push({
+                                attachment: filepath,
+                                name: 'Video Clip '+n+'.ts'
+                            })
                         })
-                    })
+                    }
                     if(screenshotBuffer){
                         sendAlert()
                     }else if(d.mon.details.snap === '1'){
@@ -3506,15 +3512,17 @@ s.camera=function(x,e,cn,tx){
                                 }
                             })
                         }
-                        if(!detectorStreamBuffers){
-                            detectorStreamBuffers = s.getDetectorStreams(d)
-                        }
-                        detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
-                            files.push({
-                                filename: 'Video Clip '+n+'.ts',
-                                content: fs.readFileSync(filepath)
+                        if(d.mon.details.detector_mail_send_video === '1'){
+                            if(!detectorStreamBuffers){
+                                detectorStreamBuffers = s.getDetectorStreams(d)
+                            }
+                            detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
+                                files.push({
+                                    filename: 'Video Clip '+n+'.ts',
+                                    content: fs.readFileSync(filepath)
+                                })
                             })
-                        })
+                        }
                         if(screenshotBuffer){
                             sendMail()
                         }else if(d.mon.details.snap === '1'){
