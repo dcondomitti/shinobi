@@ -1,32 +1,34 @@
 {
   "name": "shinobi",
-  "version": "1.0.37",
-  "description": "CCTV and NVR in Node.js, Version : daf882caf6053a7c2c8f4e69427620356f8a440c",
+  "productName": "Shinobi",
+  "version": "1.0.38",
+  "description": "CCTV and NVR in Node.js",
   "main": "camera.js",
+  "bin": "camera.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "chmod +x INSTALL/start.sh && INSTALL/start.sh"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/moeiscool/Shinobi.git"
+    "url": "git+https://gitlab.com/Shinobi-Systems/Shinobi.git"
   },
-  "author": "Moe Alam",
+  "author": "Moe Alam, Shinobi Systems",
   "bugs": {
-    "url": "https://github.com/ShinobiCCTV/Shinobi/issues"
+    "url": "https://gitlab.com/Shinobi-Systems/Shinobi/issues"
   },
-  "homepage": "https://github.com/moeiscool/Shinobi#readme",
+  "homepage": "https://gitlab.com/Shinobi-Systems/Shinobi#readme",
   "dependencies": {
     "body-parser": "^1.15.2",
     "circular-json": "0.3.1",
     "connection-tester": "^0.1.1",
-    "chokidar": "^2.0.3",
-    "mp4frag": "^0.0.15",
+    "mp4frag": "^0.0.22",
     "ejs": "^2.5.5",
     "express": "^4.14.0",
     "jsonfile": "^3.0.1",
     "moment": "^2.17.0",
     "mysql": "^2.12.0",
+    "sqlite3": "^3.1.8",
     "knex": "^0.14.2",
     "pam-diff": "^0.10.2",
     "pipe2pam": "^0.6.2",
@@ -38,6 +40,7 @@
     "socket.io-client": "^1.7.2",
     "http-proxy": "^1.17.0",
     "webdav": "^0.3.1",
+    "discord.js": "^11.3.2",
     "ldapauth-fork": "^4.0.2"
   },
   "devDependencies": {}

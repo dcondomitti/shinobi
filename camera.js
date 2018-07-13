@@ -2747,7 +2747,6 @@ s.camera=function(x,e,cn,tx){
                                             }
                                             s.log(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
                                         }else{
-                                            console.log('Is Streaming')
                                             resetSnapCheck()
                                         }
                                     }
@@ -3243,7 +3242,7 @@ s.camera=function(x,e,cn,tx){
                             }
                             setTimeout(function(){
                                 coSpawnLauncher()
-                            },3000)
+                            },6000)
                         }
                       }else{
                           s.log(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
