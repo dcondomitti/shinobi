@@ -3222,6 +3222,7 @@ s.camera=function(x,e,cn,tx){
                                     }
                                     s.group[e.ke].mon[e.id].coSpawnProcessor.on('end',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
                                     s.group[e.ke].mon[e.id].coSpawnProcessor.on('exit',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
+                                    var checkLog = function(d,x){return d.indexOf(x)>-1;}
                                     s.group[e.ke].mon[e.id].coSpawnProcessor.stderr.on('data',function(d){
                                         d=d.toString();
                                         switch(true){
