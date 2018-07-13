@@ -3124,11 +3124,12 @@ s.camera=function(x,e,cn,tx){
                             s.group[e.ke].mon[e.id].spawn.stderr.on('data',function(d){
                                 d=d.toString();
                                 switch(true){
+                                    case checkLog(d,'[hls @'):
                                     case checkLog(d,'pkt->duration = 0'):
                                     case checkLog(d,'Non-monotonous DTS'):
                                     case checkLog(d,'NULL @'):
                                     case checkLog(d,'RTP: missed'):
-                                    case checkLog(d,'deprecated pixel format used, make sure you did set range correctly'):
+                                    case checkLog(d,'deprecated pixel format used'):
                                         return
                                     break;
                                         //mp4 output with webm encoder chosen
@@ -3223,6 +3224,15 @@ s.camera=function(x,e,cn,tx){
                                     s.group[e.ke].mon[e.id].coSpawnProcessor.on('exit',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
                                     s.group[e.ke].mon[e.id].coSpawnProcessor.stderr.on('data',function(d){
                                         d=d.toString();
+                                        switch(true){
+                                            case checkLog(d,'deprecated pixel format used'):
+                                            case checkLog(d,'[hls @'):
+                                            case checkLog(d,'pkt->duration = 0'):
+                                            case checkLog(d,'Non-monotonous DTS'):
+                                            case checkLog(d,'NULL @'):
+                                                return
+                                            break;
+                                        }
                                         s.log(e,{type:lang.coProcessor,msg:d});
                                     })
                                     if(e.frame_to_stream){
