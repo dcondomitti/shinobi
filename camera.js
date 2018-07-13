@@ -561,12 +561,10 @@ s.kill = function(x,e,p){
             clearTimeout(s.group[e.ke].mon[e.id].record.capturing);
 //            if(s.group[e.ke].mon[e.id].record.request){s.group[e.ke].mon[e.id].record.request.abort();delete(s.group[e.ke].mon[e.id].record.request);}
         };
-        if(s.group[e.ke].mon[e.id].coSpawnProcessor){
-            s.group[e.ke].mon[e.id].coSpawnProcessor.kill('SIGTERM')
-        }
         if(s.group[e.ke].mon[e.id].childNode){
             s.cx({f:'kill',d:s.init('noReference',e)},s.group[e.ke].mon[e.id].childNodeId)
         }else{
+            s.coSpawnClose(e)
             if(!x||x===1){return};
             p=x.pid;
             if(s.group[e.ke].mon_conf[e.id].type===('dashcam'||'socket'||'jpeg'||'pipe')){
@@ -1658,18 +1656,20 @@ s.ffmpegCoProcessor = function(e){
         break;
     }
     //detector frames
-    if(!e.details.detector_fps||e.details.detector_fps===''){e.details.detector_fps=2}
-    if(e.details.detector_scale_x&&e.details.detector_scale_x!==''&&e.details.detector_scale_y&&e.details.detector_scale_y!==''){x.dratio=' -s '+e.details.detector_scale_x+'x'+e.details.detector_scale_y}else{x.dratio=' -s 320x240'}
-    if(e.details.cust_detect&&e.details.cust_detect!==''){x.cust_detect+=e.details.cust_detect;}
-    if(e.details.detector_pam==='1'){
-        x.pipe += ' -an -c:v pam -pix_fmt gray -f image2pipe -r '+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:3'
-        if(e.details.detector_use_detect_object === '1'){
-            //for object detection
-            x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
-            x.pipe += ' -f singlejpeg -vf fps='+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:4';
+    if(e.details.detector === '1'){
+        if(!e.details.detector_fps||e.details.detector_fps===''){e.details.detector_fps=2}
+        if(e.details.detector_scale_x&&e.details.detector_scale_x!==''&&e.details.detector_scale_y&&e.details.detector_scale_y!==''){x.dratio=' -s '+e.details.detector_scale_x+'x'+e.details.detector_scale_y}else{x.dratio=' -s 320x240'}
+        if(e.details.cust_detect&&e.details.cust_detect!==''){x.cust_detect+=e.details.cust_detect;}
+        if(e.details.detector_pam==='1'){
+            x.pipe += ' -an -c:v pam -pix_fmt gray -f image2pipe -r '+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:3'
+            if(e.details.detector_use_detect_object === '1'){
+                //for object detection
+                x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
+                x.pipe += ' -f singlejpeg -vf fps='+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:4';
+            }
+        }else{
+            x.pipe+=' -f singlejpeg -vf fps='+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:3';
         }
-    }else{
-        x.pipe+=' -f singlejpeg -vf fps='+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:3';
     }
     //snapshot frames
     if(e.details.snap === '1'){
@@ -1690,6 +1690,12 @@ s.ffmpegCoProcessor = function(e){
     var commandString = x.input+x.pipe
     s.group[e.ke].mon[e.mid].coProcessorCmd = commandString
     return spawn(config.ffmpegDir,s.splitForFFPMEG((commandString).replace(/\s+/g,' ').trim()),{detached: true,stdio:x.stdioPipes})
+}
+s.coSpawnClose = function(e){
+    if(s.group[e.ke].mon[e.id].coSpawnProcessor){
+        s.group[e.ke].mon[e.id].coSpawnProcessor.stdin.pause()
+        s.group[e.ke].mon[e.id].coSpawnProcessor.kill()
+    }
 }
 s.ffmpeg = function(e){
     e.coProcessor = false
@@ -2014,7 +2020,7 @@ s.ffmpeg = function(e){
             //add input feed map
             x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.snap)
         }
-        if(e.details.accelerator !== '1'){
+        if(e.coProcessor === false){
             if(!e.details.snap_fps || e.details.snap_fps === ''){e.details.snap_fps = 1}
             if(e.details.snap_vf && e.details.snap_vf !== ''){x.snap_vf=' -vf '+e.details.snap_vf}else{x.snap_vf=''}
             if(e.details.snap_scale_x && e.details.snap_scale_x !== '' && e.details.snap_scale_y && e.details.snap_scale_y !== ''){x.snap_ratio = ' -s '+e.details.snap_scale_x+'x'+e.details.snap_scale_y}else{x.snap_ratio=''}
@@ -2700,7 +2706,6 @@ s.camera=function(x,e,cn,tx){
                 }
                 var resetRecordingCheck = function(){
                     clearTimeout(s.group[e.ke].mon[e.id].checker)
-                    clearTimeout(s.group[e.ke].mon[e.id].checkStream)
                     var cutoff = e.cutoff + 0
                     if(e.type === 'dashcam'){
                         cutoff *= 100
@@ -2721,6 +2726,36 @@ s.camera=function(x,e,cn,tx){
                             s.log(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
                         }
                     },60000*1);
+                }
+                if(e.details.snap === '1'){
+                    var resetSnapCheck = function(){
+                        clearTimeout(s.group[e.ke].mon[e.id].checkSnap)
+                        s.group[e.ke].mon[e.id].checkSnap = setTimeout(function(){
+                            if(s.group[e.ke].mon[e.id].started===1){
+                                fs.stat(e.sdir+'s.jpg',function(err,snap){
+                                    if(err){
+                                        console.log(err)
+                                    }else{
+                                        if(!e.checkSnapTime)e.checkSnapTime = snap.mtime
+                                        if(e.checkSnapTime === snap.mtime){
+                                            e.checkSnapTime = snap.mtime
+                                            //not streaming
+                                            if(e.coProcessor === true){
+                                                s.coSpawnClose(e)
+                                            }else{
+                                                launchMonitorProcesses()
+                                            }
+                                            s.log(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
+                                        }else{
+                                            console.log('Is Streaming')
+                                            resetSnapCheck()
+                                        }
+                                    }
+                                })
+                            }
+                        },60000*1);
+                    }
+                    resetSnapCheck()
                 }
                 if(config.childNodes.mode !== 'child' && s.platform!=='darwin' && (x==='record' || (x==='start'&&e.details.detector_record_method==='sip'))){
                     //check if ffmpeg is recording
@@ -2991,6 +3026,9 @@ s.camera=function(x,e,cn,tx){
                        switch(e.details.stream_type){
                            case'mp4':
                                s.group[e.ke].mon[e.id].mp4frag['MAIN'] = new Mp4Frag();
+                               s.group[e.ke].mon[e.id].mp4frag['MAIN'].on('error',function(error){
+                                   s.log(e,{type:lang['Mp4Frag'],msg:{error:error}})
+                               })
                                s.group[e.ke].mon[e.id].spawn.stdio[1].pipe(s.group[e.ke].mon[e.id].mp4frag['MAIN'])
                            break;
                            case'flv':
@@ -3083,20 +3121,21 @@ s.camera=function(x,e,cn,tx){
                             e.details.stream_channels.forEach(createStreamEmitter)
                         }
                         if(x==='record'||e.type==='mjpeg'||e.type==='h264'||e.type==='local'){
+                            var checkLog = function(d,x){return d.indexOf(x)>-1;}
                             s.group[e.ke].mon[e.id].spawn.stderr.on('data',function(d){
                                 d=d.toString();
-                                e.chk=function(x){return d.indexOf(x)>-1;}
                                 switch(true){
-                                    case e.chk('Non-monotonous DTS'):
-                                    case e.chk('NULL @'):
-                                    case e.chk('RTP: missed'):
-                                    case e.chk('deprecated pixel format used, make sure you did set range correctly'):
+                                    case checkLog(d,'pkt->duration = 0'):
+                                    case checkLog(d,'Non-monotonous DTS'):
+                                    case checkLog(d,'NULL @'):
+                                    case checkLog(d,'RTP: missed'):
+                                    case checkLog(d,'deprecated pixel format used, make sure you did set range correctly'):
                                         return
                                     break;
                                         //mp4 output with webm encoder chosen
-                                    case e.chk('Could not find tag for vp8'):
-                                    case e.chk('Only VP8 or VP9 Video'):
-                                    case e.chk('Could not write header'):
+                                    case checkLog(d,'Could not find tag for vp8'):
+                                    case checkLog(d,'Only VP8 or VP9 Video'):
+                                    case checkLog(d,'Could not write header'):
 //                                            switch(e.ext){
 //                                                case'mp4':
 //                                                    e.details.vcodec='libx264'
@@ -3114,29 +3153,29 @@ s.camera=function(x,e,cn,tx){
 //                                            s.camera('restart',e)
                                         return s.log(e,{type:lang['Incorrect Settings Chosen'],msg:{msg:d}})
                                     break;
-//                                                case e.chk('av_interleaved_write_frame'):
-                                    case e.chk('Connection refused'):
-                                    case e.chk('Connection timed out'):
+//                                                case checkLog(d,'av_interleaved_write_frame'):
+                                    case checkLog(d,'Connection refused'):
+                                    case checkLog(d,'Connection timed out'):
                                         //restart
                                         setTimeout(function(){
                                             s.log(e,{type:lang['Connection timed out'],msg:lang['Retrying...']});
                                             errorFatal('Connection timed out');
                                         },1000)
                                     break;
-//                                        case e.chk('No such file or directory'):
-//                                        case e.chk('Unable to open RTSP for listening'):
-//                                        case e.chk('timed out'):
-//                                        case e.chk('Invalid data found when processing input'):
-//                                        case e.chk('reset by peer'):
+//                                        case checkLog(d,'No such file or directory'):
+//                                        case checkLog(d,'Unable to open RTSP for listening'):
+//                                        case checkLog(d,'timed out'):
+//                                        case checkLog(d,'Invalid data found when processing input'):
+//                                        case checkLog(d,'reset by peer'):
 //                                           if(e.frames===0&&x==='record'){s.video('delete',e)};
 //                                            setTimeout(function(){
 //                                                if(!s.group[e.ke].mon[e.id].spawn){launchMonitorProcesses()}
 //                                            },2000)
 //                                        break;
-                                    case e.chk('Immediate exit requested'):
-                                     case e.chk('mjpeg_decode_dc'):
-                                    case e.chk('bad vlc'):
-                                    case e.chk('error dc'):
+                                    case checkLog(d,'Immediate exit requested'):
+                                     case checkLog(d,'mjpeg_decode_dc'):
+                                    case checkLog(d,'bad vlc'):
+                                    case checkLog(d,'error dc'):
                                         launchMonitorProcesses()
                                     break;
                                     case /T[0-9][0-9]-[0-9][0-9]-[0-9][0-9]./.test(d):
@@ -3171,12 +3210,15 @@ s.camera=function(x,e,cn,tx){
                             });
                         }
                         if(e.coProcessor === true){
-                            var coSpawnLauncher = function(){
-                                if(s.group[e.ke].mon[e.id].started === 1){
+                            coSpawnLauncher = function(){
+                                if(s.group[e.ke].mon[e.id].started === 1 && e.coProcessor === true){
+                                    s.log(e,{type:lang['coProcessor Started'],msg:{msg:lang.coProcessorText1+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
                                     s.group[e.ke].mon[e.id].coSpawnProcessor = s.ffmpegCoProcessor(e)
                                     s.group[e.ke].mon[e.id].coSpawnProcessorExit = function(){
                                         s.log(e,{type:lang['coProcess Unexpected Exit'],msg:{msg:lang['coProcess Crashed for Monitor']+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
-                                        setTimeout(coSpawnLauncher,2000)
+                                        setTimeout(function(){
+                                            coSpawnLauncher()
+                                        },2000)
                                     }
                                     s.group[e.ke].mon[e.id].coSpawnProcessor.on('end',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
                                     s.group[e.ke].mon[e.id].coSpawnProcessor.on('exit',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
@@ -3199,7 +3241,9 @@ s.camera=function(x,e,cn,tx){
                                     }
                                 }
                             }
-                            setTimeout(coSpawnLauncher,5000)
+                            setTimeout(function(){
+                                coSpawnLauncher()
+                            },3000)
                         }
                       }else{
                           s.log(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
