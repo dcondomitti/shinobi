@@ -1698,14 +1698,20 @@ s.ffmpegCoProcessor = function(e){
         x.stdioPipes.push('pipe')
     }
     var commandString = x.input+x.pipe
+    if(commandString === x.input){
+        return false
+    }
     s.group[e.ke].mon[e.mid].coProcessorCmd = commandString
     return spawn(config.ffmpegDir,s.splitForFFPMEG((commandString).replace(/\s+/g,' ').trim()),{detached: true,stdio:x.stdioPipes})
 }
 s.coSpawnLauncher = function(e){
     if(s.group[e.ke].mon[e.id].started === 1 && e.coProcessor === true){
         s.coSpawnClose(e)
-        s.log(e,{type:lang['coProcessor Started'],msg:{msg:lang.coProcessorText1+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
         s.group[e.ke].mon[e.id].coSpawnProcessor = s.ffmpegCoProcessor(e)
+        if(s.group[e.ke].mon[e.id].coSpawnProcessor === false){
+            return
+        }
+        s.log(e,{type:lang['coProcessor Started'],msg:{msg:lang.coProcessorText1+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
         s.group[e.ke].mon[e.id].coSpawnProcessorExit = function(){
             s.log(e,{type:lang['coProcess Unexpected Exit'],msg:{msg:lang['coProcess Crashed for Monitor']+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
             setTimeout(function(){
@@ -2787,7 +2793,7 @@ s.camera=function(x,e,cn,tx){
                     var resetSnapCheck = function(){
                         clearTimeout(s.group[e.ke].mon[e.id].checkSnap)
                         s.group[e.ke].mon[e.id].checkSnap = setTimeout(function(){
-                            if(s.group[e.ke].mon[e.id].started===1){
+                            if(s.group[e.ke].mon[e.id].started === 1 && e.details.snap === '1'){
                                 fs.stat(e.sdir+'s.jpg',function(err,snap){
                                     var notStreaming = function(){
                                         if(e.coProcessor === true){
