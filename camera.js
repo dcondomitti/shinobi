@@ -483,6 +483,105 @@ s.getDetectorStreams = function(monitor){
     })
     return items
 }
+s.createPamDiffEngine = function(e){
+    var width,
+        height,
+        globalSensitivity,
+        fullFrame = false
+    if(s.group[e.ke].mon_conf[e.id].details.detector_scale_x===''||s.group[e.ke].mon_conf[e.id].details.detector_scale_y===''){
+        width = s.group[e.ke].mon_conf[e.id].details.detector_scale_x;
+        height = s.group[e.ke].mon_conf[e.id].details.detector_scale_y;
+    }else{
+        width = e.width
+        height = e.height
+    }
+    if(e.details.detector_sensitivity===''){
+        globalSensitivity = 10
+    }else{
+        globalSensitivity = parseInt(e.details.detector_sensitivity)
+    }
+    if(e.details.detector_frame==='1'){
+        fullFrame={
+            name:'FULL_FRAME',
+            sensitivity:globalSensitivity,
+            points:[
+                [0,0],
+                [0,height],
+                [width,height],
+                [width,0]
+            ]
+        };
+    }
+    var regions = s.createPamDiffRegionArray(s.group[e.ke].mon_conf[e.id].details.cords,globalSensitivity,fullFrame);
+    if(!s.group[e.ke].mon[e.id].noiseFilterArray)s.group[e.ke].mon[e.id].noiseFilterArray = {}
+    var noiseFilterArray = s.group[e.ke].mon[e.id].noiseFilterArray
+    Object.keys(regions.notForPam).forEach(function(name){
+        if(!noiseFilterArray[name])noiseFilterArray[name]=[];
+    })
+    s.group[e.ke].mon[e.id].pamDiff = new PamDiff({grayscale: 'luminosity', regions : regions.forPam});
+    s.group[e.ke].mon[e.id].p2p = new P2P();
+    var sendTrigger = function(trigger){
+        var detectorObject = {
+            f:'trigger',
+            id:e.id,
+            ke:e.ke,
+            name:trigger.name,
+            details:{
+                plug:'built-in',
+                name:trigger.name,
+                reason:'motion',
+                confidence:trigger.percent,
+            },
+            plates:[],
+            imgHeight:height,
+            imgWidth:width
+        }
+        detectorObject.doObjectDetection = (s.ocv && e.details.detector_use_detect_object === '1')
+        s.camera('motion',detectorObject)
+        if(detectorObject.doObjectDetection === true){
+            s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:s.group[e.ke].mon[e.id].lastJpegDetectorFrame});
+        }
+    }
+    var filterTheNoise = function(trigger){
+        if(noiseFilterArray[trigger.name].length > 2){
+            var thePreviousTriggerPercent = noiseFilterArray[trigger.name][noiseFilterArray[trigger.name].length - 1];
+            var triggerDifference = trigger.percent - thePreviousTriggerPercent;
+            var noiseRange = e.details.detector_noise_filter_range
+            if(!noiseRange || noiseRange === ''){
+                noiseRange = 6
+            }
+            noiseRange = parseFloat(noiseRange)
+            if(((trigger.percent - thePreviousTriggerPercent) < noiseRange)||(thePreviousTriggerPercent - trigger.percent) > -noiseRange){
+                noiseFilterArray[trigger.name].push(trigger.percent);
+            }
+        }else{
+            noiseFilterArray[trigger.name].push(trigger.percent);
+        }
+        if(noiseFilterArray[trigger.name].length > 10){
+            noiseFilterArray[trigger.name] = noiseFilterArray[trigger.name].splice(1,10)
+        }
+        var theNoise = 0;
+        noiseFilterArray[trigger.name].forEach(function(v,n){
+            theNoise += v;
+        })
+        theNoise = theNoise / noiseFilterArray[trigger.name].length;
+//                                    console.log(noiseFilterArray[trigger.name])
+//                                    console.log(theNoise)
+        var triggerPercentWithoutNoise = trigger.percent - theNoise;
+        if(triggerPercentWithoutNoise > regions.notForPam[trigger.name].sensitivity){
+            sendTrigger(trigger);
+        }
+    }
+    if(e.details.detector_noise_filter==='1'){
+        s.group[e.ke].mon[e.id].pamDiff.on('diff', (data) => {
+            data.trigger.forEach(filterTheNoise)
+        })
+    }else{
+        s.group[e.ke].mon[e.id].pamDiff.on('diff', (data) => {
+            data.trigger.forEach(sendTrigger)
+        })
+    }
+}
 s.createPamDiffRegionArray = function(regions,globalSensitivity,fullFrame){
     var pamDiffCompliantArray = [],
         arrayForOtherStuff = [],
@@ -1743,7 +1842,7 @@ s.coSpawnLauncher = function(e){
         }
         if(e.details.detector === '1'){
             if(e.details.detector_pam === '1'){
-                createPamDiffEngine()
+                s.createPamDiffEngine(e)
                 s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].pipe(s.group[e.ke].mon[e.id].p2p).pipe(s.group[e.ke].mon[e.id].pamDiff)
             }else{
                 s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].on('data',function(d){
@@ -2974,107 +3073,8 @@ s.camera=function(x,e,cn,tx){
                             s.ocvTx({f:'init_monitor',id:e.id,ke:e.ke})
                             //frames from motion detect
                             if(e.details.detector_pam==='1'){
-                                var createPamDiffEngine = function(){
-                                    var width,
-                                        height,
-                                        globalSensitivity,
-                                        fullFrame = false
-                                    if(s.group[e.ke].mon_conf[e.id].details.detector_scale_x===''||s.group[e.ke].mon_conf[e.id].details.detector_scale_y===''){
-                                        width = s.group[e.ke].mon_conf[e.id].details.detector_scale_x;
-                                        height = s.group[e.ke].mon_conf[e.id].details.detector_scale_y;
-                                    }else{
-                                        width = e.width
-                                        height = e.height
-                                    }
-                                    if(e.details.detector_sensitivity===''){
-                                        globalSensitivity = 10
-                                    }else{
-                                        globalSensitivity = parseInt(e.details.detector_sensitivity)
-                                    }
-                                    if(e.details.detector_frame==='1'){
-                                        fullFrame={
-                                            name:'FULL_FRAME',
-                                            sensitivity:globalSensitivity,
-                                            points:[
-                                                [0,0],
-                                                [0,height],
-                                                [width,height],
-                                                [width,0]
-                                            ]
-                                        };
-                                    }
-                                    var regions = s.createPamDiffRegionArray(s.group[e.ke].mon_conf[e.id].details.cords,globalSensitivity,fullFrame);
-                                    if(!s.group[e.ke].mon[e.id].noiseFilterArray)s.group[e.ke].mon[e.id].noiseFilterArray = {}
-                                    var noiseFilterArray = s.group[e.ke].mon[e.id].noiseFilterArray
-                                    Object.keys(regions.notForPam).forEach(function(name){
-                                        if(!noiseFilterArray[name])noiseFilterArray[name]=[];
-                                    })
-                                    s.group[e.ke].mon[e.id].pamDiff = new PamDiff({grayscale: 'luminosity', regions : regions.forPam});
-                                    s.group[e.ke].mon[e.id].p2p = new P2P();
-                                    var sendTrigger = function(trigger){
-                                        var detectorObject = {
-                                            f:'trigger',
-                                            id:e.id,
-                                            ke:e.ke,
-                                            name:trigger.name,
-                                            details:{
-                                                plug:'built-in',
-                                                name:trigger.name,
-                                                reason:'motion',
-                                                confidence:trigger.percent,
-                                            },
-                                            plates:[],
-                                            imgHeight:height,
-                                            imgWidth:width
-                                        }
-                                        detectorObject.doObjectDetection = (s.ocv && e.details.detector_use_detect_object === '1')
-                                        s.camera('motion',detectorObject)
-                                        if(detectorObject.doObjectDetection === true){
-                                            s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:s.group[e.ke].mon[e.id].lastJpegDetectorFrame});
-                                        }
-                                    }
-                                    var filterTheNoise = function(trigger){
-                                        if(noiseFilterArray[trigger.name].length > 2){
-                                            var thePreviousTriggerPercent = noiseFilterArray[trigger.name][noiseFilterArray[trigger.name].length - 1];
-                                            var triggerDifference = trigger.percent - thePreviousTriggerPercent;
-                                            var noiseRange = e.details.detector_noise_filter_range
-                                            if(!noiseRange || noiseRange === ''){
-                                                noiseRange = 6
-                                            }
-                                            noiseRange = parseFloat(noiseRange)
-                                            if(((trigger.percent - thePreviousTriggerPercent) < noiseRange)||(thePreviousTriggerPercent - trigger.percent) > -noiseRange){
-                                                noiseFilterArray[trigger.name].push(trigger.percent);
-                                            }
-                                        }else{
-                                            noiseFilterArray[trigger.name].push(trigger.percent);
-                                        }
-                                        if(noiseFilterArray[trigger.name].length > 10){
-                                            noiseFilterArray[trigger.name] = noiseFilterArray[trigger.name].splice(1,10)
-                                        }
-                                        var theNoise = 0;
-                                        noiseFilterArray[trigger.name].forEach(function(v,n){
-                                            theNoise += v;
-                                        })
-                                        theNoise = theNoise / noiseFilterArray[trigger.name].length;
-    //                                    console.log(noiseFilterArray[trigger.name])
-    //                                    console.log(theNoise)
-                                        var triggerPercentWithoutNoise = trigger.percent - theNoise;
-                                        if(triggerPercentWithoutNoise > regions.notForPam[trigger.name].sensitivity){
-                                            sendTrigger(trigger);
-                                        }
-                                    }
-                                    if(e.details.detector_noise_filter==='1'){
-                                        s.group[e.ke].mon[e.id].pamDiff.on('diff', (data) => {
-                                            data.trigger.forEach(filterTheNoise)
-                                        })
-                                    }else{
-                                        s.group[e.ke].mon[e.id].pamDiff.on('diff', (data) => {
-                                            data.trigger.forEach(sendTrigger)
-                                        })
-                                    }
-                                }
                                if(e.coProcessor === false){
-                                   createPamDiffEngine()
+                                   s.createPamDiffEngine(e)
                                    s.group[e.ke].mon[e.id].spawn.stdio[3].pipe(s.group[e.ke].mon[e.id].p2p).pipe(s.group[e.ke].mon[e.id].pamDiff)
                                     if(e.details.detector_use_detect_object === '1'){
                                         s.group[e.ke].mon[e.id].spawn.stdio[4].on('data',function(d){

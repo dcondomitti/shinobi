@@ -1800,8 +1800,8 @@ $.ccio.globalWebsocket=function(d,user){
                 }
                 if(d.details.confidence){
                     d.tt=d.details.confidence;
-                    if (d.tt > 100) { d.tt = 100; }
-                    d.e.find('.indifference .progress-bar').css('width',d.tt + "%").find('span').text(d.details.confidence)
+                    if (d.tt > 100) { d.tt = 100 }
+                    d.e.find('.indifference .progress-bar').css('width',d.tt + '%').find('span').html(d.details.confidence+'% change in <b>'+d.details.name+'</b>')
                 }
                 d.e.addClass('detector_triggered')
                 clearTimeout($.ccio.mon[d.ke+d.id+user.auth_token].detector_trigger_timeout);
