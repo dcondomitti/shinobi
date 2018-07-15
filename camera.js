@@ -3395,6 +3395,8 @@ s.camera=function(x,e,cn,tx){
                 if(d.mon.details.detector_webhook=='1'){
                     var detector_webhook_url = d.mon.details.detector_webhook_url
                         .replace(/{{TIME}}/g,s.timeObject(new Date).format())
+                        .replace(/{{REGION_NAME}}/g,d.details.name)
+                        .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
                         .replace(/{{MONITOR_ID}}/g,d.id)
                         .replace(/{{GROUP_KEY}}/g,d.ke)
                         .replace(/{{DETAILS}}/g,detailString)
@@ -3642,6 +3644,8 @@ s.camera=function(x,e,cn,tx){
                     },detector_command_timeout);
                     var detector_command = d.mon.details.detector_command
                         .replace(/{{TIME}}/g,s.timeObject(new Date).format())
+                        .replace(/{{REGION_NAME}}/g,d.details.name)
+                        .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
                         .replace(/{{MONITOR_ID}}/g,d.id)
                         .replace(/{{GROUP_KEY}}/g,d.ke)
                         .replace(/{{DETAILS}}/g,detailString)
