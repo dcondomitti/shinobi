@@ -282,7 +282,7 @@ s.sqlQuery = function(query,values,onMoveOn){
 if(config.discordBot === true){
     try{
         var Discord = require("discord.js")
-        s.sendDiscordAlert = function(data,files,groupKey){
+        s.discordMsg = function(data,files,groupKey){
             if(!data)data = {};
             var bot = s.group[groupKey].discordBot
             if(!bot){
@@ -307,7 +307,7 @@ if(config.discordBot === true){
         }
     }catch(err){
         console.log('Could not start Discord bot, please run "npm install discord.js" inside the Shinobi folder.')
-        s.sendDiscordAlert = function(){}
+        s.discordMsg = function(){}
     }
 }
 //kill any ffmpeg running
@@ -550,6 +550,8 @@ s.kill = function(x,e,p){
         delete(s.group[e.ke].mon[e.id].checker);
         clearTimeout(s.group[e.ke].mon[e.id].checkStream);
         delete(s.group[e.ke].mon[e.id].checkStream);
+        clearTimeout(s.group[e.ke].mon[e.id].checkSnap);
+        delete(s.group[e.ke].mon[e.id].checkSnap);
         clearTimeout(s.group[e.ke].mon[e.id].watchdog_stop);
         delete(s.group[e.ke].mon[e.id].watchdog_stop);
         delete(s.group[e.ke].mon[e.id].lastJpegDetectorFrame);
@@ -862,7 +864,7 @@ s.init=function(x,e,k,fn){
             }
         break;
         case'monitorStatus':
-//            s.sendDiscordAlert({
+//            s.discordMsg({
 //                author: {
 //                  name: s.group[e.ke].mon_conf[e.id].name,
 //                  icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"
@@ -1711,7 +1713,7 @@ s.coSpawnLauncher = function(e){
         if(s.group[e.ke].mon[e.id].coSpawnProcessor === false){
             return
         }
-        s.log(e,{type:lang['coProcessor Started'],msg:{msg:lang.coProcessorText1+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
+        s.log(e,{type:lang['coProcessor Started'],msg:{msg:lang.coProcessorTextStarted+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
         s.group[e.ke].mon[e.id].coSpawnProcessorExit = function(){
             s.log(e,{type:lang['coProcess Unexpected Exit'],msg:{msg:lang['coProcess Crashed for Monitor']+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
             setTimeout(function(){
@@ -1757,6 +1759,8 @@ s.coSpawnClose = function(e){
         s.group[e.ke].mon[e.id].coSpawnProcessor.removeListener('exit',s.group[e.ke].mon[e.id].coSpawnProcessorExit);
         s.group[e.ke].mon[e.id].coSpawnProcessor.stdin.pause()
         s.group[e.ke].mon[e.id].coSpawnProcessor.kill()
+        delete(s.group[e.ke].mon[e.id].coSpawnProcessor)
+        s.log(e,{type:lang['coProcessor Stopped'],msg:{msg:lang.coProcessorTextStopped+' : '+e.id}});
     }
 }
 s.ffmpeg = function(e){
@@ -2793,7 +2797,7 @@ s.camera=function(x,e,cn,tx){
                     var resetSnapCheck = function(){
                         clearTimeout(s.group[e.ke].mon[e.id].checkSnap)
                         s.group[e.ke].mon[e.id].checkSnap = setTimeout(function(){
-                            if(s.group[e.ke].mon[e.id].started === 1 && e.details.snap === '1'){
+                            if(s.group[e.ke].mon[e.id].started === 1){
                                 fs.stat(e.sdir+'s.jpg',function(err,snap){
                                     var notStreaming = function(){
                                         if(e.coProcessor === true){
@@ -3511,7 +3515,7 @@ s.camera=function(x,e,cn,tx){
                     },detector_discordbot_timeout);
                     var files = []
                     var sendAlert = function(){
-                        s.sendDiscordAlert({
+                        s.discordMsg({
                             author: {
                               name: s.group[d.ke].mon_conf[d.id].name,
                               icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"
