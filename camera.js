@@ -1765,7 +1765,7 @@ s.coSpawnClose = function(e){
 }
 s.ffmpeg = function(e){
     e.coProcessor = false
-    e.isStreamer = (e.type === ('dashcam'||'socket'))
+    e.isStreamer = (e.type === 'dashcam'|| e.type === 'socket')
     if(e.details.accelerator === '1' && e.details.hwaccel_vcodec !== 'auto' && e.isStreamer === false){
         e.coProcessor = true
     }
