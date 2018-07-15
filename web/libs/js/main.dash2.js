@@ -1451,7 +1451,7 @@ switch($user.details.lang){
                 tmp+='</div>'
                 tmp+='     <div class="form-group">'
                 tmp+='        <label><div><span><%-lang["Stream Type"]%></span></div>'
-                tmp+='            <div><select class="form-control" channel-detail="stream_type" selector="h_st_channel_'+tempID+'" triggerChange="#monSectionChannel'+tempID+' [channel-detail=stream_vcodec]">'
+                tmp+='            <div><select class="form-control" channel-detail="stream_type" selector="h_st_channel_'+tempID+'" triggerChange="#monSectionChannel'+tempID+' [channel-detail=stream_vcodec]" triggerChangeIgnore="b64,mjpeg">'
                 tmp+='                <option value="mp4"><%-lang["Poseidon"]%></option>'
                 tmp+='                <option value="rtmp"><%-lang["RTMP Stream"]%></option>'
                 tmp+='                <option value="flv"><%-lang["FLV"]%></option>'
