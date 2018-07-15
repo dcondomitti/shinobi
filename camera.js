@@ -287,6 +287,7 @@ if(config.discordBot === true){
             var bot = s.group[groupKey].discordBot
             if(!bot){
                 s.log({ke:groupKey,mid:'$USER'},{type:lang.DiscordFailedText,msg:lang.DiscordNotEnabledText})
+                return
             }
             var sendBody = Object.assign({
                 color: 3447003,
@@ -543,11 +544,6 @@ s.kill = function(x,e,p){
                 s.group[e.ke].mon[e.id].spawn.removeListener('end',s.group[e.ke].mon[e.id].spawn_exit);
                 s.group[e.ke].mon[e.id].spawn.removeListener('exit',s.group[e.ke].mon[e.id].spawn_exit);
                 delete(s.group[e.ke].mon[e.id].spawn_exit);
-            }catch(er){}
-            try{
-                s.group[e.ke].mon[e.id].coSpawnProcessor.removeListener('end',s.group[e.ke].mon[e.id].coSpawnProcessorExit);
-                s.group[e.ke].mon[e.id].coSpawnProcessor.removeListener('exit',s.group[e.ke].mon[e.id].coSpawnProcessorExit);
-                delete(s.group[e.ke].mon[e.id].coSpawnProcessorExit);
             }catch(er){}
         }
         clearTimeout(s.group[e.ke].mon[e.id].checker);
@@ -866,6 +862,20 @@ s.init=function(x,e,k,fn){
             }
         break;
         case'monitorStatus':
+//            s.sendDiscordAlert({
+//                author: {
+//                  name: s.group[e.ke].mon_conf[e.id].name,
+//                  icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"
+//                },
+//                title: lang['Status Changed'],
+//                description: lang['Monitor is now '+e.status],
+//                fields: [],
+//                timestamp: new Date(),
+//                footer: {
+//                  icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
+//                  text: "Shinobi Systems"
+//                }
+//            },[],e.ke)
             s.group[e.ke].mon[e.id].monitorStatus = e.status
             s.tx(Object.assign(e,{f:'monitor_status'}),'GRP_'+e.ke)
         break;
@@ -1691,15 +1701,61 @@ s.ffmpegCoProcessor = function(e){
     s.group[e.ke].mon[e.mid].coProcessorCmd = commandString
     return spawn(config.ffmpegDir,s.splitForFFPMEG((commandString).replace(/\s+/g,' ').trim()),{detached: true,stdio:x.stdioPipes})
 }
+s.coSpawnLauncher = function(e){
+    if(s.group[e.ke].mon[e.id].started === 1 && e.coProcessor === true){
+        s.coSpawnClose(e)
+        s.log(e,{type:lang['coProcessor Started'],msg:{msg:lang.coProcessorText1+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
+        s.group[e.ke].mon[e.id].coSpawnProcessor = s.ffmpegCoProcessor(e)
+        s.group[e.ke].mon[e.id].coSpawnProcessorExit = function(){
+            s.log(e,{type:lang['coProcess Unexpected Exit'],msg:{msg:lang['coProcess Crashed for Monitor']+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
+            setTimeout(function(){
+                s.coSpawnLauncher(e)
+            },2000)
+        }
+        s.group[e.ke].mon[e.id].coSpawnProcessor.on('end',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
+        s.group[e.ke].mon[e.id].coSpawnProcessor.on('exit',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
+        var checkLog = function(d,x){return d.indexOf(x)>-1;}
+        s.group[e.ke].mon[e.id].coSpawnProcessor.stderr.on('data',function(d){
+            d=d.toString();
+            switch(true){
+                case checkLog(d,'deprecated pixel format used'):
+                case checkLog(d,'[hls @'):
+                case checkLog(d,'Past duration'):
+                case checkLog(d,'Last message repeated'):
+                case checkLog(d,'pkt->duration = 0'):
+                case checkLog(d,'Non-monotonous DTS'):
+                case checkLog(d,'NULL @'):
+                    return
+                break;
+            }
+            s.log(e,{type:lang.coProcessor,msg:d});
+        })
+        if(e.frame_to_stream){
+            s.group[e.ke].mon[e.id].coSpawnProcessor.stdout.on('data',e.frame_to_stream)
+        }
+        if(e.details.detector === '1'){
+            if(e.details.detector_pam === '1'){
+                createPamDiffEngine()
+                s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].pipe(s.group[e.ke].mon[e.id].p2p).pipe(s.group[e.ke].mon[e.id].pamDiff)
+            }else{
+                s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].on('data',function(d){
+                    s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:d});
+                })
+            }
+        }
+    }
+}
 s.coSpawnClose = function(e){
     if(s.group[e.ke].mon[e.id].coSpawnProcessor){
+        s.group[e.ke].mon[e.id].coSpawnProcessor.removeListener('end',s.group[e.ke].mon[e.id].coSpawnProcessorExit);
+        s.group[e.ke].mon[e.id].coSpawnProcessor.removeListener('exit',s.group[e.ke].mon[e.id].coSpawnProcessorExit);
         s.group[e.ke].mon[e.id].coSpawnProcessor.stdin.pause()
         s.group[e.ke].mon[e.id].coSpawnProcessor.kill()
     }
 }
 s.ffmpeg = function(e){
     e.coProcessor = false
-    if(e.details.accelerator === '1'){
+    if(e.details.accelerator === '1' && e.details.hwaccel_vcodec !== 'auto'){
         e.coProcessor = true
     }
     //set X for temporary values so we don't break our main monitor object.
@@ -2670,7 +2726,7 @@ s.camera=function(x,e,cn,tx){
                     s.group[e.ke].mon[e.id].motion_lock=setTimeout(function(){
                         clearTimeout(s.group[e.ke].mon[e.id].motion_lock);
                         delete(s.group[e.ke].mon[e.id].motion_lock);
-                    },30000)
+                    },15000)
                 }
                 //start "no motion" checker
                 if(e.details.detector=='1'&&e.details.detector_notrigger=='1'){
@@ -2733,19 +2789,21 @@ s.camera=function(x,e,cn,tx){
                         s.group[e.ke].mon[e.id].checkSnap = setTimeout(function(){
                             if(s.group[e.ke].mon[e.id].started===1){
                                 fs.stat(e.sdir+'s.jpg',function(err,snap){
+                                    var notStreaming = function(){
+                                        if(e.coProcessor === true){
+                                            s.coSpawnLauncher(e)
+                                        }else{
+                                            launchMonitorProcesses()
+                                        }
+                                        s.log(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
+                                    }
                                     if(err){
-                                        console.log(err)
+                                        notStreaming()
                                     }else{
                                         if(!e.checkSnapTime)e.checkSnapTime = snap.mtime
-                                        if(e.checkSnapTime === snap.mtime){
+                                        if(err || e.checkSnapTime === snap.mtime){
                                             e.checkSnapTime = snap.mtime
-                                            //not streaming
-                                            if(e.coProcessor === true){
-                                                s.coSpawnClose(e)
-                                            }else{
-                                                launchMonitorProcesses()
-                                            }
-                                            s.log(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
+                                            notStreaming()
                                         }else{
                                             resetSnapCheck()
                                         }
@@ -3125,6 +3183,8 @@ s.camera=function(x,e,cn,tx){
                                 d=d.toString();
                                 switch(true){
                                     case checkLog(d,'[hls @'):
+                                    case checkLog(d,'Past duration'):
+                                    case checkLog(d,'Last message repeated'):
                                     case checkLog(d,'pkt->duration = 0'):
                                     case checkLog(d,'Non-monotonous DTS'):
                                     case checkLog(d,'NULL @'):
@@ -3210,49 +3270,8 @@ s.camera=function(x,e,cn,tx){
                             });
                         }
                         if(e.coProcessor === true){
-                            coSpawnLauncher = function(){
-                                if(s.group[e.ke].mon[e.id].started === 1 && e.coProcessor === true){
-                                    s.log(e,{type:lang['coProcessor Started'],msg:{msg:lang.coProcessorText1+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
-                                    s.group[e.ke].mon[e.id].coSpawnProcessor = s.ffmpegCoProcessor(e)
-                                    s.group[e.ke].mon[e.id].coSpawnProcessorExit = function(){
-                                        s.log(e,{type:lang['coProcess Unexpected Exit'],msg:{msg:lang['coProcess Crashed for Monitor']+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
-                                        setTimeout(function(){
-                                            coSpawnLauncher()
-                                        },2000)
-                                    }
-                                    s.group[e.ke].mon[e.id].coSpawnProcessor.on('end',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
-                                    s.group[e.ke].mon[e.id].coSpawnProcessor.on('exit',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
-                                    var checkLog = function(d,x){return d.indexOf(x)>-1;}
-                                    s.group[e.ke].mon[e.id].coSpawnProcessor.stderr.on('data',function(d){
-                                        d=d.toString();
-                                        switch(true){
-                                            case checkLog(d,'deprecated pixel format used'):
-                                            case checkLog(d,'[hls @'):
-                                            case checkLog(d,'pkt->duration = 0'):
-                                            case checkLog(d,'Non-monotonous DTS'):
-                                            case checkLog(d,'NULL @'):
-                                                return
-                                            break;
-                                        }
-                                        s.log(e,{type:lang.coProcessor,msg:d});
-                                    })
-                                    if(e.frame_to_stream){
-                                        s.group[e.ke].mon[e.id].coSpawnProcessor.stdout.on('data',e.frame_to_stream)
-                                    }
-                                    if(e.details.detector === '1'){
-                                        if(e.details.detector_pam === '1'){
-                                            createPamDiffEngine()
-                                            s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].pipe(s.group[e.ke].mon[e.id].p2p).pipe(s.group[e.ke].mon[e.id].pamDiff)
-                                        }else{
-                                            s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].on('data',function(d){
-                                                s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:d});
-                                            })
-                                        }
-                                    }
-                                }
-                            }
                             setTimeout(function(){
-                                coSpawnLauncher()
+                                s.coSpawnLauncher(e)
                             },6000)
                         }
                       }else{
