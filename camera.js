@@ -1765,7 +1765,8 @@ s.coSpawnClose = function(e){
 }
 s.ffmpeg = function(e){
     e.coProcessor = false
-    if(e.details.accelerator === '1' && e.details.hwaccel_vcodec !== 'auto'){
+    e.isStreamer = (e.type === ('dashcam'||'socket'))
+    if(e.details.accelerator === '1' && e.details.hwaccel_vcodec !== 'auto' && e.isStreamer === false){
         e.coProcessor = true
     }
     //set X for temporary values so we don't break our main monitor object.
@@ -1951,7 +1952,7 @@ s.ffmpeg = function(e){
     if(e.details.preset_stream&&e.details.preset_stream!==''){x.preset_stream=' -preset '+e.details.preset_stream;}else{x.preset_stream=''}
     //stream - quality
     //hardware acceleration
-    if(e.details.accelerator&&e.details.accelerator==='1'){
+    if(e.details.accelerator && e.details.accelerator==='1' && e.isStreamer === false){
         if(e.details.hwaccel&&e.details.hwaccel!==''){
             x.hwaccel+=' -hwaccel '+e.details.hwaccel;
         }
@@ -2193,7 +2194,7 @@ s.ffmpeg = function(e){
     //progress pipe
 //    x.ffmpegCommandString += ' -progress pipe:5';
     //add main input
-    if((e.type==='mp4'||e.type==='mjpeg')&&x.cust_input.indexOf('-re')===-1){
+    if((e.type === 'mp4' || e.type === 'mjpeg') && x.cust_input.indexOf('-re') === -1){
         x.cust_input += ' -re'
     }
     switch(e.type){
