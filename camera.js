@@ -88,6 +88,7 @@ try{
 }
 process.send = process.send || function () {};
 if(config.mail){
+    if(config.mail.from === undefined){config.mail.from = '"ShinobiCCTV" <no-reply@shinobi.video>'}
     var nodemailer = require('nodemailer').createTransport(config.mail);
 }
 //config defaults
@@ -996,7 +997,7 @@ s.filterEvents=function(x,d){
 
                 })
                 d.mailOptions = {
-                    from: '"ShinobiCCTV" <no-reply@shinobi.video>', // sender address
+                    from: config.mail.from, // sender address
                     to: d.mail, // list of receivers
                     subject: lang['Filter Matches']+' : '+d.name, // Subject line
                     html: lang.FilterMatchesText1+' '+d.videos.length+' '+lang.FilterMatchesText2,
@@ -2849,7 +2850,7 @@ s.camera=function(x,e,cn,tx){
                         s.group[e.ke].mon[e.id].detector_notrigger_timeout_function=function(){
                             if(config.mail&&e.details.detector_notrigger_mail=='1'){
                                 e.mailOptions = {
-                                    from: '"ShinobiCCTV" <no-reply@shinobi.video>', // sender address
+                                    from: config.mail.from, // sender address
                                     to: r.mail, // list of receivers
                                     subject: lang.NoMotionEmailText1+' '+e.name+' ('+e.id+')', // Subject line
                                     html: '<i>'+lang.NoMotionEmailText2+' '+e.details.detector_notrigger_timeout+' '+lang.minutes+'.</i>',
@@ -3581,7 +3582,7 @@ s.camera=function(x,e,cn,tx){
                         },detector_mail_timeout);
                         var files = []
                         var mailOptions = {
-                            from: '"ShinobiCCTV" <no-reply@shinobi.video>', // sender address
+                            from: config.mail.from, // sender address
                             to: r.mail, // list of receivers
                             subject: lang.Event+' - '+screenshotName, // Subject line
                             html: '<i>'+lang.EventText1+' '+s.timeObject(new Date).format()+'.</i>',
@@ -3621,7 +3622,6 @@ s.camera=function(x,e,cn,tx){
                                         filename: screenshotName+'.jpg',
                                         content: frame
                                     })
-                                    mailOptions.html='<i>'+lang.EventText3+'</i>'
                                 }
                                 sendMail()
                             })
@@ -5369,7 +5369,7 @@ app.post(['/','/:screen'],function (req,res){
                                 if(!s.factorAuth[r.ke][r.uid]){
                                     s.factorAuth[r.ke][r.uid]={key:s.nid(),user:r}
                                     r.mailOptions = {
-                                        from: '"ShinobiCCTV" <no-reply@shinobi.video>',
+                                        from: config.mail.from,
                                         to: r.mail,
                                         subject: r.lang['2-Factor Authentication'],
                                         html: r.lang['Enter this code to proceed']+' <b>'+s.factorAuth[r.ke][r.uid].key+'</b>. '+r.lang.FactorAuthText1,
