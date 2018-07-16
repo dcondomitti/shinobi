@@ -6399,13 +6399,16 @@ app.all(['/:auth/configureMonitor/:ke/:id','/:auth/configureMonitor/:ke/:id/:f']
                     res.end(s.s(req.ret, null, 3))
             }
         }else{
-            if(!user.details.sub||user.details.allmonitors==='1'||user.details.monitor_edit.indexOf(req.params.id)>-1){
+            if(!user.details.sub || user.details.allmonitors==='1' || user.details.monitor_edit.indexOf(req.params.id)>-1 || hasRestrictions && user.details.monitor_create === '1'){
                 s.log(s.group[req.params.ke].mon_conf[req.params.id],{type:'Monitor Deleted',msg:'by user : '+user.uid});
                 req.params.delete=1;s.camera('stop',req.params);
                 s.tx({f:'monitor_delete',uid:user.uid,mid:req.params.id,ke:req.params.ke},'GRP_'+req.params.ke);
                 s.sqlQuery('DELETE FROM Monitors WHERE ke=? AND mid=?',[req.params.ke,req.params.id])
                 req.ret.ok=true;
                 req.ret.msg='Monitor Deleted by user : '+user.uid
+                res.end(s.s(req.ret, null, 3))
+            }else{
+                req.ret.msg=user.lang['Not Permitted'];
                 res.end(s.s(req.ret, null, 3))
             }
         }
