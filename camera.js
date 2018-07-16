@@ -1459,13 +1459,13 @@ s.createInputMap = function(e,number,input){
     var x = {}
     x.cust_input = ''
     x.hwaccel = ''
-    if(input.cust_input&&input.cust_input!==''){x.cust_input+=' '+input.cust_input;}
+    if(input.cust_input&&input.cust_input!==''){x.cust_input+=' '+input.cust_input}
     //input - analyze duration
-    if(input.aduration&&input.aduration!==''){x.cust_input+=' -analyzeduration '+input.aduration};
+    if(input.aduration&&input.aduration!==''){x.cust_input+=' -analyzeduration '+input.aduration}
     //input - probe size
-    if(input.probesize&&input.probesize!==''){x.cust_input+=' -probesize '+input.probesize};
+    if(input.probesize&&input.probesize!==''){x.cust_input+=' -probesize '+input.probesize}
     //input - stream loop (good for static files/lists)
-    if(input.stream_loop==='1'){x.cust_input+=' -stream_loop -1'};
+    if(input.stream_loop==='1'){x.cust_input+=' -stream_loop -1'}
     //input - fps
     if(x.cust_input.indexOf('-r ')===-1&&input.sfps&&input.sfps!==''){
         input.sfps=parseFloat(input.sfps);
@@ -1478,11 +1478,11 @@ s.createInputMap = function(e,number,input){
             x.cust_input+=' -f mjpeg'
         }
         //input - frames per second
-        x.cust_input+=' -reconnect 1';
+        x.cust_input+=' -reconnect 1'
     }else
     //input - is h264 has rtsp in address and transport method is chosen
     if((input.type==='h264'||input.type==='mp4')&&input.fulladdress.indexOf('rtsp://')>-1&&input.rtsp_transport!==''&&input.rtsp_transport!=='no'){
-        x.cust_input += ' -rtsp_transport '+input.rtsp_transport;
+        x.cust_input += ' -rtsp_transport '+input.rtsp_transport
     }else
     if((input.type==='mp4'||input.type==='mjpeg')&&x.cust_input.indexOf('-re')===-1){
         x.cust_input += ' -re'
@@ -1510,7 +1510,7 @@ s.createInputMap = function(e,number,input){
     return x.hwaccel+x.cust_input+' -i "'+input.fulladdress+'"';
 }
 //create sub stream channel
-s.createStreamChannel = function(e,number,channel){
+s.createStreamChannel = function(e,number,channel,forCoProcessor){
     //`e` is the monitor object
     //`x` is an object used to contain temporary values.
     var x = {
@@ -2345,11 +2345,11 @@ s.file=function(x,e){
             if(!e){return false;}
             return exec('rm -f '+e,{detached: true});
         break;
-        case'delete_folder':
+        case'deleteFolder':
             if(!e){return false;}
             return exec('rm -rf '+e,{detached: true});
         break;
-        case'delete_files':
+        case'deleteFiles':
             if(!e.age_type){e.age_type='min'};if(!e.age){e.age='1'};
             exec('find '+e.path+' -type f -c'+e.age_type+' +'+e.age+' -exec rm -f {} +',{detached: true});
         break;
@@ -2793,7 +2793,7 @@ s.camera=function(x,e,cn,tx){
                 if (!fs.existsSync(e.sdir)){
                     fs.mkdirSync(e.sdir);
                 }else{
-                    s.file('delete_folder',e.sdir+'*')
+                    s.file('deleteFolder',e.sdir+'*')
                 }
             }
             setStreamDir()
@@ -6399,11 +6399,36 @@ app.all(['/:auth/configureMonitor/:ke/:id','/:auth/configureMonitor/:ke/:id/:f']
                     res.end(s.s(req.ret, null, 3))
             }
         }else{
-            if(!user.details.sub || user.details.allmonitors==='1' || user.details.monitor_edit.indexOf(req.params.id)>-1 || hasRestrictions && user.details.monitor_create === '1'){
+            if(!user.details.sub || user.details.allmonitors === '1' || user.details.monitor_edit.indexOf(req.params.id) > -1 || hasRestrictions && user.details.monitor_create === '1'){
                 s.log(s.group[req.params.ke].mon_conf[req.params.id],{type:'Monitor Deleted',msg:'by user : '+user.uid});
                 req.params.delete=1;s.camera('stop',req.params);
                 s.tx({f:'monitor_delete',uid:user.uid,mid:req.params.id,ke:req.params.ke},'GRP_'+req.params.ke);
                 s.sqlQuery('DELETE FROM Monitors WHERE ke=? AND mid=?',[req.params.ke,req.params.id])
+//                s.sqlQuery('DELETE FROM Files WHERE ke=? AND mid=?',[req.params.ke,req.params.id])
+                if(req.query.deleteFiles === 'true'){
+                    //videos
+                    s.dir.addStorage.forEach(function(v,n){
+                        var videosDir = v.path+req.params.ke+'/'+req.params.id+'/'
+                        fs.stat(videosDir,function(err,stat){
+                            if(!err){
+                                s.file('deleteFolder',videosDir)
+                            }
+                        })
+                    })
+                    var videosDir = s.dir.videos+req.params.ke+'/'+req.params.id+'/'
+                    fs.stat(videosDir,function(err,stat){
+                        if(!err){
+                            s.file('deleteFolder',videosDir)
+                        }
+                    })
+                    //fileBin
+                    var binDir = s.dir.fileBin+req.params.ke+'/'+req.params.id+'/'
+                    fs.stat(binDir,function(err,stat){
+                        if(!err){
+                            s.file('deleteFolder',binDir)
+                        }
+                    })
+                }
                 req.ret.ok=true;
                 req.ret.msg='Monitor Deleted by user : '+user.uid
                 res.end(s.s(req.ret, null, 3))
