@@ -3580,18 +3580,18 @@ s.camera=function(x,e,cn,tx){
                             delete(s.group[d.ke].mon[d.id].detector_mail);
                         },detector_mail_timeout);
                         var files = []
+                        var mailOptions = {
+                            from: '"ShinobiCCTV" <no-reply@shinobi.video>', // sender address
+                            to: r.mail, // list of receivers
+                            subject: lang.Event+' - '+screenshotName, // Subject line
+                            html: '<i>'+lang.EventText1+' '+s.timeObject(new Date).format()+'.</i>',
+                            attachments: files
+                        }
                         var sendMail = function(){
-                            d.mailOptions = {
-                                from: '"ShinobiCCTV" <no-reply@shinobi.video>', // sender address
-                                to: r.mail, // list of receivers
-                                subject: lang.Event+' - '+screenshotName, // Subject line
-                                html: '<i>'+lang.EventText1+' '+s.timeObject(new Date).format()+'.</i>',
-                                attachments: files
-                            }
                             Object.keys(d.details).forEach(function(v,n){
-                                d.mailOptions.html+='<div><b>'+v+'</b> : '+d.details[v]+'</div>'
+                                mailOptions.html+='<div><b>'+v+'</b> : '+d.details[v]+'</div>'
                             })
-                            nodemailer.sendMail(d.mailOptions, (error, info) => {
+                            nodemailer.sendMail(mailOptions, (error, info) => {
                                 if (error) {
                                     s.systemLog(lang.MailError,error)
                                     return false;
@@ -3621,7 +3621,7 @@ s.camera=function(x,e,cn,tx){
                                         filename: screenshotName+'.jpg',
                                         content: frame
                                     })
-                                    d.mailOptions.html='<i>'+lang.EventText3+'</i>'
+                                    mailOptions.html='<i>'+lang.EventText3+'</i>'
                                 }
                                 sendMail()
                             })
