@@ -1511,7 +1511,7 @@ s.createInputMap = function(e,number,input){
     return x.hwaccel+x.cust_input+' -i "'+input.fulladdress+'"';
 }
 //create sub stream channel
-s.createStreamChannel = function(e,number,channel,forCoProcessor){
+s.createStreamChannel = function(e,number,channel){
     //`e` is the monitor object
     //`x` is an object used to contain temporary values.
     var x = {
@@ -1813,7 +1813,7 @@ s.coSpawnLauncher = function(e){
         if(s.group[e.ke].mon[e.id].coSpawnProcessor === false){
             return
         }
-        s.log(e,{type:lang['coProcessor Started'],msg:{msg:lang.coProcessorTextStarted+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
+        s.log(e,{type:lang['coProcessor Started'],msg:{msg:lang.coProcessorTextStarted,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
         s.group[e.ke].mon[e.id].coSpawnProcessorExit = function(){
             s.log(e,{type:lang['coProcess Unexpected Exit'],msg:{msg:lang['coProcess Crashed for Monitor']+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
             setTimeout(function(){
@@ -1866,7 +1866,7 @@ s.coSpawnClose = function(e){
 s.ffmpeg = function(e){
     e.coProcessor = false
     e.isStreamer = (e.type === 'dashcam'|| e.type === 'socket')
-    if(e.details.accelerator === '1' && e.details.hwaccel_vcodec !== 'auto' && e.isStreamer === false){
+    if(e.details.accelerator === '1' && e.details.hwaccel_vcodec !== 'auto' && e.isStreamer === false && (!e.details.input_maps || e.details.input_maps.length === 0)){
         e.coProcessor = true
     }
     //set X for temporary values so we don't break our main monitor object.
