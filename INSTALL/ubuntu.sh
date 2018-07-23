@@ -31,6 +31,7 @@ if [ "$nodejsinstall" = "y" ] || [ "$nodejsinstall" = "Y" ]; then
     ./setup_8.x
     sudo apt install nodejs -y
 fi
+sudo apt install make -y
 echo "============="
 echo "Shinobi - Do you want to Install FFMPEG?"
 echo "(y)es or (N)o"
