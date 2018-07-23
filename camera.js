@@ -92,73 +92,73 @@ if(config.mail){
     var nodemailer = require('nodemailer').createTransport(config.mail);
 }
 //config defaults
-if(config.cpuUsageMarker===undefined){config.cpuUsageMarker='%Cpu'}
-if(config.customCpuCommand===undefined){config.customCpuCommand=null}
-if(config.autoDropCache===undefined){config.autoDropCache=true}
-if(config.doSnapshot===undefined){config.doSnapshot=true}
-if(config.restart===undefined){config.restart={}}
-if(config.systemLog===undefined){config.systemLog=true}
-if(config.deleteCorruptFiles===undefined){config.deleteCorruptFiles=true}
-if(config.restart.onVideoNotExist===undefined){config.restart.onVideoNotExist=true}
-if(config.ip===undefined||config.ip===''||config.ip.indexOf('0.0.0.0')>-1){config.ip='localhost'}else{config.bindip=config.ip};
-if(config.cron===undefined)config.cron={};
-if(config.cron.enabled===undefined)config.cron.enabled=true;
-if(config.cron.deleteOld===undefined)config.cron.deleteOld=true;
-if(config.cron.deleteOrphans===undefined)config.cron.deleteOrphans=false;
-if(config.cron.deleteNoVideo===undefined)config.cron.deleteNoVideo=true;
-if(config.cron.deleteNoVideoRecursion===undefined)config.cron.deleteNoVideoRecursion=false;
-if(config.cron.deleteOverMax===undefined)config.cron.deleteOverMax=true;
-if(config.cron.deleteOverMaxOffset===undefined)config.cron.deleteOverMaxOffset=0.9;
-if(config.cron.deleteLogs===undefined)config.cron.deleteLogs=true;
-if(config.cron.deleteEvents===undefined)config.cron.deleteEvents=true;
-if(config.cron.deleteFileBins===undefined)config.cron.deleteFileBins=true;
-if(config.cron.interval===undefined)config.cron.interval=1;
-if(config.databaseType===undefined){config.databaseType='mysql'}
-if(config.pluginKeys===undefined)config.pluginKeys={};
-if(config.databaseLogs===undefined){config.databaseLogs=false}
-if(config.useUTC===undefined){config.useUTC=false}
+if(config.cpuUsageMarker === undefined){config.cpuUsageMarker='%Cpu'}
+if(config.customCpuCommand === undefined){config.customCpuCommand=null}
+if(config.autoDropCache === undefined){config.autoDropCache=true}
+if(config.doSnapshot === undefined){config.doSnapshot=true}
+if(config.restart === undefined){config.restart={}}
+if(config.systemLog === undefined){config.systemLog=true}
+if(config.deleteCorruptFiles === undefined){config.deleteCorruptFiles=true}
+if(config.restart.onVideoNotExist === undefined){config.restart.onVideoNotExist=true}
+if(config.ip === undefined||config.ip===''||config.ip.indexOf('0.0.0.0')>-1){config.ip='localhost'}else{config.bindip=config.ip};
+if(config.cron === undefined)config.cron={};
+if(config.cron.enabled === undefined)config.cron.enabled=true;
+if(config.cron.deleteOld === undefined)config.cron.deleteOld=true;
+if(config.cron.deleteOrphans === undefined)config.cron.deleteOrphans=false;
+if(config.cron.deleteNoVideo === undefined)config.cron.deleteNoVideo=true;
+if(config.cron.deleteNoVideoRecursion === undefined)config.cron.deleteNoVideoRecursion=false;
+if(config.cron.deleteOverMax === undefined)config.cron.deleteOverMax=true;
+if(config.cron.deleteOverMaxOffset === undefined)config.cron.deleteOverMaxOffset=0.9;
+if(config.cron.deleteLogs === undefined)config.cron.deleteLogs=true;
+if(config.cron.deleteEvents === undefined)config.cron.deleteEvents=true;
+if(config.cron.deleteFileBins === undefined)config.cron.deleteFileBins=true;
+if(config.cron.interval === undefined)config.cron.interval=1;
+if(config.databaseType === undefined){config.databaseType='mysql'}
+if(config.pluginKeys === undefined)config.pluginKeys={};
+if(config.databaseLogs === undefined){config.databaseLogs=false}
+if(config.useUTC === undefined){config.useUTC=false}
 if(config.baseURL && config.baseURL !== ''){config.baseURL = s.checkCorrectPathEnding(config.baseURL)}
-if(config.pipeAddition===undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
+if(config.pipeAddition === undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
 //Web Paths
-if(config.webPaths===undefined){config.webPaths={}}
+if(config.webPaths === undefined){config.webPaths={}}
     //main access URI
-    if(config.webPaths.home===undefined){config.webPaths.index='/'}
+    if(config.webPaths.home === undefined){config.webPaths.index='/'}
     //Super User URI
-    if(config.webPaths.super===undefined){config.webPaths.super='/super'}
+    if(config.webPaths.super === undefined){config.webPaths.super='/super'}
     //Admin URI
-    if(config.webPaths.admin===undefined){config.webPaths.admin='/admin'}
-//Page Rander Paths
-if(config.renderPaths===undefined){config.renderPaths={}}
+    if(config.webPaths.admin === undefined){config.webPaths.admin='/admin'}
+//Page Render Paths
+if(config.renderPaths === undefined){config.renderPaths={}}
     //login page
-    if(config.renderPaths.index===undefined){config.renderPaths.index='pages/index'}
+    if(config.renderPaths.index === undefined){config.renderPaths.index='pages/index'}
     //dashboard page
-    if(config.renderPaths.home===undefined){config.renderPaths.home='pages/home'}
+    if(config.renderPaths.home === undefined){config.renderPaths.home='pages/home'}
     //sub-account administration page
-    if(config.renderPaths.admin===undefined){config.renderPaths.admin='pages/admin'}
+    if(config.renderPaths.admin === undefined){config.renderPaths.admin='pages/admin'}
     //superuser page
-    if(config.renderPaths.super===undefined){config.renderPaths.super='pages/super'}
+    if(config.renderPaths.super === undefined){config.renderPaths.super='pages/super'}
     //2-Factor Auth page
-    if(config.renderPaths.factorAuth===undefined){config.renderPaths.factorAuth='pages/factor'}
-    //Streamer (Dashbcam Prototype) page
-    if(config.renderPaths.streamer===undefined){config.renderPaths.streamer='pages/streamer'}
-    //Streamer v2 (Dashbcam) page
-    if(config.renderPaths.dashcam===undefined){config.renderPaths.dashcam='pages/dashcam'}
+    if(config.renderPaths.factorAuth === undefined){config.renderPaths.factorAuth='pages/factor'}
+    //Streamer v1 (Dashcam Prototype) page
+    if(config.renderPaths.streamer === undefined){config.renderPaths.streamer='pages/streamer'}
+    //Streamer v2 (Dashcam) page
+    if(config.renderPaths.dashcam === undefined){config.renderPaths.dashcam='pages/dashcam'}
     //embeddable widget page
-    if(config.renderPaths.embed===undefined){config.renderPaths.embed='pages/embed'}
+    if(config.renderPaths.embed === undefined){config.renderPaths.embed='pages/embed'}
     //mjpeg full screen page
-    if(config.renderPaths.mjpeg===undefined){config.renderPaths.mjpeg='pages/mjpeg'}
+    if(config.renderPaths.mjpeg === undefined){config.renderPaths.mjpeg='pages/mjpeg'}
     //gridstack only page
-    if(config.renderPaths.grid===undefined){config.renderPaths.grid='pages/grid'}
+    if(config.renderPaths.grid === undefined){config.renderPaths.grid='pages/grid'}
 //Child Nodes
-if(config.childNodes===undefined)config.childNodes = {};
+if(config.childNodes === undefined)config.childNodes = {};
     //enabled
-    if(config.childNodes.enabled===undefined)config.childNodes.enabled = false;
+    if(config.childNodes.enabled === undefined)config.childNodes.enabled = false;
     //mode, set value as `child` for all other machines in the cluster
-    if(config.childNodes.mode===undefined)config.childNodes.mode = 'master';
+    if(config.childNodes.mode === undefined)config.childNodes.mode = 'master';
     //child node connection port
-    if(config.childNodes.port===undefined)config.childNodes.port = 8288;
+    if(config.childNodes.port === undefined)config.childNodes.port = 8288;
     //child node connection key
-    if(config.childNodes.key===undefined)config.childNodes.key = [
+    if(config.childNodes.key === undefined)config.childNodes.key = [
         '3123asdasdf1dtj1hjk23sdfaasd12asdasddfdbtnkkfgvesra3asdsd3123afdsfqw345'
     ];
 
@@ -714,10 +714,10 @@ s.debugLog = function(q,w,e){
 if(config.ssl&&config.ssl.key&&config.ssl.cert){
     config.ssl.key=fs.readFileSync(s.checkRelativePath(config.ssl.key),'utf8')
     config.ssl.cert=fs.readFileSync(s.checkRelativePath(config.ssl.cert),'utf8')
-    if(config.ssl.port===undefined){
+    if(config.ssl.port === undefined){
         config.ssl.port=443
     }
-    if(config.ssl.bindip===undefined){
+    if(config.ssl.bindip === undefined){
         config.ssl.bindip=config.bindip
     }
     if(config.ssl.ca&&config.ssl.ca instanceof Array){
