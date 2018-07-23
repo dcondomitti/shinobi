@@ -117,6 +117,7 @@ if(config.databaseType===undefined){config.databaseType='mysql'}
 if(config.pluginKeys===undefined)config.pluginKeys={};
 if(config.databaseLogs===undefined){config.databaseLogs=false}
 if(config.useUTC===undefined){config.useUTC=false}
+if(config.baseURL && config.baseURL !== ''){config.baseURL = s.checkCorrectPathEnding(config.baseURL)}
 if(config.pipeAddition===undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
 //Web Paths
 if(config.webPaths===undefined){config.webPaths={}}
@@ -208,6 +209,7 @@ s.getDefinitonFile=function(rule){
     }
     return file
 }
+//sql/database connection with knex
 var databaseOptions = {
   client: config.databaseType,
   connection: config.db,
@@ -5136,6 +5138,16 @@ s.superAuth=function(x,callback){
         return true;
     }
 }
+//get page URL
+s.getOriginalUrl = function(req){
+    var url
+    if(config.baseURL){
+        url = config.baseURL
+    }else{
+        url = req.protocol + '://' + req.get('host') + '/'
+    }
+    return url
+}
 ////Pages
 app.enable('trust proxy');
 app.use('/libs',express.static(__dirname + '/web/libs'));
@@ -5146,7 +5158,7 @@ app.set('view engine','ejs');
 //add template handler
 if(config.renderPaths.handler!==undefined){require(__dirname+'/web/'+config.renderPaths.handler+'.js').addHandlers(s,app,io)}
 
-//readme
+//logout
 app.get('/:auth/logout/:ke/:id', function (req,res){
     if(s.group[req.params.ke]&&s.group[req.params.ke].users[req.params.auth]){
         delete(s.api[req.params.auth]);
@@ -5159,7 +5171,7 @@ app.get('/:auth/logout/:ke/:id', function (req,res){
 });
 //main page
 app.get(config.webPaths.index, function (req,res){
-    res.render(config.renderPaths.index,{lang:lang,config:config,screen:'dashboard'},function(err,html){
+    res.render(config.renderPaths.index,{lang:lang,config:config,screen:'dashboard',originalURL:s.getOriginalUrl(req)},function(err,html){
         if(err){
             s.systemLog(err)
         }
@@ -5168,7 +5180,7 @@ app.get(config.webPaths.index, function (req,res){
 });
 //admin page
 app.get(config.webPaths.admin, function (req,res){
-    res.render(config.renderPaths.index,{lang:lang,config:config,screen:'admin'},function(err,html){
+    res.render(config.renderPaths.index,{lang:lang,config:config,screen:'admin',originalURL:s.getOriginalUrl(req)},function(err,html){
         if(err){
             s.systemLog(err)
         }
@@ -5177,7 +5189,8 @@ app.get(config.webPaths.admin, function (req,res){
 });
 //super page
 app.get(config.webPaths.super, function (req,res){
-    res.render(config.renderPaths.index,{lang:lang,config:config,screen:'super'},function(err,html){
+    
+    res.render(config.renderPaths.index,{lang:lang,config:config,screen:'super',originalURL:s.getOriginalUrl(req)},function(err,html){
         if(err){
             s.systemLog(err)
         }
@@ -5219,6 +5232,10 @@ app.post('/:auth/register/:ke/:uid',function (req,res){
     req.resp={ok:false};
     res.setHeader('Content-Type', 'application/json');
     s.auth(req.params,function(user){
+        if(user.details.sub){
+            res.end(user.lang['Not Permitted'])
+            return
+        }
         s.sqlQuery('SELECT * FROM Users WHERE uid=? AND ke=? AND details NOT LIKE ? LIMIT 1',[req.params.uid,req.params.ke,'%"sub"%'],function(err,u) {
             if(u&&u[0]){
                 if(req.body.mail!==''&&req.body.pass!==''){
@@ -5269,6 +5286,7 @@ app.post(['/','/:screen'],function (req,res){
             res.setHeader('Content-Type', 'application/json');
             res.end(s.s(data, null, 3))
         }else{
+            data.originalURL = s.getOriginalUrl(req)
             data.screen=req.params.screen
             res.render(focus,data,function(err,html){
                 if(err){
@@ -5283,7 +5301,7 @@ app.post(['/','/:screen'],function (req,res){
             res.setHeader('Content-Type', 'application/json');
             res.end(s.s({ok:false}, null, 3))
         }else{
-            res.render(config.renderPaths.index,{failedLogin:true,lang:lang,config:config,screen:req.params.screen},function(err,html){
+            res.render(config.renderPaths.index,{failedLogin:true,lang:lang,config:config,screen:req.params.screen,originalURL:s.getOriginalUrl(req)},function(err,html){
                 if(err){
                     s.systemLog(err)
                 }
@@ -5741,7 +5759,8 @@ app.get(['/:auth/grid/:ke','/:auth/grid/:ke/:group'], function(req,res) {
                 config:config,
                 lang:user.lang,
                 $user:user,
-                monitors:r
+                monitors:r,
+                originalURL:s.getOriginalUrl(req)
             });
         })
     },res,req)
@@ -5751,7 +5770,7 @@ app.get(['/:auth/grid/:ke','/:auth/grid/:ke/:group'], function(req,res) {
 app.get(['/:auth/mjpeg/:ke/:id','/:auth/mjpeg/:ke/:id/:channel'], function(req,res) {
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     if(req.query.full=='true'){
-        res.render(config.renderPaths.mjpeg,{url:'/'+req.params.auth+'/mjpeg/'+req.params.ke+'/'+req.params.id});
+        res.render(config.renderPaths.mjpeg,{url:'/'+req.params.auth+'/mjpeg/'+req.params.ke+'/'+req.params.id,originalURL:s.getOriginalUrl(req)});
         res.end()
     }else{
         s.auth(req.params,function(user){
@@ -5807,7 +5826,7 @@ app.get(['/:auth/embed/:ke/:id','/:auth/embed/:ke/:id/:addon'], function (req,re
         if(s.group[req.params.ke]&&s.group[req.params.ke].mon[req.params.id]){
             if(s.group[req.params.ke].mon[req.params.id].started===1){
                 req.params.uid=user.uid;
-                res.render(config.renderPaths.embed,{data:req.params,baseUrl:req.protocol+'://'+req.hostname,config:config,lang:user.lang,mon:CircularJSON.parse(CircularJSON.stringify(s.group[req.params.ke].mon_conf[req.params.id]))});
+                res.render(config.renderPaths.embed,{data:req.params,baseUrl:req.protocol+'://'+req.hostname,config:config,lang:user.lang,mon:CircularJSON.parse(CircularJSON.stringify(s.group[req.params.ke].mon_conf[req.params.id])),originalURL:s.getOriginalUrl(req)});
                 res.end()
             }else{
                 res.end(user.lang['Cannot watch a monitor that isn\'t running.'])

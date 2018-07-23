@@ -8,7 +8,9 @@ if(config.ssl&&config.ssl.port&&data.protocol==='https'){
 }
 if(!data.port||data.port===''||data.port==80||data.port==443){data.url=baseUrl}else{data.url=baseUrl+':'+data.port}
 if(data.addon || data.addon.indexOf('relative')>-1){
-    data.url=''
+    data.url = ''
+}else if(config.baseURL){
+    data.url = config.baseURL
 }
 if(data.url.charAt(data.url.length - 1) !== '/'){
     data.url += '/'
