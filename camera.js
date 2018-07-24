@@ -4319,8 +4319,8 @@ var tx;
                                             if(!d.d.sub){
                                                 s.group[d.ke].sizeLimit = parseFloat(newSize)
                                                 delete(s.group[d.ke].webdav)
-                                                delete(s.group[d.ke].aws)
-                                                delete(s.group[d.ke].aws_s3)
+                                                s.group[d.ke].aws = null
+                                                s.group[d.ke].aws_s3 = null
                                                 if(s.group[d.ke].discordBot && s.group[d.ke].discordBot.destroy){
                                                     s.group[d.ke].discordBot.destroy()
                                                     delete(s.group[d.ke].discordBot)
