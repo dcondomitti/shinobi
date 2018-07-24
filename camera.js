@@ -1438,7 +1438,9 @@ s.video=function(x,e,k){
                             Body:fileStream, 
                             ACL:'public-read'
                         },function(err,data){
-                            console.log(data)
+                            if(err){
+                                s.log(e,{type:lang['Amazon S3 Upload Error'],msg:err})
+                            }
                         })
                     }
                     k.details = {}

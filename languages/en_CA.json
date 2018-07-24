@@ -183,6 +183,7 @@
    "Amazon S3": "Amazon S3",
    "Bucket": "Bucket",
    "Region": "Region",
+   "Amazon S3 Upload Error": "Amazon S3 Upload Error",
    "aws_accessKeyId": "Access Key Id",
    "aws_secretAccessKey": "Secret Access Key",
    "Discord Bot": "Discord Bot",
