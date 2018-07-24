@@ -117,7 +117,6 @@ if(config.databaseType === undefined){config.databaseType='mysql'}
 if(config.pluginKeys === undefined)config.pluginKeys={};
 if(config.databaseLogs === undefined){config.databaseLogs=false}
 if(config.useUTC === undefined){config.useUTC=false}
-if(config.baseURL && config.baseURL !== ''){config.baseURL = s.checkCorrectPathEnding(config.baseURL)}
 if(config.pipeAddition === undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
 //Web Paths
 if(config.webPaths === undefined){config.webPaths={}}
@@ -5139,6 +5138,7 @@ s.superAuth=function(x,callback){
     }
 }
 //get page URL
+if(config.baseURL && config.baseURL !== ''){config.baseURL = s.checkCorrectPathEnding(config.baseURL)}
 s.getOriginalUrl = function(req){
     var url
     if(config.baseURL){
