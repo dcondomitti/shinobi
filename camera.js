@@ -597,6 +597,7 @@ s.createPamDiffRegionArray = function(regions,globalSensitivity,fullFrame){
         json[fullFrame.name]=fullFrame;
     }
     Object.values(json).forEach(function(region){
+        if(!region)return false;
         region.polygon = [];
         region.points.forEach(function(points){
             region.polygon.push({x:parseFloat(points[0]),y:parseFloat(points[1])})
@@ -1418,7 +1419,7 @@ s.video=function(x,e,k){
     //                        });
     //                    });
     //                }
-                    if(s.group[e.ke].webdav&&s.group[e.ke].init.use_webdav!=='0'&&s.group[e.ke].init.webdav_save=="1"){
+                    if(s.group[e.ke].webdav&&s.group[e.ke].init.use_webdav!=='0'&&s.group[e.ke].init.webdav_save=='1'){
                        fs.readFile(k.dir+k.filename,function(err,data){
                            s.group[e.ke].webdav.putFileContents(s.group[e.ke].init.webdav_dir+e.ke+'/'+e.mid+'/'+k.filename,"binary",data)
                         .catch(function(err) {
@@ -1427,7 +1428,7 @@ s.video=function(x,e,k){
                            });
                         });
                     }
-                    if(s.group[e.ke].aws_s3 && s.group[e.ke].init.use_aws_s3 !== '0' && s.group[e.ke].init.aws_s3_save === "1"){
+                    if(s.group[e.ke].aws_s3 && s.group[e.ke].init.use_aws_s3 !== '0' && s.group[e.ke].init.aws_s3_save === '1'){
                         var fileStream = fs.createReadStream(k.dir+k.filename);
                         fileStream.on('error', function (err) {
                             console.error(err)
@@ -5180,7 +5181,11 @@ s.superAuth=function(x,callback){
     }
 }
 //get page URL
-if(config.baseURL && config.baseURL !== ''){config.baseURL = s.checkCorrectPathEnding(config.baseURL)}
+if(!config.baseURL){
+    config.baseURL = ""
+}else if(config.baseURL !== ''){
+    config.baseURL = s.checkCorrectPathEnding(config.baseURL)
+}
 s.getOriginalUrl = function(req){
     var url
     if(config.baseURL){
