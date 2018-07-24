@@ -4771,7 +4771,7 @@ var tx;
                                    if(d.form.pass===d.form.password_again){
                                        d.form.pass=s.md5(d.form.pass);
                                    }else{
-                                       s.tx({f:'error',ff:'account_edit',msg:lang["Passwords Don't Match"]},cn.id)
+                                       s.tx({f:'error',ff:'edit_account',msg:lang["Passwords Don't Match"]},cn.id)
                                        return
                                    }
                                 }else{
@@ -4789,7 +4789,7 @@ var tx;
                                 d.values.push(d.account.mail)
                                 s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE mail=?',d.values,function(err,r) {
                                     if(err){
-                                        s.tx({f:'error',ff:'account_edit',msg:lang.AccountEditText1},cn.id)
+                                        s.tx({f:'error',ff:'edit_account',msg:lang.AccountEditText1},cn.id)
                                         return
                                     }
                                     s.tx({f:'edit_account',form:d.form,ke:d.account.ke,uid:d.account.uid},'$');
@@ -5188,7 +5188,7 @@ if(!config.baseURL){
 }
 s.getOriginalUrl = function(req){
     var url
-    if(config.baseURL){
+    if(config.baseURL || config.baseURL === ''){
         url = config.baseURL
     }else{
         url = req.protocol + '://' + req.get('host') + '/'
