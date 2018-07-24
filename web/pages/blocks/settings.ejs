@@ -174,7 +174,66 @@
                 </div>
                 <div class="form-group">
                     <label><div><span><%-lang['Save Directory']%></span></div>
-                        <div><input class="form-control" placeholder="/" detail="webdav_dir"></div>
+                        <div><input class="form-control" placeholder="" detail="webdav_dir"></div>
+                    </label>
+                </div>
+            </div>
+            <% } %>
+            <% if(details.use_aws_s3!=='0'){ %>
+          <div class="form-group-group forestgreen">
+                <h4><%-lang['Amazon S3']%></h4>
+                <div class="form-group">
+                    <label><div><span><%-lang.Bucket%></span></div>
+                        <div><input class="form-control" detail="aws_s3_bucket" placeholder="Example : slippery-seal"></div>
+                    </label>
+                </div>
+                <div class="row">
+                    <div class="form-group col-md-12">
+                        <label><div><span><%-lang.aws_accessKeyId%></span></div>
+                            <div><input class="form-control" detail="aws_accessKeyId"></div>
+                        </label>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label><div><span><%-lang.aws_secretAccessKey%></span></div>
+                            <div><input class="form-control" type="password" detail="aws_secretAccessKey"></div>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang.Region%></span></div>
+                        <div><select class="form-control" detail="aws_region">
+                            <option value="us-west-1" selected>US West (N. California)</option>
+                            <option value="us-west-2">US West (Oregon)</option>
+                            <option value="us-east-2">US East (Ohio)</option>
+                            <option value="us-east-1">US East (N. Virginia)</option>
+                            <option value="ap-south-1">Asia Pacific (Mumbai)</option>
+                            <option value="ap-northeast-2">Asia Pacific (Seoul)</option>
+                            <option value="ap-northeast-3">Asia Pacific (Osaka-Local)**</option>
+                            <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                            <option value="ap-southeast-2">Asia Pacific (Sydney)</option>
+                            <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
+                            <option value="ca-central-1">Canada (Central)</option>
+                            <option value="cn-north-1">China (Beijing)</option>
+                            <option value="cn-northwest-1">China (Ningxia)</option>
+                            <option value="eu-central-1">EU (Frankfurt)</option>
+                            <option value="eu-west-1">EU (Ireland)</option>
+                            <option value="eu-west-2">EU (London)</option>
+                            <option value="eu-west-3">EU (Paris)</option>
+                            <option value="sa-east-1">South America (São Paulo)</option>  
+                        </select></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang.Autosave%></span></div>
+                            <div><select class="form-control" detail="aws_s3_save">
+                                <option value="0" selected><%-lang.No%></option>  
+                                <option value="1"><%-lang.Yes%></option>  
+                            </select></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang['Save Directory']%></span></div>
+                        <div><input class="form-control" placeholder="/" detail="aws_s3_dir"></div>
                     </label>
                 </div>
             </div>

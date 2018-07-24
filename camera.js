@@ -862,14 +862,37 @@ s.init=function(x,e,k,fn){
                            ar.webdav_url!==''
                           ){
                             if(!ar.webdav_dir||ar.webdav_dir===''){
-                                ar.webdav_dir='/';
-                                if(ar.webdav_dir.slice(-1)!=='/'){ar.webdav_dir+='/';}
+                                ar.webdav_dir='/'
                             }
+                            ar.webdav_dir = s.checkCorrectPathEnding(ar.webdav_dir)
                             s.group[e.ke].webdav = webdav(
                                 ar.webdav_url,
                                 ar.webdav_user,
                                 ar.webdav_pass
                             );
+                        }
+                        //Amazon S3
+                        if(ar.aws_s3 !== '0' &&
+                           ar.aws_accessKeyId !== ''&&
+                           ar.aws_secretAccessKey &&
+                           ar.aws_secretAccessKey !== ''&&
+                           ar.aws_region &&
+                           ar.aws_region !== ''&&
+                           ar.aws_s3_bucket !== ''
+                          ){
+                            if(!ar.aws_s3_dir || ar.aws_s3_dir === '/'){
+                                ar.aws_s3_dir = ''
+                            }
+                            if(ar.aws_s3_dir !== ''){
+                                ar.aws_s3_dir = s.checkCorrectPathEnding(ar.aws_s3_dir)
+                            }
+                            s.group[e.ke].aws = new require("aws-sdk")
+                            s.group[e.ke].aws.config = new s.group[e.ke].aws.Config({
+                                accessKeyId: ar.aws_accessKeyId,
+                                secretAccessKey: ar.aws_secretAccessKey,
+                                region: ar.aws_region
+                            })
+                            s.group[e.ke].aws_s3 = new s.group[e.ke].aws.S3();
                         }
                         //discordbot
                         if(!s.group[e.ke].discordBot &&
@@ -1403,6 +1426,20 @@ s.video=function(x,e,k){
                             console.error(err);
                            });
                         });
+                    }
+                    if(s.group[e.ke].aws_s3 && s.group[e.ke].init.use_aws_s3 !== '0' && s.group[e.ke].init.aws_s3_save === "1"){
+                        var fileStream = fs.createReadStream(k.dir+k.filename);
+                        fileStream.on('error', function (err) {
+                            console.error(err)
+                        })
+                        s.group[e.ke].aws_s3.upload({
+                            Bucket: s.group[e.ke].init.aws_s3_bucket, 
+                            Key: s.group[e.ke].init.aws_s3_dir+e.ke+'/'+e.mid+'/'+k.filename, 
+                            Body:fileStream, 
+                            ACL:'public-read'
+                        },function(err,data){
+                            console.log(data)
+                        })
                     }
                     k.details = {}
                     if(e.details&&e.details.dir&&e.details.dir!==''){
@@ -4246,6 +4283,7 @@ var tx;
                                         d.form.details.edit_days=d.d.edit_days
                                         d.form.details.use_admin=d.d.use_admin
                                         d.form.details.use_webdav=d.d.use_webdav
+                                        d.form.details.use_aws_s3=d.d.use_aws_s3
                                         d.form.details.use_ldap=d.d.use_ldap
                                         //check
                                         if(d.d.edit_days=="0"){
@@ -4281,6 +4319,8 @@ var tx;
                                             if(!d.d.sub){
                                                 s.group[d.ke].sizeLimit = parseFloat(newSize)
                                                 delete(s.group[d.ke].webdav)
+                                                delete(s.group[d.ke].aws)
+                                                delete(s.group[d.ke].aws_s3)
                                                 if(s.group[d.ke].discordBot && s.group[d.ke].discordBot.destroy){
                                                     s.group[d.ke].discordBot.destroy()
                                                     delete(s.group[d.ke].discordBot)
