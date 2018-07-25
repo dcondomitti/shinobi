@@ -4767,6 +4767,8 @@ var tx;
                                                 //check to see if custom key set
                                                 if(!d.form.ke||d.form.ke===''){
                                                     d.form.ke=s.gid()
+                                                }else{
+                                                    d.form.ke = d.form.ke.replace(/[`~!@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi, '')
                                                 }
                                                 //write user to db
                                                 s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[d.form.ke,d.form.uid,d.form.mail,s.md5(d.form.pass),d.form.details])
@@ -4811,7 +4813,6 @@ var tx;
                                                 d.form[v] = JSON.stringify(Object.assign(details,JSON.parse(d.form[v])))
                                             }
                                             d.values.push(d.form[v])
-                                            console.log(d.form[v])
                                         })
                                         d.values.push(d.account.mail)
                                         s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE mail=?',d.values,function(err,r) {
