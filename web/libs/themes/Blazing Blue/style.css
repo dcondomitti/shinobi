@@ -1,0 +1,81 @@
+#main_header {
+    background: #122444;
+    color: #fff;
+}
+.demo-drawer {
+    background: #1b2d4c;
+    color: #fff;
+}
+#main_canvas {
+    color: #333;
+}
+.monitor_item .mdl-card__media {
+    background: #fbfbfb;
+}
+.monitor_item .stream-block {
+    background: #000;
+}
+.monitor_item .mdl-card {
+    border: 1px solid #b7b7b7;
+}
+.monitor_item .mdl-card__supporting-text {
+    background: #122444;
+    color: #fff!important;
+}
+.progress-bar-warning {
+    background-color: #1a2c4b;
+}
+.monitor_item .side-menu {
+    background: #1b2431;
+    color: #fff;
+}
+.monitor_item .mdl-card {
+    border: 1px solid #122444;
+}
+.dark.modal .modal-header,.dark.modal .modal-footer{background:#091222;border-color:#222;}
+.dark.modal .modal-body{background:#151d28;}
+.form-group-group.forestgreen {border-color: #091222;}
+.form-group-group.forestgreen h4 {background: #091222;}
+.dark .form-group-group {background: #18253e;}
+.dark .list-group-item {background: #091222;border-color: #18253e;}
+
+/*Cool BG*/
+.dark.modal .modal-body{background: transparent}
+#main_canvas, .dark.modal .modal-content {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg id='hexagons' fill='%23fdfdfd' fill-opacity='0.4' fill-rule='nonzero'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background-color: #054e9f!important;
+}
+#main_canvas:before,.dark.modal .modal-content:before,#main_header:before {
+    content:'';
+    position: absolute;width:100%;height:100%;top:0;left:0;
+    background: rgba(227, 227, 227, 0.26);
+    background: -webkit-linear-gradient(90deg, rgba(227, 227, 227, 0.26), rgba(249, 99, 50, 0.95));
+    background: -o-linear-gradient(90deg, rgba(227, 227, 227, 0.26), rgba(249, 99, 50, 0.95));
+    background: -moz-linear-gradient(90deg, rgba(227, 227, 227, 0.26), rgba(249, 99, 50, 0.95));
+    background: linear-gradient(0deg, rgba(227, 227, 227, 0.26), rgba(249, 99, 50, 0.95));
+}
+.grid-stack{z-index: 1}
+
+.dark.modal .modal-footer, .dark.modal .modal-header, .dark.modal .modal-body {
+    z-index: 1;
+    position: relative;
+}
+.dark .form-group-group,.monitor_item .mdl-card__supporting-text,.demo-drawer {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg id='hexagons' fill='%231a2a4a' fill-opacity='0.4' fill-rule='nonzero'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+#main_header {
+    background-color: #630e0e;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg id='hexagons' fill='%231a2a4a' fill-opacity='0.4' fill-rule='nonzero'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+#main_header:before {
+    max-height: 64px;
+}
+
+#main_header .nav>li>a:hover {
+    background: rgba(227, 227, 227, 0.26);
+    background: -webkit-linear-gradient(90deg, rgba(227, 227, 227, 0.26), rgba(249, 99, 50, 0.95));
+    background: -o-linear-gradient(90deg, rgba(227, 227, 227, 0.26), rgba(249, 99, 50, 0.95));
+    background: -moz-linear-gradient(90deg, rgba(227, 227, 227, 0.26), rgba(249, 99, 50, 0.95));
+    background: linear-gradient(0deg, rgba(227, 227, 227, 0.26), rgba(249, 99, 50, 0.95));
+}
