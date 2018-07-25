@@ -305,6 +305,12 @@ if(config.discordBot === true){
             bot.channels.get(s.group[groupKey].init.discordbot_channel).send({
                 embed: sendBody,
                 files: files
+            }).catch(err => {
+                if(err){
+                    s.log({ke:groupKey,mid:'$USER'},{type:lang.DiscordErrorText,msg:err})
+                    s.group[groupKey].discordBot = null
+                    s.init('apps',{ke:groupKey})
+                }
             })
         }
     }catch(err){
@@ -873,7 +879,9 @@ s.init=function(x,e,k,fn){
                             );
                         }
                         //Amazon S3
-                        if(ar.aws_s3 !== '0' &&
+                        if(!s.group[e.ke].aws &&
+                           !s.group[e.ke].aws_s3 &&
+                           ar.aws_s3 !== '0' &&
                            ar.aws_accessKeyId !== ''&&
                            ar.aws_secretAccessKey &&
                            ar.aws_secretAccessKey !== ''&&
@@ -1349,8 +1357,6 @@ s.video=function(x,e,k){
                         });
                         k.filename = s.formattedTime(e.startTime)+'.'+e.ext
                     }else{
-//                        e.startTime = s.utcToLocal(e.startTime)
-//                        e.endTime = s.utcToLocal(e.endTime)
                         k.filename = k.file
                     }
                     if(!e.ext){e.ext = k.filename.split('.')[1]}
@@ -1441,6 +1447,18 @@ s.video=function(x,e,k){
                         },function(err,data){
                             if(err){
                                 s.log(e,{type:lang['Amazon S3 Upload Error'],msg:err})
+                            }
+                            if(s.group[e.ke].init.aws_s3_log === '1'){
+                                var save = [
+                                    e.mid,
+                                    e.ke,
+                                    e.startTime,
+                                    0,
+                                    '{}',
+                                    e.filesize,
+                                    e.endTime,
+                                ]
+                                s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end) VALUES (?,?,?,?,?,?,?,?)',save)
                             }
                         })
                     }
@@ -4767,34 +4785,44 @@ var tx;
                                 }
                             break;
                             case'edit':
-                                if(d.form.pass&&d.form.pass!==''){
-                                   if(d.form.pass===d.form.password_again){
-                                       d.form.pass=s.md5(d.form.pass);
-                                   }else{
-                                       s.tx({f:'error',ff:'edit_account',msg:lang["Passwords Don't Match"]},cn.id)
-                                       return
-                                   }
-                                }else{
-                                    delete(d.form.pass);
-                                }
-                                delete(d.form.password_again);
-                                d.keys=Object.keys(d.form);
-                                d.set=[];
-                                d.values=[];
-                                d.keys.forEach(function(v,n){
-                                    if(d.set==='ke'||d.set==='password_again'||!d.form[v]){return}
-                                    d.set.push(v+'=?')
-                                    d.values.push(d.form[v])
-                                })
-                                d.values.push(d.account.mail)
-                                s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE mail=?',d.values,function(err,r) {
-                                    if(err){
-                                        s.tx({f:'error',ff:'edit_account',msg:lang.AccountEditText1},cn.id)
-                                        return
+                                s.sqlQuery('SELECT * FROM Users WHERE mail=?',[d.account.mail],function(err,r) {
+                                    if(r && r[0]){
+                                        r = r[0]
+                                        var details = JSON.parse(r.details)
+                                        if(d.form.pass&&d.form.pass!==''){
+                                           if(d.form.pass===d.form.password_again){
+                                               d.form.pass=s.md5(d.form.pass);
+                                           }else{
+                                               s.tx({f:'error',ff:'edit_account',msg:lang["Passwords Don't Match"]},cn.id)
+                                               return
+                                           }
+                                        }else{
+                                            delete(d.form.pass);
+                                        }
+                                        delete(d.form.password_again);
+                                        d.keys=Object.keys(d.form);
+                                        d.set=[];
+                                        d.values=[];
+                                        d.keys.forEach(function(v,n){
+                                            if(d.set==='ke'||d.set==='password_again'||!d.form[v]){return}
+                                            d.set.push(v+'=?')
+                                            if(v === 'details'){
+                                                d.form[v] = JSON.stringify(Object.assign(details,JSON.parse(d.form[v])))
+                                            }
+                                            d.values.push(d.form[v])
+                                            console.log(d.form[v])
+                                        })
+                                        d.values.push(d.account.mail)
+                                        s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE mail=?',d.values,function(err,r) {
+                                            if(err){
+                                                s.tx({f:'error',ff:'edit_account',msg:lang.AccountEditText1},cn.id)
+                                                return
+                                            }
+                                            s.tx({f:'edit_account',form:d.form,ke:d.account.ke,uid:d.account.uid},'$');
+                                            delete(s.group[d.account.ke].init);
+                                            s.init('apps',d.account)
+                                        })
                                     }
-                                    s.tx({f:'edit_account',form:d.form,ke:d.account.ke,uid:d.account.uid},'$');
-                                    delete(s.group[d.account.ke].init);
-                                    s.init('apps',d.account)
                                 })
                             break;
                             case'delete':
@@ -7463,6 +7491,10 @@ if(config.childNodes.mode === 'child'){
 //        })
 //    })
 }else{
+    //add Cloud Videos table, will remove in future
+    s.sqlQuery('CREATE TABLE IF NOT EXISTS `Cloud Videos` (`mid` varchar(50) NOT NULL,`ke` varchar(50) DEFAULT NULL,`href` text NOT NULL,`size` float DEFAULT NULL,`time` timestamp NULL DEFAULT NULL,`end` timestamp NULL DEFAULT NULL,`status` int(1) DEFAULT \'0\' COMMENT \'0:Complete,1:Read,2:Archive\',`details` text) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;',[],function(err){
+        if(err)console.log(err)
+    })
     //master node - startup functions
     setInterval(function(){
         s.cpuUsage(function(cpu){
