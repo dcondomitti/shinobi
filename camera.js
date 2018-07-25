@@ -1448,7 +1448,7 @@ s.video=function(x,e,k){
                             if(err){
                                 s.log(e,{type:lang['Amazon S3 Upload Error'],msg:err})
                             }
-                            if(s.group[e.ke].init.aws_s3_log === '1'){
+                            if(s.group[e.ke].init.aws_s3_log === '1' && data && data.Location){
                                 var save = [
                                     e.mid,
                                     e.ke,
@@ -1457,8 +1457,9 @@ s.video=function(x,e,k){
                                     '{}',
                                     e.filesize,
                                     e.endTime,
+                                    data.Location
                                 ]
-                                s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end) VALUES (?,?,?,?,?,?,?,?)',save)
+                                s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end,href) VALUES (?,?,?,?,?,?,?,?)',save)
                             }
                         })
                     }
