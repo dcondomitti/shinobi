@@ -118,36 +118,6 @@ if(config.pluginKeys === undefined)config.pluginKeys={};
 if(config.databaseLogs === undefined){config.databaseLogs=false}
 if(config.useUTC === undefined){config.useUTC=false}
 if(config.pipeAddition === undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
-//Web Paths
-if(config.webPaths === undefined){config.webPaths={}}
-    //main access URI
-    if(config.webPaths.home === undefined){config.webPaths.index='/'}
-    //Super User URI
-    if(config.webPaths.super === undefined){config.webPaths.super='/super'}
-    //Admin URI
-    if(config.webPaths.admin === undefined){config.webPaths.admin='/admin'}
-//Page Render Paths
-if(config.renderPaths === undefined){config.renderPaths={}}
-    //login page
-    if(config.renderPaths.index === undefined){config.renderPaths.index='pages/index'}
-    //dashboard page
-    if(config.renderPaths.home === undefined){config.renderPaths.home='pages/home'}
-    //sub-account administration page
-    if(config.renderPaths.admin === undefined){config.renderPaths.admin='pages/admin'}
-    //superuser page
-    if(config.renderPaths.super === undefined){config.renderPaths.super='pages/super'}
-    //2-Factor Auth page
-    if(config.renderPaths.factorAuth === undefined){config.renderPaths.factorAuth='pages/factor'}
-    //Streamer v1 (Dashcam Prototype) page
-    if(config.renderPaths.streamer === undefined){config.renderPaths.streamer='pages/streamer'}
-    //Streamer v2 (Dashcam) page
-    if(config.renderPaths.dashcam === undefined){config.renderPaths.dashcam='pages/dashcam'}
-    //embeddable widget page
-    if(config.renderPaths.embed === undefined){config.renderPaths.embed='pages/embed'}
-    //mjpeg full screen page
-    if(config.renderPaths.mjpeg === undefined){config.renderPaths.mjpeg='pages/mjpeg'}
-    //gridstack only page
-    if(config.renderPaths.grid === undefined){config.renderPaths.grid='pages/grid'}
 //Child Nodes
 if(config.childNodes === undefined)config.childNodes = {};
     //enabled
@@ -5225,6 +5195,38 @@ s.getOriginalUrl = function(req){
     }
     return url
 }
+//Render Configurations - Web Paths
+if(config.webPaths === undefined){config.webPaths={}}
+    //main access URI
+    if(config.webPaths.home === undefined){config.webPaths.home='/'}
+    //Super User URI
+    if(config.webPaths.super === undefined){config.webPaths.super='/super'}
+    //Admin URI
+    if(config.webPaths.admin === undefined){config.webPaths.admin='/admin'}
+    //API Prefix
+    if(config.webPaths.apiPrefix === undefined){config.webPaths.apiPrefix='/'}else{config.webPaths.apiPrefix = s.checkCorrectPathEnding(config.webPaths.apiPrefix)}
+//Render Configurations - Page Render Paths
+if(config.renderPaths === undefined){config.renderPaths={}}
+    //login page
+    if(config.renderPaths.index === undefined){config.renderPaths.index='pages/index'}
+    //dashboard page
+    if(config.renderPaths.home === undefined){config.renderPaths.home='pages/home'}
+    //sub-account administration page
+    if(config.renderPaths.admin === undefined){config.renderPaths.admin='pages/admin'}
+    //superuser page
+    if(config.renderPaths.super === undefined){config.renderPaths.super='pages/super'}
+    //2-Factor Auth page
+    if(config.renderPaths.factorAuth === undefined){config.renderPaths.factorAuth='pages/factor'}
+    //Streamer v1 (Dashcam Prototype) page
+    if(config.renderPaths.streamer === undefined){config.renderPaths.streamer='pages/streamer'}
+    //Streamer v2 (Dashcam) page
+    if(config.renderPaths.dashcam === undefined){config.renderPaths.dashcam='pages/dashcam'}
+    //embeddable widget page
+    if(config.renderPaths.embed === undefined){config.renderPaths.embed='pages/embed'}
+    //mjpeg full screen page
+    if(config.renderPaths.mjpeg === undefined){config.renderPaths.mjpeg='pages/mjpeg'}
+    //gridstack only page
+    if(config.renderPaths.grid === undefined){config.renderPaths.grid='pages/grid'}
 ////Pages
 app.enable('trust proxy');
 app.use('/libs',express.static(__dirname + '/web/libs'));
@@ -5236,7 +5238,7 @@ app.set('view engine','ejs');
 if(config.renderPaths.handler!==undefined){require(__dirname+'/web/'+config.renderPaths.handler+'.js').addHandlers(s,app,io)}
 
 //logout
-app.get('/:auth/logout/:ke/:id', function (req,res){
+app.get(config.webPaths.apiPrefix+':auth/logout/:ke/:id', function (req,res){
     if(s.group[req.params.ke]&&s.group[req.params.ke].users[req.params.auth]){
         delete(s.api[req.params.auth]);
         delete(s.group[req.params.ke].users[req.params.auth]);
@@ -5247,7 +5249,7 @@ app.get('/:auth/logout/:ke/:id', function (req,res){
     }
 });
 //main page
-app.get(config.webPaths.index, function (req,res){
+app.get(config.webPaths.home, function (req,res){
     res.render(config.renderPaths.index,{lang:lang,config:config,screen:'dashboard',originalURL:s.getOriginalUrl(req)},function(err,html){
         if(err){
             s.systemLog(err)
@@ -5275,7 +5277,7 @@ app.get(config.webPaths.super, function (req,res){
     })
 });
 //update server
-app.get('/:auth/update/:key', function (req,res){
+app.get(config.webPaths.apiPrefix+':auth/update/:key', function (req,res){
     req.ret={ok:false};
     res.setHeader('Content-Type', 'application/json');
     req.fn=function(user){
@@ -5294,7 +5296,7 @@ app.get('/:auth/update/:key', function (req,res){
     s.auth(req.params,req.fn,res,req);
 });
 //get user details by API key
-app.get('/:auth/userInfo/:ke',function (req,res){
+app.get(config.webPaths.apiPrefix+':auth/userInfo/:ke',function (req,res){
     req.ret={ok:false};
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -5305,7 +5307,7 @@ app.get('/:auth/userInfo/:ke',function (req,res){
     },res,req);
 })
 //register function
-app.post('/:auth/register/:ke/:uid',function (req,res){
+app.post(config.webPaths.apiPrefix+':auth/register/:ke/:uid',function (req,res){
     req.resp={ok:false};
     res.setHeader('Content-Type', 'application/json');
     s.auth(req.params,function(user){
@@ -5351,7 +5353,7 @@ s.deleteFactorAuth=function(r){
         delete(s.factorAuth[r.ke])
     }
 }
-app.post(['/','/:screen'],function (req,res){
+app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':screen'],function (req,res){
     req.ip=req.headers['cf-connecting-ip']||req.headers["CF-Connecting-IP"]||req.headers["'x-forwarded-for"]||req.connection.remoteAddress;
     if(req.query.json=='true'){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -5663,7 +5665,7 @@ app.post(['/','/:screen'],function (req,res){
     }
 });
 // Get HLS stream (m3u8)
-app.get(['/:auth/hls/:ke/:id/:file','/:auth/hls/:ke/:id/:channel/:file'], function (req,res){
+app.get([config.webPaths.apiPrefix+':auth/hls/:ke/:id/:file',config.webPaths.apiPrefix+':auth/hls/:ke/:id/:channel/:file'], function (req,res){
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     req.fn=function(user){
         s.checkChildProxy(req.params,function(){
@@ -5684,7 +5686,7 @@ app.get(['/:auth/hls/:ke/:id/:file','/:auth/hls/:ke/:id/:channel/:file'], functi
     s.auth(req.params,req.fn,res,req);
 });
 //Get JPEG snap
-app.get('/:auth/jpeg/:ke/:id/s.jpg', function(req,res){
+app.get(config.webPaths.apiPrefix+':auth/jpeg/:ke/:id/s.jpg', function(req,res){
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
         s.checkChildProxy(req.params,function(){
@@ -5708,7 +5710,7 @@ app.get('/:auth/jpeg/:ke/:id/s.jpg', function(req,res){
     },res,req);
 });
 //Get FLV stream
-app.get(['/:auth/flv/:ke/:id/s.flv','/:auth/flv/:ke/:id/:channel/s.flv'], function(req,res) {
+app.get([config.webPaths.apiPrefix+':auth/flv/:ke/:id/s.flv',config.webPaths.apiPrefix+':auth/flv/:ke/:id/:channel/s.flv'], function(req,res) {
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
         s.checkChildProxy(req.params,function(){
@@ -5744,7 +5746,7 @@ app.get(['/:auth/flv/:ke/:id/s.flv','/:auth/flv/:ke/:id/:channel/s.flv'], functi
     },res,req)
 })
 //montage - stand alone squished view with gridstackjs
-app.get(['/:auth/grid/:ke','/:auth/grid/:ke/:group'], function(req,res) {
+app.get([config.webPaths.apiPrefix+':auth/grid/:ke',config.webPaths.apiPrefix+':auth/grid/:ke/:group'], function(req,res) {
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
         if(user.permissions.get_monitors==="0"){
@@ -5844,7 +5846,7 @@ app.get(['/:auth/grid/:ke','/:auth/grid/:ke/:group'], function(req,res) {
 });
 //MJPEG feed
 // if query string `full=true` is not present then it will load the MJPEG data directly and not the iframe ready page.
-app.get(['/:auth/mjpeg/:ke/:id','/:auth/mjpeg/:ke/:id/:channel'], function(req,res) {
+app.get([config.webPaths.apiPrefix+':auth/mjpeg/:ke/:id',config.webPaths.apiPrefix+':auth/mjpeg/:ke/:id/:channel'], function(req,res) {
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     if(req.query.full=='true'){
         res.render(config.renderPaths.mjpeg,{url:'/'+req.params.auth+'/mjpeg/'+req.params.ke+'/'+req.params.id,originalURL:s.getOriginalUrl(req)});
@@ -5892,7 +5894,7 @@ app.get(['/:auth/mjpeg/:ke/:id','/:auth/mjpeg/:ke/:id/:channel'], function(req,r
     }
 });
 //embed monitor
-app.get(['/:auth/embed/:ke/:id','/:auth/embed/:ke/:id/:addon'], function (req,res){
+app.get([config.webPaths.apiPrefix+':auth/embed/:ke/:id',config.webPaths.apiPrefix+':auth/embed/:ke/:id/:addon'], function (req,res){
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     req.params.protocol=req.protocol;
     s.auth(req.params,function(user){
@@ -5914,7 +5916,7 @@ app.get(['/:auth/embed/:ke/:id','/:auth/embed/:ke/:id/:addon'], function (req,re
     },res,req);
 });
 // Get TV Channels (Monitor Streams) json
-app.get(['/:auth/tvChannels/:ke','/:auth/tvChannels/:ke/:id','/get.php'], function (req,res){
+app.get([config.webPaths.apiPrefix+':auth/tvChannels/:ke',config.webPaths.apiPrefix+':auth/tvChannels/:ke/:id','/get.php'], function (req,res){
     req.ret={ok:false};
     if(req.query.username&&req.query.password){
         req.params.username = req.query.username
@@ -6050,7 +6052,7 @@ app.get(['/:auth/tvChannels/:ke','/:auth/tvChannels/:ke/:id','/get.php'], functi
     s.auth(req.params,req.fn,res,req);
 });
 // Get monitors json
-app.get(['/:auth/monitor/:ke','/:auth/monitor/:ke/:id'], function (req,res){
+app.get([config.webPaths.apiPrefix+':auth/monitor/:ke',config.webPaths.apiPrefix+':auth/monitor/:ke/:id'], function (req,res){
     req.ret={ok:false};
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -6136,7 +6138,7 @@ app.get(['/:auth/monitor/:ke','/:auth/monitor/:ke/:id'], function (req,res){
     s.auth(req.params,req.fn,res,req);
 });
 // Get videos json
-app.get(['/:auth/videos/:ke','/:auth/videos/:ke/:id'], function (req,res){
+app.get([config.webPaths.apiPrefix+':auth/videos/:ke',config.webPaths.apiPrefix+':auth/videos/:ke/:id'], function (req,res){
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
@@ -6236,7 +6238,7 @@ app.get(['/:auth/videos/:ke','/:auth/videos/:ke/:id'], function (req,res){
     },res,req);
 });
 // Get events json (motion logs)
-app.get(['/:auth/events/:ke','/:auth/events/:ke/:id','/:auth/events/:ke/:id/:limit','/:auth/events/:ke/:id/:limit/:start','/:auth/events/:ke/:id/:limit/:start/:end'], function (req,res){
+app.get([config.webPaths.apiPrefix+':auth/events/:ke',config.webPaths.apiPrefix+':auth/events/:ke/:id',config.webPaths.apiPrefix+':auth/events/:ke/:id/:limit',config.webPaths.apiPrefix+':auth/events/:ke/:id/:limit/:start',config.webPaths.apiPrefix+':auth/events/:ke/:id/:limit/:start/:end'], function (req,res){
     req.ret={ok:false};
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -6292,7 +6294,7 @@ app.get(['/:auth/events/:ke','/:auth/events/:ke/:id','/:auth/events/:ke/:id/:lim
     },res,req);
 });
 // Get logs json
-app.get(['/:auth/logs/:ke','/:auth/logs/:ke/:id'], function (req,res){
+app.get([config.webPaths.apiPrefix+':auth/logs/:ke',config.webPaths.apiPrefix+':auth/logs/:ke/:id'], function (req,res){
     req.ret={ok:false};
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -6355,7 +6357,7 @@ app.get(['/:auth/logs/:ke','/:auth/logs/:ke/:id'], function (req,res){
     },res,req);
 });
 // Get monitors online json
-app.get('/:auth/smonitor/:ke', function (req,res){
+app.get(config.webPaths.apiPrefix+':auth/smonitor/:ke', function (req,res){
     req.ret={ok:false};
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -6390,7 +6392,7 @@ app.get('/:auth/smonitor/:ke', function (req,res){
     s.auth(req.params,req.fn,res,req);
 });
 // Monitor Add,Edit,Delete
-app.all(['/:auth/configureMonitor/:ke/:id','/:auth/configureMonitor/:ke/:id/:f'], function (req,res){
+app.all([config.webPaths.apiPrefix+':auth/configureMonitor/:ke/:id',config.webPaths.apiPrefix+':auth/configureMonitor/:ke/:id/:f'], function (req,res){
     req.ret={ok:false};
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -6535,7 +6537,7 @@ app.all(['/:auth/configureMonitor/:ke/:id','/:auth/configureMonitor/:ke/:id/:f']
         }
     })
 })
-app.get(['/:auth/monitor/:ke/:id/:f','/:auth/monitor/:ke/:id/:f/:ff','/:auth/monitor/:ke/:id/:f/:ff/:fff'], function (req,res){
+app.get([config.webPaths.apiPrefix+':auth/monitor/:ke/:id/:f',config.webPaths.apiPrefix+':auth/monitor/:ke/:id/:f/:ff',config.webPaths.apiPrefix+':auth/monitor/:ke/:id/:f/:ff/:fff'], function (req,res){
     req.ret={ok:false};
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -6629,7 +6631,7 @@ app.get(['/:auth/monitor/:ke/:id/:f','/:auth/monitor/:ke/:id/:f/:ff','/:auth/mon
     },res,req);
 })
 //get file from fileBin bin
-app.get(['/:auth/fileBin/:ke','/:auth/fileBin/:ke/:id'],function (req,res){
+app.get([config.webPaths.apiPrefix+':auth/fileBin/:ke',config.webPaths.apiPrefix+':auth/fileBin/:ke/:id'],function (req,res){
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     req.fn=function(user){
@@ -6661,7 +6663,7 @@ app.get(['/:auth/fileBin/:ke','/:auth/fileBin/:ke/:id'],function (req,res){
     s.auth(req.params,req.fn,res,req);
 });
 //get file from fileBin bin
-app.get('/:auth/fileBin/:ke/:id/:year/:month/:day/:file', function (req,res){
+app.get(config.webPaths.apiPrefix+':auth/fileBin/:ke/:id/:year/:month/:day/:file', function (req,res){
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     req.fn=function(user){
         req.failed=function(){
@@ -6690,7 +6692,7 @@ app.get('/:auth/fileBin/:ke/:id/:year/:month/:day/:file', function (req,res){
     s.auth(req.params,req.fn,res,req);
 });
 //zip videos and get link from fileBin
-app.get('/:auth/zipVideos/:ke', function (req,res){
+app.get(config.webPaths.apiPrefix+':auth/zipVideos/:ke', function (req,res){
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     var failed = function(resp){
         res.setHeader('Content-Type', 'application/json');
@@ -6778,7 +6780,7 @@ app.get('/:auth/zipVideos/:ke', function (req,res){
     }
 });
 // Get video file
-app.get('/:auth/videos/:ke/:id/:file', function (req,res){
+app.get(config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file', function (req,res){
     s.auth(req.params,function(user){
         if(user.permissions.watch_videos==="0"||user.details.sub&&user.details.allmonitors!=='1'&&user.details.monitors.indexOf(req.params.id)===-1){
             res.end(user.lang['Not Permitted'])
@@ -6830,7 +6832,7 @@ app.get('/:auth/videos/:ke/:id/:file', function (req,res){
     },res,req);
 });
 //motion trigger
-app.get('/:auth/motion/:ke/:id', function (req,res){
+app.get(config.webPaths.apiPrefix+':auth/motion/:ke/:id', function (req,res){
     s.auth(req.params,function(user){
         if(req.query.data){
             try{
@@ -6853,7 +6855,7 @@ app.get('/:auth/motion/:ke/:id', function (req,res){
     },res,req);
 })
 //hookTester trigger
-app.get('/:auth/hookTester/:ke/:id', function (req,res){
+app.get(config.webPaths.apiPrefix+':auth/hookTester/:ke/:id', function (req,res){
     res.setHeader('Content-Type', 'application/json');
     s.auth(req.params,function(user){
         s.log(req.params,{type:'Test',msg:'Hook Test'})
@@ -6861,7 +6863,7 @@ app.get('/:auth/hookTester/:ke/:id', function (req,res){
     },res,req);
 })
 //control trigger
-app.get('/:auth/control/:ke/:id/:direction', function (req,res){
+app.get(config.webPaths.apiPrefix+':auth/control/:ke/:id/:direction', function (req,res){
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
@@ -6871,7 +6873,7 @@ app.get('/:auth/control/:ke/:id/:direction', function (req,res){
     },res,req);
 })
 //modify video file
-app.get(['/:auth/videos/:ke/:id/:file/:mode','/:auth/videos/:ke/:id/:file/:mode/:f'], function (req,res){
+app.get([config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode',config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode/:f'], function (req,res){
     req.ret={ok:false};
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -6942,7 +6944,7 @@ app.all(['/streamIn/:ke/:id','/streamIn/:ke/:id/:feed'], function (req, res) {
     }
 })
 //MP4 Stream
-app.get(['/:auth/mp4/:ke/:id/:channel/s.mp4','/:auth/mp4/:ke/:id/s.mp4','/:auth/mp4/:ke/:id/:channel/s.ts','/:auth/mp4/:ke/:id/s.ts'], function (req, res) {
+app.get([config.webPaths.apiPrefix+':auth/mp4/:ke/:id/:channel/s.mp4',config.webPaths.apiPrefix+':auth/mp4/:ke/:id/s.mp4',config.webPaths.apiPrefix+':auth/mp4/:ke/:id/:channel/s.ts',config.webPaths.apiPrefix+':auth/mp4/:ke/:id/s.ts'], function (req, res) {
     s.auth(req.params,function(user){
         if(!s.group[req.params.ke] || !s.group[req.params.ke].mon[req.params.id]){
             res.status(404);
@@ -6985,11 +6987,11 @@ app.get(['/:auth/mp4/:ke/:id/:channel/s.mp4','/:auth/mp4/:ke/:id/s.mp4','/:auth/
 });
 //simulate RTSP over HTTP
 app.get([
-    '/:auth/mpegts/:ke/:id/:feed/:file',
-    '/:auth/mpegts/:ke/:id/:feed/',
-    '/:auth/h264/:ke/:id/:feed/:file',
-    '/:auth/h264/:ke/:id/:feed',
-    '/:auth/h264/:ke/:id'
+    config.webPaths.apiPrefix+':auth/mpegts/:ke/:id/:feed/:file',
+    config.webPaths.apiPrefix+':auth/mpegts/:ke/:id/:feed/',
+    config.webPaths.apiPrefix+':auth/h264/:ke/:id/:feed/:file',
+    config.webPaths.apiPrefix+':auth/h264/:ke/:id/:feed',
+    config.webPaths.apiPrefix+':auth/h264/:ke/:id'
 ], function (req, res) {
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
@@ -7022,7 +7024,7 @@ app.get([
     },res,req);
 });
 //FFprobe by API
-app.get('/:auth/probe/:ke',function (req,res){
+app.get(config.webPaths.apiPrefix+':auth/probe/:ke',function (req,res){
     req.ret={ok:false};
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -7067,7 +7069,7 @@ app.get('/:auth/probe/:ke',function (req,res){
     },res,req);
 })
 //ONVIF requesting with Shinobi API structure
-app.all(['/:auth/onvif/:ke/:id/:action','/:auth/onvif/:ke/:id/:service/:action'],function (req,res){
+app.all([config.webPaths.apiPrefix+':auth/onvif/:ke/:id/:action',config.webPaths.apiPrefix+':auth/onvif/:ke/:id/:service/:action'],function (req,res){
     var response = {ok:false};
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
