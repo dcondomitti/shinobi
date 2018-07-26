@@ -13,6 +13,9 @@ process.on('uncaughtException', function (err) {
     console.error('Uncaught Exception occured!');
     console.error(err.stack);
 });
+process.on('SIGINT', function() {
+    process.exit();
+});
 var staticFFmpeg = false;
 try{
     staticFFmpeg = require('ffmpeg-static').path;
