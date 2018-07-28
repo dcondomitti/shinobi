@@ -112,6 +112,14 @@
             </label>
         </div>
         <div class="form-group h_l_input h_l_limited">
+            <label><div><span><%-lang['Can use Amazon S3']%></span></div>
+                <div><select class="form-control" detail="use_aws_s3">
+                    <option value="1" selected><%-lang.Yes%></option>
+                    <option value="0"><%-lang.No%></option>  
+                </select></div>
+            </label>
+        </div>
+        <div class="form-group h_l_input h_l_limited">
             <label><div><span><%-lang['Can use WebDAV']%></span></div>
                 <div><select class="form-control" detail="use_webdav">
                     <option value="1" selected><%-lang.Yes%></option>
@@ -153,11 +161,12 @@
 <script>
 //add new
 $.aN={e:$('#add_edit')};$.aN.f=$.aN.e.find('form')
+$.aN.modeIsEdit = false
 $.aN.f.submit(function(e){
     e.preventDefault();
     e.s=$.aN.f.serializeObject()
     e.cx={f:'accounts',ff:'register',form:e.s};
-    if($('#edit').is(':checked')){
+    if($.aN.modeIsEdit){
         e.cx.ff='edit';
         e.cx.account=$.aN.selected;
     }
@@ -165,21 +174,33 @@ $.aN.f.submit(function(e){
     $.aN.e.modal('hide')
     return false;
 });
-$.aN.e.on('change','[detail]',function(e){
-    e.ar={},e.f=$(this).parents('form');
-    $.each(e.f.find('[detail]'),function(n,v){
-        v=$(v);e.ar[v.attr('detail')]=v.val();
+$.aN.e.on('change','[detail]',function(){
+    e = {}
+    e.ar = {}
+    if($.aN.modeIsEdit){
+        try{
+            e.ar = Object.assign(JSON.parse($.aN.selected.details),{})
+        }catch(err){
+            
+        }
+    }
+    $.each($.aN.e.find('[detail]'),function(n,v){
+        var el = $(v)
+        e.ar[el.attr('detail')] = el.val()
     });
-    e.f.find('[name="details"]').val(JSON.stringify(e.ar));
+    $.aN.e.find('[name="details"]').val(JSON.stringify(e.ar))
 })
 $('#edit').change(function(e){
     if($('#edit').is(':checked')){
+        $.aN.modeIsEdit = true
         $('#title').text("<%-lang['Edit']%>")
         $.aN.e.find('[name="mail"],[name="ke"]').prop('disabled',true)
     }else{
+        $.aN.modeIsEdit = false
         $('#title').text("<%-lang['Add New']%>")
         $.aN.e.find('input,select').prop('disabled',false)
     }
+    $.aN.e.find('[detail]').first().change()
 }).change()
 $.aN.e.on('change','[selector]',function(e){
     e.v=$(this).val();e.a=$(this).attr('selector')
@@ -189,6 +210,7 @@ $.aN.e.on('change','[selector]',function(e){
 //simple lister
 $.aC={e:$('#accounts')};$.aC.t=$.aC.e.find('table')
 $.aC.e.on('click','.add',function(e){
+    $.aN.selected = null
     $.aN.e.modal('show')
     $('#edit').prop('checked',false).change().parent().removeClass('is-checked')
     $.aN.f[0].reset()
@@ -207,7 +229,6 @@ $.aC.e.on('click','.delete',function(e){
 })
 $.aC.e.on('click','.permission',function(e){
     $.aN.e.modal('show')
-    $('#edit').prop('checked',true).change().parent().addClass('is-checked')
     e.e=$(this).parents('tr');
     e.u=e.e.attr('ke');
     e.account=$.ccio.accounts[e.u];
@@ -218,8 +239,9 @@ $.aC.e.on('click','.permission',function(e){
         $.aN.e.find('[name="'+n+'"]').val(v).change()
     })
     $.each(JSON.parse(e.account.details),function(n,v){
-        $.aN.e.find('[detail="'+n+'"]').val(v).change()
+        $.aN.e.find('[detail="'+n+'"]').val(v)
     })
+    $('#edit').prop('checked',true).change().parent().addClass('is-checked')
 //    $.pR.e.modal('show');
     
 })

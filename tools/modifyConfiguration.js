@@ -12,13 +12,22 @@ processArgv.forEach(function(val) {
     var theSplit = val.split('=');
     var index = theSplit[0];
     var value = theSplit[1];
-    if(value==='DELETE'){
-        delete(config[index])
-    }else{
+    if(index === 'addToConfig'){
         try{
-            config[index] = JSON.parse(value);
+            value = JSON.parse(value)
+            config = Object.assign(config,value)
         }catch(err){
-            config[index] = value;
+            console.log('Not a valid Data set. "addToConfig" value must be a JSON string. You may need to wrap it in singles quotes.')
+        }
+    }else{
+        if(value==='DELETE'){
+            delete(config[index])
+        }else{
+            try{
+                config[index] = JSON.parse(value);
+            }catch(err){
+                config[index] = value;
+            }
         }
     }
     console.log(index + ': ' + value);

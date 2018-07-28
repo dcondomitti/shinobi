@@ -1451,7 +1451,7 @@ switch($user.details.lang){
                 tmp+='</div>'
                 tmp+='     <div class="form-group">'
                 tmp+='        <label><div><span><%-lang["Stream Type"]%></span></div>'
-                tmp+='            <div><select class="form-control" channel-detail="stream_type" selector="h_st_channel_'+tempID+'" triggerChange="#monSectionChannel'+tempID+' [channel-detail=stream_vcodec]">'
+                tmp+='            <div><select class="form-control" channel-detail="stream_type" selector="h_st_channel_'+tempID+'" triggerChange="#monSectionChannel'+tempID+' [channel-detail=stream_vcodec]" triggerChangeIgnore="b64,mjpeg">'
                 tmp+='                <option value="mp4"><%-lang["Poseidon"]%></option>'
                 tmp+='                <option value="rtmp"><%-lang["RTMP Stream"]%></option>'
                 tmp+='                <option value="flv"><%-lang["FLV"]%></option>'
@@ -1800,8 +1800,8 @@ $.ccio.globalWebsocket=function(d,user){
                 }
                 if(d.details.confidence){
                     d.tt=d.details.confidence;
-                    if (d.tt > 100) { d.tt = 100; }
-                    d.e.find('.indifference .progress-bar').css('width',d.tt + "%").find('span').text(d.details.confidence)
+                    if (d.tt > 100) { d.tt = 100 }
+                    d.e.find('.indifference .progress-bar').css('width',d.tt + '%').find('span').html(d.details.confidence+'% change in <b>'+d.details.name+'</b>')
                 }
                 d.e.addClass('detector_triggered')
                 clearTimeout($.ccio.mon[d.ke+d.id+user.auth_token].detector_trigger_timeout);
@@ -3174,13 +3174,30 @@ $.multimon.e.find('.delete').click(function(){
     $.confirm.title.text('<%-cleanLang(lang['Delete'])%> <%-cleanLang(lang['Monitors'])%>')
     e.html='<p><%-cleanLang(lang.DeleteMonitorsText)%></p>';
     $.confirm.body.html(e.html)
-    $.confirm.click({title:'Delete',class:'btn-danger'},function(){
-        $.each(arr,function(n,v){
-            $.get($.ccio.init('location',$user)+v.user.auth_token+'/configureMonitor/'+v.ke+'/'+v.mid+'/delete',function(data){
-                console.log(data)
-            })
-        })
-    });
+    $.confirm.click([
+        {
+            title:'Delete Monitors',
+            class:'btn-danger',
+            callback:function(){
+                $.each(arr,function(n,v){
+                    $.get($.ccio.init('location',$user)+v.user.auth_token+'/configureMonitor/'+v.ke+'/'+v.mid+'/delete',function(data){
+                        console.log(data)
+                    })
+                })
+            }
+        },
+        {
+            title:'Delete Monitors and Files',
+            class:'btn-danger',
+            callback:function(){
+                $.each(arr,function(n,v){
+                    $.get($.ccio.init('location',$user)+v.user.auth_token+'/configureMonitor/'+v.ke+'/'+v.mid+'/delete?deleteFiles=true',function(data){
+                        console.log(data)
+                    })
+                })
+            }
+        }
+    ]);
 })
 //$.multimon.e.find('.edit_all').click(function(){
 //    var arr=$.multimon.getSelectedMonitors();
@@ -5487,11 +5504,26 @@ $('body')
             })
             e.html+='</tr></table>';
             $.confirm.body.html(e.html)
-            $.confirm.click({title:'Delete Monitor',class:'btn-danger'},function(){
-                $.get($.ccio.init('location',user)+user.auth_token+'/configureMonitor/'+user.ke+'/'+e.mon.mid+'/delete',function(d){
-                    $.ccio.log(d)
-                })
-            });
+            $.confirm.click([
+                {
+                    title:'Delete Monitor',
+                    class:'btn-danger',
+                    callback:function(){
+                        $.get($.ccio.init('location',user)+user.auth_token+'/configureMonitor/'+user.ke+'/'+e.mon.mid+'/delete',function(d){
+                            $.ccio.log(d)
+                        })
+                    }
+                },
+                {
+                    title:'Delete Monitor and Files',
+                    class:'btn-danger',
+                    callback:function(){
+                        $.get($.ccio.init('location',user)+user.auth_token+'/configureMonitor/'+user.ke+'/'+e.mon.mid+'/delete?deleteFiles=true',function(d){
+                            $.ccio.log(d)
+                        })
+                    }
+                }
+            ])
         break;
         case'edit':
             e.p=$('#add_monitor'),e.mt=e.p.find('.modal-title')

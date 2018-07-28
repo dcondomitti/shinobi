@@ -34,13 +34,13 @@ nano plugins/openalpr/conf.json
 Start the plugin.
 
 ```
-node plugins/openalpr/shinobi-motion.js
+node plugins/openalpr/shinobi-openalpr.js
 ```
 
 Or to daemonize with PM2.
 
 ```
-pm2 start plugins/openalpr/shinobi-motion.js
+pm2 start plugins/openalpr/shinobi-openalpr.js
 ```
 
 Doing this will reveal options in the monitor configuration. Shinobi does not need to be restarted when a plugin is initiated or stopped.
