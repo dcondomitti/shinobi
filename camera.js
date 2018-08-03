@@ -27,7 +27,6 @@ try{
 }catch(err){
     staticFFmpeg = false;
     console.log('No Static FFmpeg. Continuing.')
-    //no static ffmpeg
 }
 var os = require('os');
 var URL = require('url');
@@ -54,6 +53,7 @@ var jsonfile = require("jsonfile");
 var connectionTester = require('connection-tester');
 var events = require('events');
 var onvif = require('node-onvif');
+var onvifHawk = require('onvif-nvt');
 var knex = require('knex');
 var Mp4Frag = require('mp4frag');
 var P2P = require('pipe2pam');
@@ -914,6 +914,8 @@ s.init=function(x,e,k,fn){
             //build a complete url from pieces
             e.authd='';
             if(e.details.muser&&e.details.muser!==''&&e.host.indexOf('@')===-1) {
+                e.username = e.details.muser
+                e.password = e.details.mpass
                 e.authd=e.details.muser+':'+e.details.mpass+'@';
             }
             if(e.port==80&&e.details.port_force!=='1'){e.porty=''}else{e.porty=':'+e.port}
@@ -2428,7 +2430,10 @@ s.camera=function(x,e,cn,tx){
             var monitorConfig = cn
             URLobject=URL.parse(e)
             if(monitorConfig.details.control_url_method === 'ONVIF' && monitorConfig.details.control_base_url === ''){
-                URLobject.port = 8000
+                if(monitorConfig.details.onvif_port === ''){
+                    monitorConfig.details.onvif_port = 8000
+                }
+                URLobject.port = monitorConfig.details.onvif_port
             }else if(!URLobject.port){
                 URLobject.port = 80
             }
@@ -2831,6 +2836,68 @@ s.camera=function(x,e,cn,tx){
                 }
             }
             setStreamDir()
+            //try to create HawkEye Onvif Object
+            if(e.details.is_onvif === '1'){
+                console.log('onvifHawk',e.hosty, e.porty.replace(':',''), e.username, e.password)
+                var doOnvifHawk = true
+                var errorCount = 0
+                var hawkFail = function(msg,callback){
+                    ++errorCount
+                    if(errorCount > 2){
+                        callback()
+                        s.log(e,msg);
+                    }
+                }
+                var createHawkOnvif = function(){
+                    if(doOnvifHawk === false){
+                        return false
+                    }
+                    if(!e.details.onvif_port || e.details.onvif_port === ''){
+                        e.details.onvif_port = 8000
+                    }
+                    onvifHawk.connect(e.hosty, e.details.onvif_port, e.username, e.password).then(function(results){
+                        var camera = results
+                        // if the camera supports events, the module will already be loaded.
+                        if (camera.events) {
+                            camera.events.soap.username = e.username
+                            camera.events.soap.password = e.password
+                            camera.events.on('messages', messages => {
+                                console.log('Messages Received:', (typeof messages))
+                                s.log(e,{type:lang.ONVIFEventsNotAvailable,msg:{msg:lang.ONVIFnotCompliantProfileT}});
+                            })
+                            camera.events.on('messages:error', error => {
+                                if(error.body.indexOf('anonymous') > -1){
+                                    hawkFail({type:lang.ONVIFEventsNotAvailable,msg:{msg:lang.ONVIFnotCompliantProfileT}},function(){
+                                        camera.events.stopPull()
+                                    })
+                                }
+                            })
+                            // start a pull event loop
+                            setTimeout(function(){
+                                camera.events.startPull()
+                            },3000)
+                            // call stopPull() to end the event loop
+                            // camera.events.stopPull()
+                            s.group[e.ke].mon[e.id].HawkEyeOnvifConnection = camera
+                        }
+                        if(s.group[e.ke].mon[e.id].HawkEyeOnvifConnection){
+                            console.log('Found')
+                        }else{
+                            console.log('Not Found')
+                        }
+                    }).catch(function(err){
+                        console.log('Error Connecting')
+                        console.log(err.code)
+                        hawkFail({type:lang.ONVIFEventsNotAvailable,msg:{msg:lang.ONVIFnotCompliantProfileT}},function(){
+                            doOnvifHawk = false
+                        })
+                        setTimeout(function(){
+                            createHawkOnvif()
+                        },3000)
+                    })
+                }
+                createHawkOnvif()
+            }
             //set up fatal error handler
             if(e.details.fatal_max===''){
                 e.details.fatal_max = 10

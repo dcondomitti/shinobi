@@ -156,6 +156,8 @@
    "FFmpegTip": "FFprobe is a simple multimedia streams analyzer. You can use it to output all kinds of information about an input including duration, frame rate, frame size, etc.",
    "Complete Stream URL": "Complete Stream URL",
    "ONVIF Scanner": "ONVIF Scanner",
+   "ONVIFEventsNotAvailable": "ONVIF Events not Available",
+   "ONVIFnotCompliantProfileT": "Camera is not ONVIF Profile T Compliant",
    "Scan Settings": "Scan Settings",
    "ONVIFnote": "Discover ONVIF devices on networks outside your own or leave it blank to scan your current network. <br>Username and Password can be left blank.",
    "Range or Single": "Range or Single",
