@@ -183,7 +183,7 @@ switch($user.details.lang){
                         url=url+'/'
                     }
                 }else{
-                    url = ''
+                    url = '<%-originalURL%>'
                 }
                 return url
             break;
