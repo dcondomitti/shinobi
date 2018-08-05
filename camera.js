@@ -1901,7 +1901,13 @@ s.coSpawnClose = function(e){
 s.ffmpeg = function(e){
     e.coProcessor = false
     e.isStreamer = (e.type === 'dashcam'|| e.type === 'socket')
-    if(e.details.accelerator === '1' && e.details.hwaccel_vcodec !== 'auto' && e.isStreamer === false && (!e.details.input_maps || e.details.input_maps.length === 0)){
+    if(
+        e.details.accelerator === '1' &&
+        e.details.hwaccel !== 'vaapi' &&
+        e.details.hwaccel_vcodec !== 'auto' &&
+        e.isStreamer === false &&
+        (!e.details.input_maps || e.details.input_maps.length === 0)
+      ){
         e.coProcessor = true
     }
     //set X for temporary values so we don't break our main monitor object.
@@ -2863,7 +2869,6 @@ s.camera=function(x,e,cn,tx){
                             camera.events.soap.password = e.password
                             camera.events.on('messages', messages => {
                                 console.log('Messages Received:', (typeof messages))
-                                s.log(e,{type:lang.ONVIFEventsNotAvailable,msg:{msg:lang.ONVIFnotCompliantProfileT}});
                             })
                             camera.events.on('messages:error', error => {
                                 if(error.body.indexOf('anonymous') > -1){
