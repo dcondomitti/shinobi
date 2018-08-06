@@ -95,7 +95,6 @@ s.detectObject=function(buffer,d,tx){
       if(err) return s.systemLog(err);
       if(s.isPythonRunning === false)return console.log('Python Script is not Running.')
       s.getRequest('http://localhost:'+config.pythonPort+'/get?img='+d.dir+d.tmpFile,function(data){
-          console.log(data)
           if(data.length > 0){
               var mats=[]
               data.forEach(function(v){
