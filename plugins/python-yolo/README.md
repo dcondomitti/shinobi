@@ -19,7 +19,7 @@ sh INSTALL.sh
 Start the plugin.
 
 ```
-pm2 start plugins/python-yolo/shinobi-python-yolo.js
+pm2 start shinobi-python-yolo.js
 ```
 
 Doing this will reveal options in the monitor configuration. Shinobi does not need to be restarted when a plugin is initiated or stopped.
@@ -30,7 +30,7 @@ Doing this will reveal options in the monitor configuration. Shinobi does not ne
 Edit your plugins configuration file. Set the `hostPort` **to be different** than the `listening port for camera.js`.
 
 ```
-nano plugins/python-yolo/conf.json
+nano conf.json
 ```
 
 Here is a sample of a Host configuration for the plugin.
