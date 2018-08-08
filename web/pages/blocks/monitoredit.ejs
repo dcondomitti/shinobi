@@ -133,17 +133,17 @@
                       </div>
                       <div class="form-group">
                         <label><div><span><%-lang['Username']%></span></div>
-                        <div><input class="form-control" detail="muser" placeholder=""></div>
+                        <div><input class="form-control" detail="muser"></div>
                         </label>
                       </div>
                       <div class="form-group">
                         <label><div><span><%-lang['Password']%></span></div>
-                        <div><input class="form-control" type="password" detail="mpass" placeholder=""></div>
+                        <div><input class="form-control" type="password" detail="mpass"></div>
                         </label>
                       </div>
                       <div class="form-group">
                         <label><div><span><%-lang['Host']%></span></div>
-                        <div><input class="form-control" name="host" placeholder=""></div>
+                        <div><input class="form-control" name="host"></div>
                         </label>
                       </div>
                       <div class="form-group">
@@ -545,12 +545,12 @@
                   </div>
                   <div class="form-group">
                     <label><div><span><%-lang['Image Width']%></span></div>
-                    <div><input class="form-control" detail="snap_scale_x" placeholder=""></div>
+                    <div><input class="form-control" detail="snap_scale_x"></div>
                     </label>
                   </div>
                   <div class="form-group">
                     <label><div><span><%-lang['Image Height']%></span></div>
-                    <div><input class="form-control" detail="snap_scale_y" placeholder=""></div>
+                    <div><input class="form-control" detail="snap_scale_y"></div>
                     </label>
                   </div>
                   <div class="form-group">
@@ -618,12 +618,12 @@
               <div class="h_vc_input h_vc_libvpx h_vc_libvpx-vp9 h_vc_libx264 h_vc_libx265 h_vc_hevc_nvenc h_vc_h264_nvenc h_vc_h264_vaapi h_vc_hevc_vaapi h_vc_h264_qsv h_vc_hevc_qsv h_vc_mpeg2_qsv h_vc_default h_vc_none">
                   <div class="form-group">
                     <label><div><span><%-lang['Quality']%></span></div>
-                    <div><input class="form-control" detail="crf" placeholder=""></div>
+                    <div><input class="form-control" detail="crf"></div>
                     </label>
                   </div>
                   <div class="form-group">
                     <label><div><span><%-lang['Preset']%></span></div>
-                        <div><input class="form-control" detail="preset_record" placeholder=""></div>
+                        <div><input class="form-control" detail="preset_record"></div>
                     </label>
                   </div>
               </div>
@@ -785,7 +785,7 @@
           <h4><%-lang['Custom']%></h4>
               <div class="form-group">
                 <label><div><span><%-lang['Input Flags']%></span></div>
-                <div><input class="form-control" detail="cust_input" placeholder=""></div>
+                <div><input class="form-control" detail="cust_input"></div>
                 </label>
               </div>
               <div class="form-group h_sn_input h_sn_1" style="display:none">
@@ -820,7 +820,7 @@
               </div>
               <div class="form-group h_m_input h_m_record">
                 <label><div><span><%-lang['Recording Flags']%></span></div>
-                <div><input class="form-control" detail="cust_record" placeholder=""></div>
+                <div><input class="form-control" detail="cust_record"></div>
                 </label>
               </div>
               <div class="form-group">
@@ -1005,13 +1005,22 @@
                         </select></div>
                     </label>
                   </div>
+                  <div class="form-group">
+                    <label><div><span><%-lang['Detector Filters']%></span></div>
+                        <div><select class="form-control" detail="use_detector_filters">
+                            <option value="0" selected><%-lang.No%></option>
+                            <option value="1"><%-lang.Yes%></option>
+                        </select></div>
+                    </label>
+                  </div>
                   <div class="form-group h_det_discord_input h_det_discord_1">
                     <label><div><span><%-lang['Allow Next Discord Alert']%></span></div>
                     <div><input class="form-control" detail="detector_discordbot_timeout" placeholder="10"></div>
                     </label>
                   </div>
                   <div class="hidden">
-                      <div><input detail="cords" placeholder=""></div>
+                      <input detail="cords">
+                      <input detail="detector_filters">
                   </div>
                   <div class="form-group">
                     <a class="btn btn-danger btn-block" monitor="region"><i class="fa fa-grav"></i> &nbsp; <%-lang['Region Editor']%></a>
@@ -1090,7 +1099,7 @@
                           </div>
                       </div>
                   </div>
-                  <div class="form-group-group orange shinobi-detector-opencv shinobi-detector-openalpr shinobi-detector_plug" section id="monSectionDetectorObject">
+                  <div class="form-group-group orange shinobi-detector-opencv shinobi-detector-openalpr shinobi-detector-python-yolo shinobi-detector_plug" section id="monSectionDetectorObject">
                       <h4><%-lang['Object Detection']%> <small><%-lang['Plugin']%> : <b class="shinobi-detector_name"></b> <b class="shinobi-detector-invert"><%-lang['Not Connected']%></b><b class="shinobi-detector" style="display:none"><%-lang['Connected']%></b></small></h4>
                       <div class="form-group">
                         <label><div><span><%-lang['Detect Objects']%></span></div>
@@ -1504,7 +1513,10 @@
               <li class="mdl-menu__item add_map"><i class="fa fa-rss"></i> <%-lang['Add Input Feed']%></li>
               <li class="mdl-menu__item add_channel"><i class="fa fa-puzzle-piece"></i> <%-lang['Add Channel']%></li>
             </ul>
-            <span class="h_det_input h_det_1"><button type="button" style="display:none" class="btn btn-warning shinobi-detector-opencv shinobi-detector-openalpr shinobi-detector-motion shinobi-detector_plug" monitor="region"><i class="fa fa-grav"></i> <%-lang['Region Editor']%></button></span>
+            <div class="h_det_input h_det_1" style="display:inline-block">
+                <button type="button" style="display:none" class="btn btn-primary" monitor="region"><i class="fa fa-grav"></i> <%-lang['Region Editor']%></button>
+                <button type="button" class="btn btn-primary" monitor="detector_filters"><i class="fa fa-grav"></i> <%-lang['Detector Filters']%></button>
+              </div>
           </div>
           <div style="display:inline-block;margin-right:5px">
             <div><select class="form-control btn-default" dropdown_toggle="monedit_user_type" selector="h_us">

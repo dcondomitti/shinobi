@@ -1153,6 +1153,63 @@ switch($user.details.lang){
                 }
                 $.ccio.init('ls')
             break;
+            case'detector-filters-where':
+                if(!d)d={};
+                d.id=$('#filters_where .row').length;
+                if(!d.p1){d.p1='indifference'}
+                if(!d.p2){d.p2='='}
+                if(!d.p3){d.p3=''}
+                if(!d.p4){d.p4='&&'}
+                tmp+='<div class="row where-row">'
+                tmp+='   <div class="form-group col-md-3">'
+                tmp+='       <label>'
+                tmp+='           <select class="form-control" where="p1">'
+                tmp+='               <option value="indifference" selected><%-cleanLang(lang['Indifference'])%></option>'
+                tmp+='               <option value="name"><%-cleanLang(lang['Region Name'])%></option>'
+                tmp+='               <option value="reason"><%-cleanLang(lang['Reason'])%></option>'
+                tmp+='               <option value="plug"><%-cleanLang(lang['Detection Engine'])%></option>'
+                tmp+='               <optgroup label="Matrix">'
+                tmp+='                  <option value="tag"><%-cleanLang(lang['Object Tag'])%></option>'
+                tmp+='                  <option value="confidence"><%-cleanLang(lang['Confidence'])%></option>'
+                tmp+='                  <option value="x"><%-cleanLang(lang['X Point'])%></option>'
+                tmp+='                  <option value="y"><%-cleanLang(lang['Y Point'])%></option>'
+                tmp+='                  <option value="height"><%-cleanLang(lang['Height'])%></option>'
+                tmp+='                  <option value="width"><%-cleanLang(lang['Width'])%></option>'
+                tmp+='               </optgroup>'
+                tmp+='           </select>'
+                tmp+='       </label>'
+                tmp+='   </div>'
+                tmp+='   <div class="form-group col-md-3">'
+                tmp+='       <label>'
+                tmp+='           <select class="form-control" where="p2">'
+                tmp+='               <option value="===" selected><%-cleanLang(lang['Equal to'])%></option>'
+                tmp+='               <option value="!=="><%-cleanLang(lang['Not Equal to'])%></option>'
+                tmp+='               <option value="indexOf"><%-cleanLang(lang['Contains'])%></option>'
+                tmp+='               <option value="!indexOf"><%-cleanLang(lang['Does Not Contain'])%></option>'
+                tmp+='               <optgroup label="For Numbers">'
+                tmp+='                  <option value=">="><%-cleanLang(lang['Greater Than or Equal to'])%></option>'
+                tmp+='                  <option value=">"><%-cleanLang(lang['Greater Than'])%></option>'
+                tmp+='                  <option value="<"><%-cleanLang(lang['Less Than'])%></option>'
+                tmp+='                  <option value="<="><%-cleanLang(lang['Less Than or Equal to'])%></option>'
+                tmp+='               </optgroup>'
+                tmp+='           </select>'
+                tmp+='       </label>'
+                tmp+='   </div>'
+                tmp+='   <div class="form-group col-md-3">'
+                tmp+='       <label>'
+                tmp+='           <input class="form-control" placeholder="Value" title="<%-cleanLang(lang.Value)%>" where="p3">'
+                tmp+='       </label>'
+                tmp+='   </div>'
+                tmp+='   <div class="form-group col-md-3">'
+                tmp+='       <label>'
+                tmp+='           <select class="form-control" where="p4">'
+                tmp+='               <option value="&&" selected><%-cleanLang(lang['AND'])%></option>'
+                tmp+='               <option value="||"><%-cleanLang(lang['OR'])%></option>'
+                tmp+='           </select>'
+                tmp+='       </label>'
+                tmp+='   </div>'
+                tmp+='</div>'
+            break;
             case'filters-where':
                 if(!d)d={};
                 d.id=$('#filters_where .row').length;
@@ -1653,6 +1710,14 @@ switch($user.details.lang){
                 k.mid=d.mid
                 k.mon=$.ccio.mon[d.ke+d.mid+user.auth_token]
                 $.ccio.init('monitorInfo',k)
+            break;
+            case'detector-filters-where':
+                $('#detector_filters_where').append(tmp);
+                $('#detector_filters_where .row [where="p4"][disabled]').prop('disabled',false)
+                $('#detector_filters_where .row:last [where="p1"]').val(d.p1)
+                $('#detector_filters_where .row:last [where="p2"]').val(d.p2)
+                $('#detector_filters_where .row:last [where="p3"]').val(d.p3)
+                $('#detector_filters_where .row:last [where="p4"]').val(d.p4).prop('disabled',true)
             break;
             case'filters-where':
                 $('#filters_where').append(tmp);
@@ -3254,9 +3319,9 @@ $.each(<%-JSON.stringify(define["Monitor Settings"].blocks)%>,function(n,v){
         }
         if(b.name.indexOf('detail=')>-1){
             b.name=b.name.replace('detail=','')
-            v.element=$('[detail="'+b.name+'"]')
+            v.element=$.aM.e.find('[detail="'+b.name+'"]')
         }else{
-            v.element=$('[name="'+b.name+'"]')
+            v.element=$.aM.e.find('[name="'+b.name+'"]')
         }
         v.parent=v.element.parents('.form-group').find('label div:first-child span')
         v.parent.find('small').remove()
@@ -4078,15 +4143,116 @@ $.fI.f.submit(function(e){
     e.er=[];
     $.each(e.s,function(n,v){e.s[n]=v.trim()})
     e.s.where=[];
-    $('.where-row').each(function(n,v){
+    e.e.find('.where-row').each(function(n,v){
         n={};
         $(v).find('[where]').each(function(m,b){
             b=$(b);
-            n[b.attr('where')]=b.val();
+            n[b.attr('where')]=b.val().trim();
         })
         e.s.where.push(n)
     })
     $.ccio.cx({f:'settings',ff:'filters',fff:'save',form:e.s})
+});
+//detector filters window
+$.detectorFilters={e:$('#detector_filter')};
+$.detectorFilters.f=$.detectorFilters.e.find('form');
+$.detectorFilters.md=$.detectorFilters.f.find('[detail]');
+$.detectorFilters.getSelected = function(){
+    return $('#detector_filters').val()
+}
+$.detectorFilters.drawOptions = function(){
+    var dFilters = $.detectorFilters.getCurrent()
+    $('#detector_filters optgroup').empty()
+    $.each(dFilters,function(n,dFilter){
+        $.ccio.tm('option',{auth_token:$user.auth_token,id:dFilter.id,name:dFilter.filter_name},'#detector_filters optgroup')
+    })
+}
+$.detectorFilters.getCurrent = function(){
+    try{
+        return JSON.parse($.aM.e.find('[detail="detector_filters"]').val())
+    }catch(err){
+        return {}
+    }
+}
+$.detectorFilters.save = function(){
+    var currentVals = $.detectorFilters.getCurrent()
+    currentVals[$.detectorFilters.lastSave.id] = $.detectorFilters.lastSave
+    $.aM.e.find('[detail="detector_filters"]').val(JSON.stringify(currentVals)).change()
+}
+$.ccio.tm('detector-filters-where');
+$.detectorFilters.e.on('shown.bs.modal',function(e){
+    $.detectorFilters.drawOptions()
+})
+$.detectorFilters.e.on('click','.where .add',function(e){
+    $.ccio.tm('detector-filters-where');
+})
+$.detectorFilters.e.on('click','.where .remove',function(e){
+    e.e=$('#detector_filters_where .row');
+    if(e.e.length>1){
+        e.e.last().remove();
+        $('#detector_filters_where .row:last [where="p4"]').prop('disabled',true)
+    }
+})
+$.detectorFilters.f.find('.delete').click(function(e){
+    var currentVals = $.detectorFilters.getCurrent()
+    var newObject = {}
+    var deleteId = $.detectorFilters.getSelected()
+    $.each(currentVals,function(id,obj){
+        if(id === deleteId)return false;
+        newObject[id] = obj
+    })
+    $.aM.e.find('[detail="detector_filters"]').val(JSON.stringify(newObject)).change()
+    $.detectorFilters.drawOptions()
+})
+$('#detector_filters').change(function(){
+    e = {}
+    e.e=$(this),e.id=e.e.val();
+    $('#detector_filters_where').empty()
+    if(e.id&&e.id!==''){
+        var currentFilter = $.detectorFilters.getCurrent()[e.id]
+        e.name=currentFilter.name;
+        $.each(currentFilter.where,function(n,v){
+            $.ccio.tm('detector-filters-where',v)
+        });
+        $.each(currentFilter.actions,function(action,val){
+            $.detectorFilters.e.find('[actions="'+action+'"]').val(val)
+        });
+        $.each(currentFilter,function(n,v){
+            if(n==='where'){return}
+            $.detectorFilters.f.find('[name="'+n+'"]').val(v);
+        });
+    }else{
+        e.name='<%-cleanLang(lang['Add New'])%>';
+        $.detectorFilters.f.find('[name="id"]').val($.ccio.gid(5));
+        $.ccio.tm('detector-filters-where');
+    }
+    $.detectorFilters.e.find('.filter_name').text(e.name)
+}).change()
+$.detectorFilters.f.submit(function(ee){
+    ee.preventDefault()
+    e = {}
+    e.e=$(this),e.s=e.e.serializeObject();
+    e.er=[];
+    $.each(e.s,function(n,v){e.s[n]=v.trim()})
+    //create conditions object (where)
+    e.s.where=[];
+    e.e.find('.where-row').each(function(n,v){
+        n={};
+        $(v).find('[where]').each(function(m,b){
+            b=$(b);
+            n[b.attr('where')]=b.val().trim();
+        })
+        e.s.where.push(n)
+    })
+    // create actions object (do)
+    e.s.actions={};
+    e.e.find('.actions-row').each(function(n,v){
+        b=$(v).find('[actions]');
+        e.s.actions[b.attr('actions')] = b.val()
+    })
+    $.detectorFilters.lastSave = e.s
+    $.detectorFilters.save()
+    $.detectorFilters.e.modal('hide')
 });
 //settings window
 $.sM={e:$('#settings')};
@@ -5324,6 +5490,9 @@ $('body')
             }
             $.zO.regionViewerDetails=e.d;
             $.zO.initRegionList()
+        break;
+        case'detector_filters':
+            $.detectorFilters.e.modal('show');
         break;
         case'snapshot':
             $.ccio.snapshot(e,function(url){

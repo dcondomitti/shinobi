@@ -518,7 +518,7 @@ s.createPamDiffEngine = function(e){
             imgWidth:width
         }
         detectorObject.doObjectDetection = (s.ocv && e.details.detector_use_detect_object === '1')
-        s.camera('motion',detectorObject)
+        s.event('trigger',detectorObject)
         if(detectorObject.doObjectDetection === true){
             s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:s.group[e.ke].mon[e.id].lastJpegDetectorFrame});
         }
@@ -2397,6 +2397,444 @@ s.file=function(x,e){
         break;
     }
 }
+s.event = function(x,e,cn){
+    switch(x){
+        case'trigger':
+            var d=e;
+            var filter = {
+                halt : false,
+                addToMotionCounter : true,
+                useLock : true,
+                save : true,
+                discord : true,
+                webhook : true,
+                command : true,
+                mail : true,
+                record : true
+            }
+            if(s.group[d.ke].mon[d.id].open){
+                d.details.videoTime = s.group[d.ke].mon[d.id].open;
+            }
+            var detailString = JSON.stringify(d.details);
+            if(!s.group[d.ke]||!s.group[d.ke].mon[d.id]){
+                return s.systemLog(lang['No Monitor Found, Ignoring Request'])
+            }
+            d.mon=s.group[d.ke].mon_conf[d.id];
+            var currentConfig = s.group[d.ke].mon[d.id].details
+            //read filters
+            if(currentConfig.use_detector_filters === '1'){
+                var parseValue = function(key,val){
+                    var newVal
+                    switch(val){
+                        case'':
+                            newVal = filter[key]
+                        break;
+                        case'0':
+                            newVal = false
+                        break;
+                        case'1':
+                            newVal = true
+                        break;
+                        default:
+                            newVal = val
+                        break;
+                    }
+                    return newVal
+                }
+                var filters = currentConfig.detector_filters
+                Object.keys(filters).forEach(function(key){
+                    var conditionChain = {}
+                    var dFilter = filters[key]
+                    dFilter.where.forEach(function(condition,place){
+                        conditionChain[place] = {ok:false,next:condition.p4,matrixCount:0}
+                        if(d.details.matrices)conditionChain[place].matrixCount = d.details.matrices.length
+                        var modifyFilters = function(toCheck,matrixPosition){
+                            var param = toCheck[condition.p1]
+                            var pass = function(){
+                                if(matrixPosition && dFilter.actions.halt === '1'){
+                                    console.log(d.details.matrices[matrixPosition])
+                                    delete(d.details.matrices[matrixPosition])
+                                }else{
+                                    conditionChain[place].ok = true
+                                }
+                            }
+                            switch(condition.p2){
+                                case'indexOf':
+                                    if(param.indexOf(condition.p3) > -1){
+                                        pass()
+                                    }
+                                break;
+                                case'!indexOf':
+                                    if(param.indexOf(condition.p3) === -1){
+                                        pass()
+                                    }
+                                break;
+                                default:
+                                    var cmd = 'param '+condition.p2+' "'+condition.p3.replace(/"/g,'\\"')+'"'
+                                    if(eval('param '+condition.p2+' "'+condition.p3.replace(/"/g,'\\"')+'"')){
+                                        pass()
+                                    }
+                                break;
+                            }
+                        }
+                        switch(condition.p1){
+                            case'tag':
+                            case'x':
+                            case'y':
+                            case'height':
+                            case'width':
+                                if(d.details.matrices){
+                                    d.details.matrices.forEach(function(matrix,position){
+                                        modifyFilters(matrix,position)
+                                    })
+                                }
+                            break;
+                            default:
+                                modifyFilters(d.details)
+                            break;
+                        }
+                    })
+                    var conditionArray = Object.values(conditionChain)
+                    var validationString = ''
+                    conditionArray.forEach(function(condition,number){
+                        validationString += condition.ok+' '
+                        if(conditionArray.length-1 !== number){
+                            validationString += condition.next+' '
+                        }
+                    })
+                    console.log(validationString)
+                    console.log(eval(validationString))
+                    if(eval(validationString)){
+                        if(dFilter.actions.halt !== '1'){
+                            delete(dFilter.actions.halt)
+                            Object.keys(dFilter.actions).forEach(function(key){
+                                var value = dFilter.actions[key]
+                                filter[key] = parseValue(key,value)
+                            })
+                        }else{
+                            filter.halt = true
+                        }
+                    }
+                })
+                var reviewedMatrix = []
+                d.details.matrices.forEach(function(matrix){
+                    if(matrix)reviewedMatrix.push(matrix)
+                })
+                d.details.matrices = reviewedMatrix
+                if(d.details.matrices && d.details.matrices.length === 0 || filter.halt === true){
+                    return
+                }
+            }
+            //motion counter
+            if(filter.addToMotionCounter && filter.record){
+                if(!s.group[d.ke].mon[d.id].detector_motion_count){
+                    s.group[d.ke].mon[d.id].detector_motion_count=0
+                }
+                s.group[d.ke].mon[d.id].detector_motion_count+=1
+            }
+            if(filter.useLock){
+                if(s.group[d.ke].mon[d.id].motion_lock){
+                    return
+                }
+                var detector_lock_timeout
+                if(!currentConfig.detector_lock_timeout||currentConfig.detector_lock_timeout===''){
+                    detector_lock_timeout = 2000
+                }
+                detector_lock_timeout = parseFloat(currentConfig.detector_lock_timeout);
+                if(!s.group[d.ke].mon[d.id].detector_lock_timeout){
+                    s.group[d.ke].mon[d.id].detector_lock_timeout=setTimeout(function(){
+                        clearTimeout(s.group[d.ke].mon[d.id].detector_lock_timeout)
+                        delete(s.group[d.ke].mon[d.id].detector_lock_timeout)
+                    },detector_lock_timeout)
+                }else{
+                    return
+                }
+            }
+            if(d.doObjectDetection !== true){
+                //save this detection result in SQL, only coords. not image.
+                if(filter.save && currentConfig.detector_save==='1'){
+                    s.sqlQuery('INSERT INTO Events (ke,mid,details) VALUES (?,?,?)',[d.ke,d.id,detailString])
+                }
+                if(currentConfig.detector_notrigger=='1'){
+                    var detector_notrigger_timeout
+                    if(!currentConfig.detector_notrigger_timeout||currentConfig.detector_notrigger_timeout===''){
+                        detector_notrigger_timeout = 10
+                    }
+                    detector_notrigger_timeout = parseFloat(currentConfig.detector_notrigger_timeout)*1000*60;
+                    s.group[e.ke].mon[e.id].detector_notrigger_timeout = detector_notrigger_timeout;
+                    clearInterval(s.group[d.ke].mon[d.id].detector_notrigger_timeout)
+                    s.group[d.ke].mon[d.id].detector_notrigger_timeout = setInterval(s.group[d.ke].mon[d.id].detector_notrigger_timeout_function,detector_notrigger_timeout)
+                }
+                if(filter.webhook && currentConfig.detector_webhook=='1'){
+                    var detector_webhook_url = currentConfig.detector_webhook_url
+                        .replace(/{{TIME}}/g,s.timeObject(new Date).format())
+                        .replace(/{{REGION_NAME}}/g,d.details.name)
+                        .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
+                        .replace(/{{MONITOR_ID}}/g,d.id)
+                        .replace(/{{GROUP_KEY}}/g,d.ke)
+                        .replace(/{{DETAILS}}/g,detailString)
+                    http.get(detector_webhook_url, function(data) {
+                          data.setEncoding('utf8');
+                          var chunks='';
+                          data.on('data', (chunk) => {
+                              chunks+=chunk;
+                          });
+                          data.on('end', () => {
+
+                          });
+
+                    }).on('error', function(e) {
+
+                    }).end();
+                }
+                var detector_timeout
+                if(!currentConfig.detector_timeout||currentConfig.detector_timeout===''){
+                    detector_timeout = 10
+                }else{
+                    detector_timeout = parseFloat(currentConfig.detector_timeout)
+                }
+                if(filter.record && d.mon.mode=='start'&&currentConfig.detector_trigger==='1'&&currentConfig.detector_record_method==='sip'){
+                    //s.group[d.ke].mon[d.id].eventBasedRecording.timeout
+    //                clearTimeout(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
+                    s.group[d.ke].mon[d.id].eventBasedRecording.timeout = setTimeout(function(){
+                        s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd=true;
+                    },detector_timeout * 950 * 60)
+                    if(!s.group[d.ke].mon[d.id].eventBasedRecording.process){
+                        if(!d.auth){
+                            d.auth=s.gid();
+                        }
+                        if(!s.group[d.ke].users[d.auth]){
+                            s.group[d.ke].users[d.auth]={system:1,details:{},lang:lang}
+                        }
+                        s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd = false;
+                        var runRecord = function(){
+                            var filename = s.formattedTime()+'.mp4'
+                            s.log(d,{type:"Traditional Recording",msg:"Started"})
+                            //-t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+'
+                            s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i http://'+config.ip+':'+config.port+'/'+d.auth+'/hls/'+d.ke+'/'+d.id+'/detectorStream.m3u8 -t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+' -c:v copy -strftime 1 "'+s.video('getDir',d.mon) + filename + '"').replace(/\s+/g,' ').trim()))
+                            var ffmpegError='';
+                            var error
+                            s.group[d.ke].mon[d.id].eventBasedRecording.process.stderr.on('data',function(data){
+                                s.log(d,{type:"Traditional Recording",msg:data.toString()})
+                            })
+                            s.group[d.ke].mon[d.id].eventBasedRecording.process.on('close',function(){
+                                if(!s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd){
+                                    s.log(d,{type:"Traditional Recording",msg:"Detector Recording Process Exited Prematurely. Restarting."})
+                                    runRecord()
+                                    return
+                                }
+                                s.video('insertCompleted',d.mon,{
+                                    file : filename
+                                })
+                                s.log(d,{type:"Traditional Recording",msg:"Detector Recording Complete"})
+                                delete(s.group[d.ke].users[d.auth])
+                                s.log(d,{type:"Traditional Recording",msg:'Clear Recorder Process'})
+                                delete(s.group[d.ke].mon[d.id].eventBasedRecording.process)
+                                delete(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
+                                clearTimeout(s.group[d.ke].mon[d.id].checker)
+                            })
+                        }
+                        runRecord()
+                    }
+                }else if(filter.record && d.mon.mode!=='stop'&&currentConfig.detector_trigger=='1'&&currentConfig.detector_record_method==='hot'){
+                    if(!d.auth){
+                        d.auth=s.gid();
+                    }
+                    if(!s.group[d.ke].users[d.auth]){
+                        s.group[d.ke].users[d.auth]={system:1,details:{},lang:lang}
+                    }
+                    d.urlQuery=[]
+                    d.url='http://'+config.ip+':'+config.port+'/'+d.auth+'/monitor/'+d.ke+'/'+d.id+'/record/'+detector_timeout+'/min';
+                    if(currentConfig.watchdog_reset!=='0'){
+                        d.urlQuery.push('reset=1')
+                    }
+                    if(currentConfig.detector_trigger_record_fps&&currentConfig.detector_trigger_record_fps!==''&&currentConfig.detector_trigger_record_fps!=='0'){
+                        d.urlQuery.push('fps='+currentConfig.detector_trigger_record_fps)
+                    }
+                    if(d.urlQuery.length>0){
+                        d.url+='?'+d.urlQuery.join('&')
+                    }
+                    http.get(d.url, function(data) {
+                        data.setEncoding('utf8');
+                        var chunks='';
+                        data.on('data', (chunk) => {
+                            chunks+=chunk;
+                        });
+                        data.on('end', () => {
+                            delete(s.group[d.ke].users[d.auth])
+                            d.cx.f='detector_record_engaged';
+                            d.cx.msg=JSON.parse(chunks);
+                            s.tx(d.cx,'GRP_'+d.ke);
+                        });
+
+                    }).on('error', function(e) {
+
+                    }).end();
+                }
+                var screenshotName = 'Motion_'+(d.mon.name.replace(/[^\w\s]/gi,''))+'_'+d.id+'_'+d.ke+'_'+s.formattedTime()
+                var screenshotBuffer = null
+                var detectorStreamBuffers = null
+                
+                //discord bot
+                if(filter.discord && currentConfig.detector_discordbot === '1' && !s.group[d.ke].mon[d.id].detector_discordbot){
+                    var detector_discordbot_timeout
+                    if(!currentConfig.detector_discordbot_timeout||currentConfig.detector_discordbot_timeout===''){
+                        detector_discordbot_timeout = 1000*60*10;
+                    }else{
+                        detector_discordbot_timeout = parseFloat(currentConfig.detector_discordbot_timeout)*1000*60;
+                    }
+                    //lock mailer so you don't get emailed on EVERY trigger event.
+                    s.group[d.ke].mon[d.id].detector_discordbot=setTimeout(function(){
+                        //unlock so you can mail again.
+                        clearTimeout(s.group[d.ke].mon[d.id].detector_discordbot);
+                        delete(s.group[d.ke].mon[d.id].detector_discordbot);
+                    },detector_discordbot_timeout);
+                    var files = []
+                    var sendAlert = function(){
+                        s.discordMsg({
+                            author: {
+                              name: s.group[d.ke].mon_conf[d.id].name,
+                              icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"
+                            },
+                            title: lang.Event+' - '+screenshotName,
+                            description: lang.EventText1+' '+s.timeObject(new Date).format(),
+                            fields: [],
+                            timestamp: new Date(),
+                            footer: {
+                              icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
+                              text: "Shinobi Systems"
+                            }
+                        },files,d.ke)
+                    }
+                    if(currentConfig.detector_discordbot_send_video === '1'){
+                        if(!detectorStreamBuffers){
+                            detectorStreamBuffers = s.getDetectorStreams(d)
+                        }
+                        detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
+                            files.push({
+                                attachment: filepath,
+                                name: 'Video Clip '+n+'.ts'
+                            })
+                        })
+                    }
+                    if(screenshotBuffer){
+                        sendAlert()
+                    }else if(currentConfig.snap === '1'){
+                        fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
+                            if(err){
+                                s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
+                            }else{
+                                screenshotBuffer = frame
+                                files.push({
+                                    attachment: screenshotBuffer,
+                                    name: screenshotName+'.jpg'
+                                })
+                            }
+                            sendAlert()
+                        })
+                    }else{
+                        sendAlert()
+                    }
+                }
+                //mailer
+                if(filter.mail && config.mail && !s.group[d.ke].mon[d.id].detector_mail && currentConfig.detector_mail === '1'){
+                    s.sqlQuery('SELECT mail FROM Users WHERE ke=? AND details NOT LIKE ?',[d.ke,'%"sub"%'],function(err,r){
+                        r=r[0];
+                        var detector_mail_timeout
+                        if(!currentConfig.detector_mail_timeout||currentConfig.detector_mail_timeout===''){
+                            detector_mail_timeout = 1000*60*10;
+                        }else{
+                            detector_mail_timeout = parseFloat(currentConfig.detector_mail_timeout)*1000*60;
+                        }
+                        //lock mailer so you don't get emailed on EVERY trigger event.
+                        s.group[d.ke].mon[d.id].detector_mail=setTimeout(function(){
+                            //unlock so you can mail again.
+                            clearTimeout(s.group[d.ke].mon[d.id].detector_mail);
+                            delete(s.group[d.ke].mon[d.id].detector_mail);
+                        },detector_mail_timeout);
+                        var files = []
+                        var mailOptions = {
+                            from: config.mail.from, // sender address
+                            to: r.mail, // list of receivers
+                            subject: lang.Event+' - '+screenshotName, // Subject line
+                            html: '<i>'+lang.EventText1+' '+s.timeObject(new Date).format()+'.</i>',
+                            attachments: files
+                        }
+                        var sendMail = function(){
+                            Object.keys(d.details).forEach(function(v,n){
+                                mailOptions.html+='<div><b>'+v+'</b> : '+d.details[v]+'</div>'
+                            })
+                            nodemailer.sendMail(mailOptions, (error, info) => {
+                                if (error) {
+                                    s.systemLog(lang.MailError,error)
+                                    return false;
+                                }
+                            })
+                        }
+                        if(currentConfig.detector_mail_send_video === '1'){
+                            if(!detectorStreamBuffers){
+                                detectorStreamBuffers = s.getDetectorStreams(d)
+                            }
+                            detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
+                                files.push({
+                                    filename: 'Video Clip '+n+'.ts',
+                                    content: fs.readFileSync(filepath)
+                                })
+                            })
+                        }
+                        if(screenshotBuffer){
+                            sendMail()
+                        }else if(currentConfig.snap === '1'){
+                            fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
+                                if(err){
+                                    s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
+                                }else{
+                                    screenshotBuffer = frame
+                                    files.push({
+                                        filename: screenshotName+'.jpg',
+                                        content: frame
+                                    })
+                                }
+                                sendMail()
+                            })
+                        }else{
+                            sendMail()
+                        }
+                    });
+                }
+                if(filter.command && currentConfig.detector_command_enable==='1'&&!s.group[d.ke].mon[d.id].detector_command){
+                    var detector_command_timeout
+                    if(!currentConfig.detector_command_timeout||currentConfig.detector_command_timeout===''){
+                        detector_command_timeout = 1000*60*10;
+                    }else{
+                        detector_command_timeout = parseFloat(currentConfig.detector_command_timeout)*1000*60;
+                    }
+                    s.group[d.ke].mon[d.id].detector_command=setTimeout(function(){
+                        clearTimeout(s.group[d.ke].mon[d.id].detector_command);
+                        delete(s.group[d.ke].mon[d.id].detector_command);
+
+                    },detector_command_timeout);
+                    var detector_command = currentConfig.detector_command
+                        .replace(/{{TIME}}/g,s.timeObject(new Date).format())
+                        .replace(/{{REGION_NAME}}/g,d.details.name)
+                        .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
+                        .replace(/{{MONITOR_ID}}/g,d.id)
+                        .replace(/{{GROUP_KEY}}/g,d.ke)
+                        .replace(/{{DETAILS}}/g,detailString)
+                    if(d.details.confidence){
+                        detector_command = detector_command
+                        .replace(/{{CONFIDENCE}}/g,d.details.confidence)
+                    }
+                    exec(detector_command,{detached: true})
+                }
+            }
+            //show client machines the event
+            d.cx={f:'detector_trigger',id:d.id,ke:d.ke,details:d.details,doObjectDetection:d.doObjectDetection};
+            s.tx(d.cx,'DETECTOR_'+d.ke+d.id);
+        break;
+    }
+    if(typeof cn==='function'){setTimeout(function(){cn()},1000);}
+}
 s.camera=function(x,e,cn,tx){
     if(x!=='motion'){
         var ee=s.init('noReference',e);
@@ -2408,12 +2846,13 @@ s.camera=function(x,e,cn,tx){
         try{e.details=JSON.parse(e.details)}catch(err){}
     }
     //parse Objects
-    (['detector_cascades','cords','input_map_choices']).forEach(function(v){
+    (['detector_cascades','cords','detector_filters','input_map_choices']).forEach(function(v){
         if(e.details&&e.details[v]&&(e.details[v] instanceof Object)===false){
             try{
                 if(e.details[v] === '') e.details[v] = '{}'
                 e.details[v]=JSON.parse(e.details[v]);
                 if(!e.details[v])e.details[v]={};
+                s.group[e.ke].mon[e.id].details = e.details;
             }catch(err){
                 
             }
@@ -3453,318 +3892,6 @@ s.camera=function(x,e,cn,tx){
                 launchMonitorProcesses();
             }
         break;
-        case'motion':
-            var d=e;
-            if(s.group[d.ke].mon[d.id].open){
-                d.details.videoTime = s.group[d.ke].mon[d.id].open;
-            }
-            var detailString = JSON.stringify(d.details);
-            if(!s.group[d.ke]||!s.group[d.ke].mon[d.id]){
-                return s.systemLog(lang['No Monitor Found, Ignoring Request'])
-            }
-            d.mon=s.group[d.ke].mon_conf[d.id];
-            if(!s.group[d.ke].mon[d.id].detector_motion_count){
-                s.group[d.ke].mon[d.id].detector_motion_count=0
-            }
-            s.group[d.ke].mon[d.id].detector_motion_count+=1
-            if(s.group[d.ke].mon[d.id].motion_lock){
-                return
-            }
-            var detector_lock_timeout
-            if(!d.mon.details.detector_lock_timeout||d.mon.details.detector_lock_timeout===''){
-                detector_lock_timeout = 2000
-            }
-            detector_lock_timeout = parseFloat(d.mon.details.detector_lock_timeout);
-            if(!s.group[d.ke].mon[d.id].detector_lock_timeout){
-                s.group[d.ke].mon[d.id].detector_lock_timeout=setTimeout(function(){
-                    clearTimeout(s.group[d.ke].mon[d.id].detector_lock_timeout)
-                    delete(s.group[d.ke].mon[d.id].detector_lock_timeout)
-                },detector_lock_timeout)
-            }else{
-                return
-            }
-            if(d.doObjectDetection !== true){
-                //save this detection result in SQL, only coords. not image.
-                if(d.mon.details.detector_save==='1'){
-                    s.sqlQuery('INSERT INTO Events (ke,mid,details) VALUES (?,?,?)',[d.ke,d.id,detailString])
-                }
-                if(d.mon.details.detector_notrigger=='1'){
-                    var detector_notrigger_timeout
-                    if(!d.mon.details.detector_notrigger_timeout||d.mon.details.detector_notrigger_timeout===''){
-                        detector_notrigger_timeout = 10
-                    }
-                    detector_notrigger_timeout = parseFloat(d.mon.details.detector_notrigger_timeout)*1000*60;
-                    s.group[e.ke].mon[e.id].detector_notrigger_timeout = detector_notrigger_timeout;
-                    clearInterval(s.group[d.ke].mon[d.id].detector_notrigger_timeout)
-                    s.group[d.ke].mon[d.id].detector_notrigger_timeout = setInterval(s.group[d.ke].mon[d.id].detector_notrigger_timeout_function,detector_notrigger_timeout)
-                }
-                if(d.mon.details.detector_webhook=='1'){
-                    var detector_webhook_url = d.mon.details.detector_webhook_url
-                        .replace(/{{TIME}}/g,s.timeObject(new Date).format())
-                        .replace(/{{REGION_NAME}}/g,d.details.name)
-                        .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
-                        .replace(/{{MONITOR_ID}}/g,d.id)
-                        .replace(/{{GROUP_KEY}}/g,d.ke)
-                        .replace(/{{DETAILS}}/g,detailString)
-                    http.get(detector_webhook_url, function(data) {
-                          data.setEncoding('utf8');
-                          var chunks='';
-                          data.on('data', (chunk) => {
-                              chunks+=chunk;
-                          });
-                          data.on('end', () => {
-
-                          });
-
-                    }).on('error', function(e) {
-
-                    }).end();
-                }
-                var detector_timeout
-                if(!d.mon.details.detector_timeout||d.mon.details.detector_timeout===''){
-                    detector_timeout = 10
-                }else{
-                    detector_timeout = parseFloat(d.mon.details.detector_timeout)
-                }
-                if(d.mon.mode=='start'&&d.mon.details.detector_trigger==='1'&&d.mon.details.detector_record_method==='sip'){
-                    //s.group[d.ke].mon[d.id].eventBasedRecording.timeout
-    //                clearTimeout(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
-                    s.group[d.ke].mon[d.id].eventBasedRecording.timeout = setTimeout(function(){
-                        s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd=true;
-                    },detector_timeout * 950 * 60)
-                    if(!s.group[d.ke].mon[d.id].eventBasedRecording.process){
-                        if(!d.auth){
-                            d.auth=s.gid();
-                        }
-                        if(!s.group[d.ke].users[d.auth]){
-                            s.group[d.ke].users[d.auth]={system:1,details:{},lang:lang}
-                        }
-                        s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd = false;
-                        var runRecord = function(){
-                            var filename = s.formattedTime()+'.mp4'
-                            s.log(d,{type:"Traditional Recording",msg:"Started"})
-                            //-t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+'
-                            s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i http://'+config.ip+':'+config.port+'/'+d.auth+'/hls/'+d.ke+'/'+d.id+'/detectorStream.m3u8 -t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+' -c:v copy -strftime 1 "'+s.video('getDir',d.mon) + filename + '"').replace(/\s+/g,' ').trim()))
-                            var ffmpegError='';
-                            var error
-                            s.group[d.ke].mon[d.id].eventBasedRecording.process.stderr.on('data',function(data){
-                                s.log(d,{type:"Traditional Recording",msg:data.toString()})
-                            })
-                            s.group[d.ke].mon[d.id].eventBasedRecording.process.on('close',function(){
-                                if(!s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd){
-                                    s.log(d,{type:"Traditional Recording",msg:"Detector Recording Process Exited Prematurely. Restarting."})
-                                    runRecord()
-                                    return
-                                }
-                                s.video('insertCompleted',d.mon,{
-                                    file : filename
-                                })
-                                s.log(d,{type:"Traditional Recording",msg:"Detector Recording Complete"})
-                                delete(s.group[d.ke].users[d.auth])
-                                s.log(d,{type:"Traditional Recording",msg:'Clear Recorder Process'})
-                                delete(s.group[d.ke].mon[d.id].eventBasedRecording.process)
-                                delete(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
-                                clearTimeout(s.group[d.ke].mon[d.id].checker)
-                            })
-                        }
-                        runRecord()
-                    }
-                }else if(d.mon.mode!=='stop'&&d.mon.details.detector_trigger=='1'&&d.mon.details.detector_record_method==='hot'){
-                    if(!d.auth){
-                        d.auth=s.gid();
-                    }
-                    if(!s.group[d.ke].users[d.auth]){
-                        s.group[d.ke].users[d.auth]={system:1,details:{},lang:lang}
-                    }
-                    d.urlQuery=[]
-                    d.url='http://'+config.ip+':'+config.port+'/'+d.auth+'/monitor/'+d.ke+'/'+d.id+'/record/'+detector_timeout+'/min';
-                    if(d.mon.details.watchdog_reset!=='0'){
-                        d.urlQuery.push('reset=1')
-                    }
-                    if(d.mon.details.detector_trigger_record_fps&&d.mon.details.detector_trigger_record_fps!==''&&d.mon.details.detector_trigger_record_fps!=='0'){
-                        d.urlQuery.push('fps='+d.mon.details.detector_trigger_record_fps)
-                    }
-                    if(d.urlQuery.length>0){
-                        d.url+='?'+d.urlQuery.join('&')
-                    }
-                    http.get(d.url, function(data) {
-                        data.setEncoding('utf8');
-                        var chunks='';
-                        data.on('data', (chunk) => {
-                            chunks+=chunk;
-                        });
-                        data.on('end', () => {
-                            delete(s.group[d.ke].users[d.auth])
-                            d.cx.f='detector_record_engaged';
-                            d.cx.msg=JSON.parse(chunks);
-                            s.tx(d.cx,'GRP_'+d.ke);
-                        });
-
-                    }).on('error', function(e) {
-
-                    }).end();
-                }
-                var screenshotName = 'Motion_'+(d.mon.name.replace(/[^\w\s]/gi,''))+'_'+d.id+'_'+d.ke+'_'+s.formattedTime()
-                var screenshotBuffer = null
-                var detectorStreamBuffers = null
-                
-                //discord bot
-                if(d.mon.details.detector_discordbot === '1' && !s.group[d.ke].mon[d.id].detector_discordbot){
-                    var detector_discordbot_timeout
-                    if(!d.mon.details.detector_discordbot_timeout||d.mon.details.detector_discordbot_timeout===''){
-                        detector_discordbot_timeout = 1000*60*10;
-                    }else{
-                        detector_discordbot_timeout = parseFloat(d.mon.details.detector_discordbot_timeout)*1000*60;
-                    }
-                    //lock mailer so you don't get emailed on EVERY trigger event.
-                    s.group[d.ke].mon[d.id].detector_discordbot=setTimeout(function(){
-                        //unlock so you can mail again.
-                        clearTimeout(s.group[d.ke].mon[d.id].detector_discordbot);
-                        delete(s.group[d.ke].mon[d.id].detector_discordbot);
-                    },detector_discordbot_timeout);
-                    var files = []
-                    var sendAlert = function(){
-                        s.discordMsg({
-                            author: {
-                              name: s.group[d.ke].mon_conf[d.id].name,
-                              icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"
-                            },
-                            title: lang.Event+' - '+screenshotName,
-                            description: lang.EventText1+' '+s.timeObject(new Date).format(),
-                            fields: [],
-                            timestamp: new Date(),
-                            footer: {
-                              icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
-                              text: "Shinobi Systems"
-                            }
-                        },files,d.ke)
-                    }
-                    if(d.mon.details.detector_discordbot_send_video === '1'){
-                        if(!detectorStreamBuffers){
-                            detectorStreamBuffers = s.getDetectorStreams(d)
-                        }
-                        detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
-                            files.push({
-                                attachment: filepath,
-                                name: 'Video Clip '+n+'.ts'
-                            })
-                        })
-                    }
-                    if(screenshotBuffer){
-                        sendAlert()
-                    }else if(d.mon.details.snap === '1'){
-                        fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
-                            if(err){
-                                s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
-                            }else{
-                                screenshotBuffer = frame
-                                files.push({
-                                    attachment: screenshotBuffer,
-                                    name: screenshotName+'.jpg'
-                                })
-                            }
-                            sendAlert()
-                        })
-                    }else{
-                        sendAlert()
-                    }
-                }
-                //mailer
-                if(config.mail && !s.group[d.ke].mon[d.id].detector_mail && d.mon.details.detector_mail === '1'){
-                    s.sqlQuery('SELECT mail FROM Users WHERE ke=? AND details NOT LIKE ?',[d.ke,'%"sub"%'],function(err,r){
-                        r=r[0];
-                        var detector_mail_timeout
-                        if(!d.mon.details.detector_mail_timeout||d.mon.details.detector_mail_timeout===''){
-                            detector_mail_timeout = 1000*60*10;
-                        }else{
-                            detector_mail_timeout = parseFloat(d.mon.details.detector_mail_timeout)*1000*60;
-                        }
-                        //lock mailer so you don't get emailed on EVERY trigger event.
-                        s.group[d.ke].mon[d.id].detector_mail=setTimeout(function(){
-                            //unlock so you can mail again.
-                            clearTimeout(s.group[d.ke].mon[d.id].detector_mail);
-                            delete(s.group[d.ke].mon[d.id].detector_mail);
-                        },detector_mail_timeout);
-                        var files = []
-                        var mailOptions = {
-                            from: config.mail.from, // sender address
-                            to: r.mail, // list of receivers
-                            subject: lang.Event+' - '+screenshotName, // Subject line
-                            html: '<i>'+lang.EventText1+' '+s.timeObject(new Date).format()+'.</i>',
-                            attachments: files
-                        }
-                        var sendMail = function(){
-                            Object.keys(d.details).forEach(function(v,n){
-                                mailOptions.html+='<div><b>'+v+'</b> : '+d.details[v]+'</div>'
-                            })
-                            nodemailer.sendMail(mailOptions, (error, info) => {
-                                if (error) {
-                                    s.systemLog(lang.MailError,error)
-                                    return false;
-                                }
-                            })
-                        }
-                        if(d.mon.details.detector_mail_send_video === '1'){
-                            if(!detectorStreamBuffers){
-                                detectorStreamBuffers = s.getDetectorStreams(d)
-                            }
-                            detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
-                                files.push({
-                                    filename: 'Video Clip '+n+'.ts',
-                                    content: fs.readFileSync(filepath)
-                                })
-                            })
-                        }
-                        if(screenshotBuffer){
-                            sendMail()
-                        }else if(d.mon.details.snap === '1'){
-                            fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
-                                if(err){
-                                    s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
-                                }else{
-                                    screenshotBuffer = frame
-                                    files.push({
-                                        filename: screenshotName+'.jpg',
-                                        content: frame
-                                    })
-                                }
-                                sendMail()
-                            })
-                        }else{
-                            sendMail()
-                        }
-                    });
-                }
-                if(d.mon.details.detector_command_enable==='1'&&!s.group[d.ke].mon[d.id].detector_command){
-                    var detector_command_timeout
-                    if(!d.mon.details.detector_command_timeout||d.mon.details.detector_command_timeout===''){
-                        detector_command_timeout = 1000*60*10;
-                    }else{
-                        detector_command_timeout = parseFloat(d.mon.details.detector_command_timeout)*1000*60;
-                    }
-                    s.group[d.ke].mon[d.id].detector_command=setTimeout(function(){
-                        clearTimeout(s.group[d.ke].mon[d.id].detector_command);
-                        delete(s.group[d.ke].mon[d.id].detector_command);
-
-                    },detector_command_timeout);
-                    var detector_command = d.mon.details.detector_command
-                        .replace(/{{TIME}}/g,s.timeObject(new Date).format())
-                        .replace(/{{REGION_NAME}}/g,d.details.name)
-                        .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
-                        .replace(/{{MONITOR_ID}}/g,d.id)
-                        .replace(/{{GROUP_KEY}}/g,d.ke)
-                        .replace(/{{DETAILS}}/g,detailString)
-                    if(d.details.confidence){
-                        detector_command = detector_command
-                        .replace(/{{CONFIDENCE}}/g,d.details.confidence)
-                    }
-                    exec(detector_command,{detached: true})
-                }
-            }
-            //show client machines the event
-            d.cx={f:'detector_trigger',id:d.id,ke:d.ke,details:d.details,doObjectDetection:d.doObjectDetection};
-            s.tx(d.cx,'DETECTOR_'+d.ke+d.id);
-        break;
     }
     if(typeof cn==='function'){setTimeout(function(){cn()},1000);}
 }
@@ -3773,7 +3900,7 @@ s.camera=function(x,e,cn,tx){
 s.pluginEventController=function(d){
     switch(d.f){
         case'trigger':
-            s.camera('motion',d)
+            s.event('trigger',d)
         break;
         case's.tx':
             s.tx(d.data,d.to)
@@ -6924,7 +7051,7 @@ app.get(config.webPaths.apiPrefix+':auth/motion/:ke/:id', function (req,res){
             res.end(user.lang['No Group with this key exists']);
             return;
         }
-        s.camera('motion',d,function(){
+        s.event('trigger',d,function(){
             res.end(user.lang['Trigger Successful'])
         });
     },res,req);
