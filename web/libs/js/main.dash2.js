@@ -1896,7 +1896,7 @@ $.ccio.globalWebsocket=function(d,user){
                         },user.details.audio_delay * 1000)
                     }
                 }
-                if(user.details.event_mon_pop === '1' && !$.ccio.mon[d.ke+d.id+user.auth_token].popOut || $.ccio.mon[d.ke+d.id+user.auth_token].popOut.closed === true){
+                if(user.details.event_mon_pop === '1' && (!$.ccio.mon[d.ke+d.id+user.auth_token].popOut || $.ccio.mon[d.ke+d.id+user.auth_token].popOut.closed === true)){
                     d.e.find('[monitor="pop"]').click()
                 }
             }
