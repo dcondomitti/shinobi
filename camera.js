@@ -2439,7 +2439,11 @@ s.event = function(x,e,cn){
             d.mon=s.group[d.ke].mon_conf[d.id];
             var currentConfig = s.group[d.ke].mon[d.id].details
             //read filters
-            if(currentConfig.use_detector_filters === '1'){
+            if(
+                currentConfig.use_detector_filters === '1' &&
+                ((currentConfig.use_detector_filters_object === '1' && d.details.matrices) || 
+                currentConfig.use_detector_filters_object !== '1')
+            ){
                 var parseValue = function(key,val){
                     var newVal
                     switch(val){
@@ -2530,14 +2534,14 @@ s.event = function(x,e,cn){
                         }
                     }
                 })
-                if(d.details.matrices && d.details.matrices.length > 0){
+                if(d.details.matrices && d.details.matrices.length === 0 || filter.halt === true){
+                    return
+                }else if(d.details.matrices && d.details.matrices.length > 0){
                     var reviewedMatrix = []
                     d.details.matrices.forEach(function(matrix){
                         if(matrix)reviewedMatrix.push(matrix)
                     })
                     d.details.matrices = reviewedMatrix
-                }else if(d.details.matrices && d.details.matrices.length === 0 || filter.halt === true){
-                    return
                 }
             }
             //motion counter
