@@ -5200,7 +5200,18 @@ $.grid.e
 .on('gsresizestop', $.grid.saveElementPositions);
 //open all monitors
 $('[class_toggle="list-blocks"][data-target="#left_menu"]').dblclick(function(){
-    $('#monitors_list [monitor="watch"]').click()
+    $('#monitors_list .monitor_block').each(function(n,v){
+        var el = $(v)
+        var ke = el.attr('ke')
+        var mid = el.attr('mid')
+        var auth = el.attr('auth')
+        var monItem = $('.monitor_item[ke='+ke+'][mid='+mid+'][auth='+auth+']')
+        if(monItem.length > 0){
+            monItem.find('[monitor="watch_on"]').click()
+        }else{
+            el.find('[monitor="watch"]').click()
+        }
+    })
 })
 //search monitors list
 $('#monitors_list_search').keyup(function(){
