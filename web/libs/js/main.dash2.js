@@ -4180,6 +4180,41 @@ $.detectorFilters.save = function(){
     $.aM.e.find('[detail="detector_filters"]').val(JSON.stringify(currentVals)).change()
 }
 $.ccio.tm('detector-filters-where');
+$.detectorFilters.e.on('change','[where="p1"]',function(e){
+    var el = $(this)
+    var p1v = el.val()
+    var parent = el.parents('.row')
+    var p3 = parent.find('[where="p3"]')
+    var options = []
+    switch(p1v){
+        case'reason':
+            options = [
+                'licensePlate',
+                'object',
+                'motion',
+            ]
+        break;
+        case'plug':
+            options = [
+                'PythonYolo',
+                'OpenCV',
+                'built-in',
+            ]
+        break;
+        case'tag':
+            options = [
+                'car',
+                'tree',
+                'pottedplant',
+            ]
+        break;
+    }
+    var msg = 'Value'
+    if(options.length > 0){
+        msg = 'Example : '+options.join(', ')
+    }
+    p3.attr('placeholder',msg)
+})
 $.detectorFilters.e.on('shown.bs.modal',function(e){
     $.detectorFilters.drawOptions()
 })
