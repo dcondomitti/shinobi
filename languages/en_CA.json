@@ -469,6 +469,7 @@
    "Audio": "Audio",
    "Mute Audio": "Mute Audio",
    "No Audio": "No Audio",
+   "Popout Monitor on Event": "Popout Monitor on Event",
    "aac": "aac",
    "ac3": "ac3",
    "libmp3lame": "libmp3lame",
