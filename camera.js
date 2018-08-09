@@ -1804,18 +1804,35 @@ s.ffmpegCoProcessor = function(e){
     }
     //detector frames
     if(e.details.detector === '1'){
-        if(!e.details.detector_fps||e.details.detector_fps===''){e.details.detector_fps=2}
-        if(e.details.detector_scale_x&&e.details.detector_scale_x!==''&&e.details.detector_scale_y&&e.details.detector_scale_y!==''){x.dratio=' -s '+e.details.detector_scale_x+'x'+e.details.detector_scale_y}else{x.dratio=' -s 320x240'}
+        if(e.details.detector_fps && e.details.detector_fps !== ''){
+            x.detector_fps = e.details.detector_fps
+        }else{
+            x.detector_fps = '2'
+        }
+        if(e.details.detector_scale_x && e.details.detector_scale_x !== '' && e.details.detector_scale_y && e.details.detector_scale_y !== ''){
+            x.dratio=' -s '+e.details.detector_scale_x+'x'+e.details.detector_scale_y
+        }else{
+            x.dratio=' -s 320x240'
+        }
+        
         if(e.details.cust_detect&&e.details.cust_detect!==''){x.cust_detect+=e.details.cust_detect;}
         if(e.details.detector_pam==='1'){
-            x.pipe += ' -an -c:v pam -pix_fmt gray -f image2pipe -r '+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:3'
+            x.pipe += ' -an -c:v pam -pix_fmt gray -f image2pipe -r '+x.detector_fps+x.cust_detect+x.dratio+' pipe:3'
             if(e.details.detector_use_detect_object === '1'){
+                if(e.details.detector_use_motion === '1'){
+                    if(e.details.detector_scale_x_object && e.details.detector_scale_x_object !== '' && e.details.detector_scale_y_object && e.details.detector_scale_y_object !== ''){
+                        x.dratio=' -s '+e.details.detector_scale_x_object+'x'+e.details.detector_scale_y_object
+                    }
+                    if(e.details.detector_fps_object && e.details.detector_fps_object !== ''){
+                        x.detector_fps = e.details.detector_fps_object
+                    }
+                }
                 //for object detection
                 x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
-                x.pipe += ' -f singlejpeg -vf fps='+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:4';
+                x.pipe += ' -f singlejpeg -vf fps='+x.detector_fps+x.cust_detect+x.dratio+' pipe:4';
             }
         }else{
-            x.pipe+=' -f singlejpeg -vf fps='+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:3';
+            x.pipe+=' -f singlejpeg -vf fps='+x.detector_fps+x.cust_detect+x.dratio+' pipe:3';
         }
     }
     //snapshot frames
@@ -2519,8 +2536,7 @@ s.event = function(x,e,cn){
                         if(matrix)reviewedMatrix.push(matrix)
                     })
                     d.details.matrices = reviewedMatrix
-                }
-                if(d.details.matrices && d.details.matrices.length === 0 || filter.halt === true){
+                }else if(d.details.matrices && d.details.matrices.length === 0 || filter.halt === true){
                     return
                 }
             }
