@@ -1501,7 +1501,7 @@ s.createInputMap = function(e,number,input){
     //input - probe size
     if(input.probesize&&input.probesize!==''){x.cust_input+=' -probesize '+input.probesize}
     //input - stream loop (good for static files/lists)
-    if(input.stream_loop==='1'){x.cust_input+=' -stream_loop -1'}
+    if(input.stream_loop === '1'){x.cust_input+=' -stream_loop -1'}
     //input - fps
     if(x.cust_input.indexOf('-r ')===-1&&input.sfps&&input.sfps!==''){
         input.sfps=parseFloat(input.sfps);
@@ -1944,7 +1944,7 @@ s.ffmpeg = function(e){
     //input - probe size
     if(e.details.probesize&&e.details.probesize!==''){x.cust_input+=' -probesize '+e.details.probesize};
     //input - stream loop (good for static files/lists)
-    if(e.details.stream_loop==='1'){x.cust_input+=' -stream_loop -1'};
+    if(e.details.stream_loop === '1' && (e.type === 'mp4' || e.type === 'local')){x.cust_input+=' -stream_loop -1'};
     //input
     if(e.details.cust_input.indexOf('-fflags') === -1){x.cust_input+=' -fflags +igndts'}
     switch(e.type){

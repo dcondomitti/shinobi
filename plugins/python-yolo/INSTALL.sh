@@ -2,6 +2,39 @@
 echo "-----------------------------------------------"
 echo "-- Installing Python Yolo Plugin for Shinobi --"
 echo "-----------------------------------------------"
+echo "-----------------------------------"
+if [ ! -d "weights" ]; then
+    echo "Downloading yolov3 weights..."
+    mkdir weights
+    wget -O weights/yolov3.weights https://pjreddie.com/media/files/yolov3.weights
+else
+    echo "yolov3 weights found..."
+fi
+echo "-----------------------------------"
+if [ ! -d "cfg" ]; then
+    echo "Downloading yolov3 cfg"
+    mkdir cfg
+    wget -O cfg/coco.data https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/coco.data
+    wget -O cfg/yolov3.cfg https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov3.cfg
+else
+    echo "yolov3 cfg found..."
+fi
+echo "-----------------------------------"
+if [ ! -d "data" ]; then
+    echo "Downloading yolov3 data"
+    mkdir data
+    wget -O data/coco.names https://raw.githubusercontent.com/pjreddie/darknet/master/data/coco.names
+else
+    echo "yolov3 data found..."
+fi
+echo "-----------------------------------"
+if [ ! -e "./conf.json" ]; then
+    echo "Creating conf.json"
+    sudo cp conf.sample.json conf.json
+else
+    echo "conf.json already exists..."
+fi
+echo "-----------------------------------"
 sudo apt update -y
 sudo apt-get install libxml2-dev libxslt-dev libxslt1-dev zlib1g-dev -y
 if ! [ -x "$(command -v python3)" ]; then
@@ -52,6 +85,7 @@ echo "Getting new pip..."
 pip3 install --upgrade pip
 pip install --user --upgrade pip
 echo "Smoking pips..."
+pip3 install flask_socketio
 pip3 install flask
 pip3 install numpy
 export PATH=/usr/local/cuda/bin:$PATH
@@ -74,38 +108,5 @@ pip3 install .
 apt remove libpython-all-dev python-all python-all-dev python-asn1crypto python-cffi-backend python-crypto python-cryptography python-dbus python-enum34 python-gi python-idna python-ipaddress python-keyring python-keyrings.alt python-pkg-resources python-secretstorage python-setuptools python-six python-wheel python-xdg -y
 echo "Done Installing Darknet..."
 export PATH=/opt/darknet:$PATH
-echo "-----------------------------------"
-if [ ! -d "weights" ]; then
-    echo "Downloading yolov3 weights..."
-    mkdir weights
-    wget -O weights/yolov3.weights https://pjreddie.com/media/files/yolov3.weights
-else
-    echo "yolov3 weights found..."
-fi
-echo "-----------------------------------"
-if [ ! -d "cfg" ]; then
-    echo "Downloading yolov3 cfg"
-    mkdir cfg
-    wget -O cfg/coco.data https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/coco.data
-    wget -O cfg/yolov3.cfg https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov3.cfg
-else
-    echo "yolov3 cfg found..."
-fi
-echo "-----------------------------------"
-if [ ! -d "data" ]; then
-    echo "Downloading yolov3 data"
-    mkdir data
-    wget -O data/coco.names https://raw.githubusercontent.com/pjreddie/darknet/master/data/coco.names
-else
-    echo "yolov3 data found..."
-fi
-echo "-----------------------------------"
-if [ ! -e "./conf.json" ]; then
-    echo "Creating conf.json"
-    sudo cp conf.sample.json conf.json
-else
-    echo "conf.json already exists..."
-fi
-echo "-----------------------------------"
 echo "Start the plugin with pm2 like so :"
 echo "pm2 start shinobi-python-yolo.js"
