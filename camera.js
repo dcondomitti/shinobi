@@ -2452,7 +2452,6 @@ s.event = function(x,e,cn){
                             var param = toCheck[condition.p1]
                             var pass = function(){
                                 if(matrixPosition && dFilter.actions.halt === '1'){
-                                    console.log(d.details.matrices[matrixPosition])
                                     delete(d.details.matrices[matrixPosition])
                                 }else{
                                     conditionChain[place].ok = true
@@ -2502,8 +2501,6 @@ s.event = function(x,e,cn){
                             validationString += condition.next+' '
                         }
                     })
-                    console.log(validationString)
-                    console.log(eval(validationString))
                     if(eval(validationString)){
                         if(dFilter.actions.halt !== '1'){
                             delete(dFilter.actions.halt)
@@ -2516,11 +2513,13 @@ s.event = function(x,e,cn){
                         }
                     }
                 })
-                var reviewedMatrix = []
-                d.details.matrices.forEach(function(matrix){
-                    if(matrix)reviewedMatrix.push(matrix)
-                })
-                d.details.matrices = reviewedMatrix
+                if(d.details.matrices && d.details.matrices.length > 0){
+                    var reviewedMatrix = []
+                    d.details.matrices.forEach(function(matrix){
+                        if(matrix)reviewedMatrix.push(matrix)
+                    })
+                    d.details.matrices = reviewedMatrix
+                }
                 if(d.details.matrices && d.details.matrices.length === 0 || filter.halt === true){
                     return
                 }
