@@ -6,7 +6,7 @@ SHINOBI OPEN SOURCE SOFTWARE LICENSE AGREEMENT
  
  *We'll try to keep it simple. Thanks for using Shinobi Software!*
   
-Defintions.
+Definitions.
 -----------
 In this license, which also serves as a general End User License Agreement [EULA], the following 
 terms shall be interpreted by these definitions:
