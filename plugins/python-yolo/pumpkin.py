@@ -1,11 +1,16 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
+from flask_socketio import SocketIO, emit
 from pydarknet import Detector, Image
 import cv2
 import os
 import json
 import numpy as np
+import sys
+
+dirname = sys.argv[1]
+
 try:
-    with open('conf.json') as json_file:  
+    with open("{}/conf.json".format(dirname)) as json_file:  
         config = json.load(json_file)
         httpPort = config['pythonPort']
         try:
@@ -17,14 +22,15 @@ except Exception as e:
     httpPort = 7990
 
 # Load Flask
-app = Flask("Pumpkin")
+app = Flask("YOLOv3 for Shinobi (Pumpkin Pie)")
+socketio = SocketIO(app)
 # Silence Flask
 import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
 # Load Darknet
-net = Detector(bytes("cfg/yolov3.cfg", encoding="utf-8"), bytes("weights/yolov3.weights", encoding="utf-8"), 0, bytes("cfg/coco.data",encoding="utf-8"))
+net = Detector(bytes("{}/cfg/yolov3.cfg".format(dirname), encoding="utf-8"), bytes("{}/weights/yolov3.weights".format(dirname), encoding="utf-8"), 0, bytes("{}/cfg/coco.data".format(dirname),encoding="utf-8"))
 
 def spark(filepath):
     try:
@@ -39,7 +45,6 @@ def spark(filepath):
     results = net.detect(img2)
     returnData = '[]'
     try:
-        print(type(results))
         new_list = []
         for item in results:
             sub_list = {}
@@ -59,7 +64,7 @@ def spark(filepath):
                     sub_list[key] = points_list
                 i += 1
             new_list.append(sub_list)
-        returnData = jsonify(new_list)
+        returnData = new_list
 #        returnData = json.dumps(results)
     except Exception as e:
         returnData = ',\n'.join(map(str, results))
@@ -79,7 +84,7 @@ def index():
 @app.route('/post', methods=['POST'])
 def post():
     filepath = request.form['img']
-    return spark(filepath)
+    return jsonify(spark(filepath))
 
 # bake the image data by a file path
 # GET string contains the "img" variable. The value should be to a local image path. 
@@ -87,8 +92,12 @@ def post():
 @app.route('/get', methods=['GET'])
 def get():
     filepath = request.args.get('img')
-    return spark(filepath)
+    return jsonify(spark(filepath))
+
+@socketio.on('f')
+def receiveMessage(message):
+    emit('f',{'id':message.get("id"),'data':spark(message.get("path"))})
 
 # quick-and-dirty start
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=httpPort)
+    socketio.run(app, port=httpPort)

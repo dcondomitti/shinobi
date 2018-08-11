@@ -37,13 +37,9 @@ fi
 echo "-----------------------------------"
 sudo apt update -y
 sudo apt-get install libxml2-dev libxslt-dev libxslt1-dev zlib1g-dev -y
-if ! [ -x "$(command -v python3)" ]; then
-    echo "Installing python3"
-    sudo apt install python3 python3-dev python3-pip -y
-    sudo apt install python3-lxml libxml2-dev -y
-else
-    echo "python3 found... : $(python3 --version)"
-fi
+echo "Installing python3"
+sudo apt install python3 python3-dev python3-pip -y
+sudo apt install python3-lxml libxml2-dev -y
 echo "-----------------------------------"
 if ! [ -x "$(command -v gcc-6)" ]; then
     echo "Installing gcc-6 and g++-6"

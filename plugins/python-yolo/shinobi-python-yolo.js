@@ -17,7 +17,8 @@ var spawn = require('child_process').spawn;
 var moment = require('moment');
 var http = require('http');
 var express = require('express');
-var config=require('./conf.json');
+var socketIoClient = require('socket.io-client');
+var config = require('./conf.json');
 var http = require('http'),
     app = express(),
     server = http.createServer(app);
@@ -78,6 +79,8 @@ s.getRequest = function(url,callback){
 //                              s.systemLog("Get Snapshot Error", e);
     });
 }
+s.multiplerHeight = 0.75
+s.multiplerWidth = 0.96
 s.detectObject=function(buffer,d,tx){
   d.tmpFile=s.gid(5)+'.jpg'
   if(!fs.existsSync(s.dir.streams)){
@@ -94,15 +97,17 @@ s.detectObject=function(buffer,d,tx){
   fs.writeFile(d.dir+d.tmpFile,buffer,function(err){
       if(err) return s.systemLog(err);
       if(s.isPythonRunning === false)return console.log('Python Script is not Running.')
-      s.getRequest('http://localhost:'+config.pythonPort+'/get?img='+d.dir+d.tmpFile,function(data){
+      var callbackId = s.gid(10)
+      s.sendToPython({path:d.dir+d.tmpFile,id:callbackId},function(data){
           if(data.length > 0){
               var mats=[]
               data.forEach(function(v){
                   mats.push({
-                    x:v.points[0],
-                    y:v.points[1],
+                    x:v.points[0] * s.multiplerWidth,
+                    y:v.points[1] * s.multiplerHeight,
                     width:v.points[2],
                     height:v.points[3],
+                    confidence:v.confidence,
                     tag:v.tag
                   })
               })
@@ -120,6 +125,7 @@ s.detectObject=function(buffer,d,tx){
                   }
               })
           }
+          delete(s.callbacks[callbackId])
           exec('rm -rf '+d.dir+d.tmpFile,{encoding:'utf8'})
       })
   })
@@ -207,7 +213,7 @@ if(config.mode==='host'){
 }else{
     //start plugin as client
     if(!config.host){config.host='localhost'}
-    var io = require('socket.io-client')('ws://'+config.host+':'+config.port);//connect to master
+    var io = socketIoClient('ws://'+config.host+':'+config.port);//connect to master
     s.cx=function(x){x.pluginKey=config.key;x.plug=config.plug;return io.emit('ocv',x)}
     io.on('connect',function(d){
         s.cx({f:'init',plug:config.plug,notice:config.notice,type:config.type});
@@ -220,10 +226,34 @@ if(config.mode==='host'){
     })
 }
 
+//Start Python Controller
+var pythonIo = socketIoClient('ws://localhost:'+config.pythonPort);
+s.callbacks = {}
+s.sendToPython = function(data,callback){
+    s.callbacks[data.id] = callback
+    pythonIo.emit('f',data)
+}
+pythonIo.on('connect',function(d){
+    console.log('Connected')
+})
+pythonIo.on('disconnect',function(d){
+    setTimeout(function(){
+        pythonIo.connect();
+        console.log('Disconnected')
+    },3000)
+})
+pythonIo.on('f',function(d){
+    if(s.callbacks[d.id]){
+        s.callbacks[d.id](d.data)
+    }
+})
+
+
 //Start Python Daemon
+process.env.PYTHONUNBUFFERED = 1;
 s.createPythonProcess = function(){
     s.isPythonRunning = false
-    s.pythonScript = spawn('python3',[config.pythonScript]);
+    s.pythonScript = spawn('sh',[__dirname+'/bootPy.sh',config.pythonScript,__dirname]);
     var onStdErr = function (data) {
         console.log('Python ERR')
         console.log(data.toString())
