@@ -147,7 +147,9 @@ fi
 # Install NPM Libraries
 echo "============="
 echo "Shinobi - Install NPM Libraries"
-npm install
+sudo npm i npm -g
+sudo npm install --unsafe-perm
+sudo npm audit fix --unsafe-perm
 echo "============="
 
 #Install PM2

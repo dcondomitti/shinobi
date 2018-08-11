@@ -147,7 +147,9 @@ else
 fi
 echo "============="
 echo "Shinobi - Install NPM Libraries"
-sudo npm install
+sudo npm i npm -g
+sudo npm install --unsafe-perm
+sudo npm audit fix --unsafe-perm
 echo "============="
 echo "Shinobi - Install PM2"
 sudo npm install pm2 -g
