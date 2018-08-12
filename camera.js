@@ -2604,7 +2604,6 @@ s.event = function(x,e,cn){
                           data.on('end', () => {
 
                           });
-
                     }).on('error', function(e) {
 
                     }).end();
@@ -5679,7 +5678,8 @@ app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':
                             }
                             if(!r.details.acceptedMachines[req.body.machineID]){
                                 req.complete=function(){
-                                    s.factorAuth[r.ke][r.uid].info=req.resp;
+                                    s.factorAuth[r.ke][r.uid].function = req.body.function
+                                    s.factorAuth[r.ke][r.uid].info = req.resp
                                     clearTimeout(s.factorAuth[r.ke][r.uid].expireAuth)
                                     s.factorAuth[r.ke][r.uid].expireAuth=setTimeout(function(){
                                         s.deleteFactorAuth(r)
@@ -5891,7 +5891,8 @@ app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':
                             s.sqlQuery("UPDATE Users SET details=? WHERE ke=? AND uid=?",[s.s(req.details),req.body.ke,req.body.id])
                         }
                     }
-                    req.resp=s.factorAuth[req.body.ke][req.body.id].info
+                    req.body.function = s.factorAuth[req.body.ke][req.body.id].function
+                    req.resp = s.factorAuth[req.body.ke][req.body.id].info
                     req.fn(s.factorAuth[req.body.ke][req.body.id].user)
                 }else{
                     req.renderFunction(config.renderPaths.factorAuth,{$user:s.factorAuth[req.body.ke][req.body.id].info,lang:req.lang});
