@@ -330,9 +330,11 @@ s.ocvTx=function(data){
 //send data to socket client function
 s.tx = function(z,y,x){if(x){return x.broadcast.to(y).emit('f',z)};io.to(y).emit('f',z);}
 s.txToDashcamUsers = function(data,groupKey){
-    Object.keys(s.group[groupKey].dashcamUsers).forEach(function(auth){
-        s.tx(data,s.group[groupKey].dashcamUsers[auth].cnid)
-    })
+    if(s.group[groupKey] && s.group[groupKey].dashcamUsers){
+        Object.keys(s.group[groupKey].dashcamUsers).forEach(function(auth){
+            s.tx(data,s.group[groupKey].dashcamUsers[auth].cnid)
+        })
+    }
 }
 s.txWithSubPermissions = function(z,y,permissionChoices){
     if(typeof permissionChoices==='string'){
