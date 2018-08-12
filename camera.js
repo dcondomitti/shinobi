@@ -120,6 +120,7 @@ if(config.databaseType === undefined){config.databaseType='mysql'}
 if(config.pluginKeys === undefined)config.pluginKeys={};
 if(config.databaseLogs === undefined){config.databaseLogs=false}
 if(config.useUTC === undefined){config.useUTC=false}
+if(config.iconURL === undefined){config.iconURL = "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"}
 if(config.pipeAddition === undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
 //Child Nodes
 if(config.childNodes === undefined)config.childNodes = {};
@@ -271,7 +272,7 @@ if(config.discordBot === true){
                 fields: [],
                 timestamp: new Date(),
                 footer: {
-                  icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
+                  icon_url: config.iconURL,
                   text: "Shinobi Systems"
                 }
             },data)
@@ -975,14 +976,14 @@ s.init=function(x,e,k,fn){
 //            s.discordMsg({
 //                author: {
 //                  name: s.group[e.ke].mon_conf[e.id].name,
-//                  icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"
+//                  icon_url: config.iconURL
 //                },
 //                title: lang['Status Changed'],
 //                description: lang['Monitor is now '+e.status],
 //                fields: [],
 //                timestamp: new Date(),
 //                footer: {
-//                  icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
+//                  icon_url: config.iconURL,
 //                  text: "Shinobi Systems"
 //                }
 //            },[],e.ke)
@@ -2713,14 +2714,14 @@ s.event = function(x,e,cn){
                         s.discordMsg({
                             author: {
                               name: s.group[d.ke].mon_conf[d.id].name,
-                              icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"
+                              icon_url: config.iconURL
                             },
                             title: lang.Event+' - '+screenshotName,
                             description: lang.EventText1+' '+s.timeObject(new Date).format(),
                             fields: [],
                             timestamp: new Date(),
                             footer: {
-                              icon_url: "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png",
+                              icon_url: config.iconURL,
                               text: "Shinobi Systems"
                             }
                         },files,d.ke)
@@ -5686,20 +5687,37 @@ app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':
                                 if(!s.factorAuth[r.ke]){s.factorAuth[r.ke]={}}
                                 if(!s.factorAuth[r.ke][r.uid]){
                                     s.factorAuth[r.ke][r.uid]={key:s.nid(),user:r}
-                                    r.mailOptions = {
-                                        from: config.mail.from,
-                                        to: r.mail,
-                                        subject: r.lang['2-Factor Authentication'],
-                                        html: r.lang['Enter this code to proceed']+' <b>'+s.factorAuth[r.ke][r.uid].key+'</b>. '+r.lang.FactorAuthText1,
-                                    };
-                                    nodemailer.sendMail(r.mailOptions, (error, info) => {
-                                        if (error) {
-                                            s.systemLog(r.lang.MailError,error)
-                                            req.fn(r)
-                                            return
-                                        }
-                                        req.complete()
-                                    });
+                                    if(r.details.factor_mail !== '0'){
+                                        var mailOptions = {
+                                            from: config.mail.from,
+                                            to: r.mail,
+                                            subject: r.lang['2-Factor Authentication'],
+                                            html: r.lang['Enter this code to proceed']+' <b>'+s.factorAuth[r.ke][r.uid].key+'</b>. '+r.lang.FactorAuthText1,
+                                        };
+                                        nodemailer.sendMail(mailOptions, (error, info) => {
+                                            if (error) {
+                                                s.systemLog(r.lang.MailError,error)
+                                                return
+                                            }
+                                        });
+                                    }
+                                    if(r.details.factor_discord === '1'){
+                                        s.discordMsg({
+                                            author: {
+                                              name: r.lang['2-Factor Authentication'],
+                                              icon_url: config.iconURL
+                                            },
+                                            title: r.lang['Enter this code to proceed'],
+                                            description: '**'+s.factorAuth[r.ke][r.uid].key+'** '+r.lang.FactorAuthText1,
+                                            fields: [],
+                                            timestamp: new Date(),
+                                            footer: {
+                                              icon_url: config.iconURL,
+                                              text: "Shinobi Systems"
+                                            }
+                                        },[],r.ke)
+                                    }
+                                    req.complete()
                                 }else{
                                     req.complete()
                                 }

@@ -398,6 +398,7 @@
    "Save Events to SQL": "Save Events to SQL",
    "Email on Trigger": "Email on Trigger <small>Emails go to the main account holder's login address.</small>",
    "Attach Video Clip": "Attach Video Clip",
+   "Discord": "Discord",
    "Discord Alert on Trigger": "Discord Alert on Trigger",
    "Allow Next Email": "Allow Next Email <small>in Minutes</small>",
    "Allow Next Discord Alert": "Allow Next Discord Alert <small>in Minutes</small>",
