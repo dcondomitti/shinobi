@@ -390,6 +390,7 @@
    "Recording Flags": "Recording Flags",
    "Output Method": "Output Method",
    "Webhook": "Webhook",
+   "Event Webhook Error": "Event Webhook Error",
    "Webhook URL": "Webhook URL",
    "Command on Trigger": "Command on Trigger",
    "Command": "Command",

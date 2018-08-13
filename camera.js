@@ -2595,18 +2595,11 @@ s.event = function(x,e,cn){
                         .replace(/{{MONITOR_ID}}/g,d.id)
                         .replace(/{{GROUP_KEY}}/g,d.ke)
                         .replace(/{{DETAILS}}/g,detailString)
-                    http.get(detector_webhook_url, function(data) {
-                          data.setEncoding('utf8');
-                          var chunks='';
-                          data.on('data', (chunk) => {
-                              chunks+=chunk;
-                          });
-                          data.on('end', () => {
-
-                          });
-                    }).on('error', function(e) {
-
-                    }).end();
+                    request({url:detector_webhook_url,method:'GET',encoding:null},function(err,data){
+                        if(err){
+                            s.log(d,{type:lang["Event Webhook Error"],msg:{error:err,data:data}})
+                        }
+                    })
                 }
                 var detector_timeout
                 if(!currentConfig.detector_timeout||currentConfig.detector_timeout===''){
