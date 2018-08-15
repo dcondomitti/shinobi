@@ -1439,9 +1439,12 @@ switch($user.details.lang){
                             {label:'<%-cleanLang(lang['hevc_cuvid'])%>',value:'hevc_cuvid',group:'NVIDIA'},
                             {label:'<%-cleanLang(lang['mjpeg_cuvid'])%>',value:'mjpeg_cuvid',group:'NVIDIA'},
                             {label:'<%-cleanLang(lang['mpeg4_cuvid'])%>',value:'mpeg4_cuvid',group:'NVIDIA'},
-                            {label:'<%-cleanLang(lang['h264_qsv'])%>',value:'h264_qsv',group:'QuickSync Video'},
-                            {label:'<%-cleanLang(lang['hevc_qsv'])%>',value:'hevc_qsv',group:'QuickSync Video'},
-                            {label:'<%-cleanLang(lang['mpeg2_qsv'])%>',value:'mpeg2_qsv',group:'QuickSync Video'},
+                            {label:'<%-cleanLang(lang['h264_qsv'])%>',value:'h264_qsv',group:'Quick Sync Video'},
+                            {label:'<%-cleanLang(lang['hevc_qsv'])%>',value:'hevc_qsv',group:'Quick Sync Video'},
+                            {label:'<%-cleanLang(lang['mpeg2_qsv'])%>',value:'mpeg2_qsv',group:'Quick Sync Video'},
+                            {label:'<%-cleanLang(lang['h264_mmal'])%>',value:'h264_mmal',group:'Raspberry Pi'},
+                            {label:'<%-cleanLang(lang['mpeg2_mmal'])%>',value:'mpeg2_mmal',group:'Raspberry Pi'},
+                            {label:'<%-cleanLang(lang['mpeg4_mmal'])%>',value:'mpeg4_mmal',group:'Raspberry Pi'},
                         ]
                     },
                     {
@@ -1551,6 +1554,7 @@ switch($user.details.lang){
                 tmp+='                        <option value="h264_qsv"><%-lang["h264_qsv"]%></option>'
                 tmp+='                        <option value="hevc_qsv"><%-lang["hevc_qsv"]%></option>'
                 tmp+='                        <option value="mpeg2_qsv"><%-lang["mpeg2_qsv"]%></option>'
+                tmp+='                        <option value="h264_omx"><%-lang["h264_omx"]%></option>'
                 tmp+='                    </optgroup>'
                 tmp+='                </select></div>'
                 tmp+='            </label>'
