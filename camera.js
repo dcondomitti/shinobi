@@ -1650,7 +1650,7 @@ s.createStreamChannel = function(e,number,channel){
         //add input feed map
         x.pipe += s.createFFmpegMap(e,e.details.input_map_choices['stream_channel-'+(number-config.pipeAddition)])
     }
-    if(e.details.stream_vcodec !== 'copy' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'gif' || e.details.stream_type === 'b64'){
+    if(channel.stream_vcodec !== 'copy' || channel.stream_type === 'mjpeg' || channel.stream_type === 'b64'){
         x.cust_stream += x.stream_fps
     }
     switch(channel.stream_type){
@@ -1791,8 +1791,8 @@ s.ffmpegCoProcessor = function(e){
     }
     if(e.details.cust_stream&&e.details.cust_stream!==''){x.cust_stream=' '+e.details.cust_stream}else{x.cust_stream=''}
     if(e.details.stream_fps&&e.details.stream_fps!==''){x.stream_fps=' -r '+e.details.stream_fps}else{x.stream_fps=''}
-    if(e.details.stream_vcodec!=='copy'){
-        x.cust_stream+=x.stream_fps
+    if(e.details.stream_vcodec !== 'copy' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64'){
+        x.cust_stream += x.stream_fps
     }
     switch(e.details.stream_type){
         case'mjpeg':
@@ -2158,8 +2158,8 @@ s.ffmpeg = function(e){
         //add input feed map
         x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.stream)
     }
-    if(e.details.stream_vcodec!=='copy'){
-        x.cust_stream+=x.stream_fps
+    if(e.details.stream_vcodec !== 'copy' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64'){
+        x.cust_stream += x.stream_fps
     }
     switch(e.details.stream_type){
         case'mp4':
