@@ -630,6 +630,7 @@ s.kill = function(x,e,p){
                 delete(s.group[e.ke].mon[e.id].spawn_exit);
             }catch(er){}
         }
+        s.group[e.ke].mon[e.id].firstStreamChunk = {}
         clearTimeout(s.group[e.ke].mon[e.id].checker);
         delete(s.group[e.ke].mon[e.id].checker);
         clearTimeout(s.group[e.ke].mon[e.id].checkStream);
@@ -1649,8 +1650,8 @@ s.createStreamChannel = function(e,number,channel){
         //add input feed map
         x.pipe += s.createFFmpegMap(e,e.details.input_map_choices['stream_channel-'+(number-config.pipeAddition)])
     }
-    if(channel.stream_vcodec!=='copy'){
-        x.cust_stream+=x.stream_fps
+    if(e.details.stream_vcodec !== 'copy' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'gif' || e.details.stream_type === 'b64'){
+        x.cust_stream += x.stream_fps
     }
     switch(channel.stream_type){
         case'mp4':
