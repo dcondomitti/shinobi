@@ -486,6 +486,7 @@
    "Bottom Left": "Bottom Left",
    "WebM (libvpx)": "WebM (libvpx)",
    "Poseidon": "Poseidon",
+   "HEVC (H.265)": "HEVC (H.265)",
    "MP4 (copy, libx264, libx265)": "MP4 (copy, libx264, libx265)",
    "Default": "Default",
    "libvpx (Default)": "libvpx (Default)",

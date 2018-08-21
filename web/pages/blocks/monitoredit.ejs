@@ -26,7 +26,7 @@
                 <%-lang.IdentityText2%>
             </blockquote>
             <div class="form-group">
-            <label> 
+            <label>
                 <div><span><%-lang.Mode%></span></div>
                 <div><select class="form-control" name="mode" selector="h_m">
                     <option value="stop"><%-lang.Disabled%></option>
@@ -124,10 +124,10 @@
                       <div class="form-group h_p_input h_p_rtsp">
                         <label><div><span><%-lang['RTSP Transport']%></span></div>
                             <div><select class="form-control" detail="rtsp_transport">
-                                <option value="no" selected><%-lang['Auto']%></option>  
-                                <option value="tcp"><%-lang['TCP']%></option>  
-                                <option value="udp"><%-lang['UDP']%></option>  
-                                <option value="http"><%-lang['HTTP']%></option>  
+                                <option value="no" selected><%-lang['Auto']%></option>
+                                <option value="tcp"><%-lang['TCP']%></option>
+                                <option value="udp"><%-lang['UDP']%></option>
+                                <option value="http"><%-lang['HTTP']%></option>
                             </select></div>
                         </label>
                       </div>
@@ -294,9 +294,9 @@
               </div>
               <div class="form-group">
                 <label><div><span><%-lang['Stream Type']%></span></div>
-                    <div><select class="form-control" detail="stream_type" selector="h_st" triggerChange="#add_monitor [detail=stream_vcodec]" triggerChangeIgnore="b64,mjpeg,jpeg">
+                    <div><select class="form-control" detail="stream_type" selector="h_st" triggerChange="#add_monitor [detail=stream_vcodec]" triggerChangeIgnore="b64,mjpeg,jpeg,gif">
                         <option value="mp4"><%-lang['Poseidon']%></option>
-<!--                        <option value="pam">PAM</option>-->
+                        <option value="h265"><%-lang['HEVC (H.265)']%></option>
                         <option value="b64" selected><%-lang['Base64 over Websocket']%></option>
                         <option value="jpeg"><%-lang['JPEG (Auto Enables JPEG API)']%></option>
                         <option value="mjpeg"><%-lang['MJPEG']%></option>
@@ -305,7 +305,7 @@
                     </select></div>
                 </label>
               </div>
-              <div class="form-group h_st_input h_st_flv h_st_mp4">
+              <div class="form-group h_st_input h_st_flv h_st_mp4 h_st_h265">
                 <label><div><span><%-lang['Connection Type']%></span></div>
                     <div><select class="form-control" detail="stream_flv_type" selector="h_st_lat">
                         <option value="http" selected><%-lang['HTTP']%></option>
@@ -323,7 +323,7 @@
                     <div><input class="form-control" detail="stream_mjpeg_clients" placeholder="20"></div>
                 </label>
               </div>
-              <div class="h_st_input h_st_hls h_st_flv h_st_mp4">
+              <div class="h_st_input h_st_hls h_st_flv h_st_mp4 h_st_h265">
                   <div class="form-group">
                     <label><div><span><%-lang['HLS Video Encoder']%></span></div>
                         <div><select class="form-control" detail="stream_vcodec" selector="h_hls_v">
@@ -357,7 +357,7 @@
                     </label>
                   </div>
               </div>
-              <div class="h_st_input h_st_mjpeg h_st_b64 h_st_hls h_st_flv h_st_mp4 h_hls_v_input h_hls_v_libx264 h_hls_v_libx265 h_hls_v_h264_nvenc h_hls_v_hevc_nvenc h_hls_v_no">
+              <div class="h_st_input h_st_mjpeg h_st_b64 h_st_hls h_st_gif h_st_flv h_st_mp4 h_st_h265 h_hls_v_input h_hls_v_libx264 h_hls_v_libx265 h_hls_v_h264_nvenc h_hls_v_hevc_nvenc h_hls_v_no">
                   <div class="h_st_input h_st_hls">
                       <div class="form-group">
                         <label><div><span><%-lang['HLS Segment Length']%></span></div>
@@ -370,7 +370,7 @@
                         </label>
                       </div>
                   </div>
-                  <div class="form-group h_st_input h_st_hls h_st_flv h_st_mp4">
+                  <div class="form-group h_st_input h_st_hls h_st_flv h_st_mp4 h_st_h265">
                     <label><div><span><%-lang['HLS Preset']%></span></div>
                         <div><input class="form-control" detail="preset_stream" placeholder="ultrafast"></div>
                     </label>
@@ -453,8 +453,8 @@
                   <div class="form-group">
                       <label><div><span><%-lang['Enabled']%></span></div>
                         <div><select class="form-control" detail="stream_timestamp" selector="h_tm">
-                            <option value="1"><%-lang.Yes%></option>  
-                            <option value="0" selected><%-lang.No%></option>  
+                            <option value="1"><%-lang.Yes%></option>
+                            <option value="0" selected><%-lang.No%></option>
                         </select></div>
                       </label>
                   </div>
@@ -584,8 +584,8 @@
               <div class="form-group">
                 <label><div><span><%-lang['Record File Type']%></span></div>
                     <div><select class="form-control" name="ext" selector="h_f">
-                        <option value="webm"><%-lang['WebM (libvpx)']%></option>  
-                        <option value="mp4"><%-lang['MP4 (copy, libx264, libx265)']%></option>  
+                        <option value="webm"><%-lang['WebM (libvpx)']%></option>
+                        <option value="mp4"><%-lang['MP4 (copy, libx264, libx265)']%></option>
     <!--                    <option value="mkv">MKV</option>  -->
                     </select></div>
                 </label>
@@ -712,8 +712,8 @@
                       <div class="form-group">
                           <label><div><span><%-lang['Enabled']%></span></div>
                             <div><select class="form-control" detail="timestamp" selector="h_tm">
-                                <option value="1"><%-lang.Yes%></option>  
-                                <option value="0" selected><%-lang.No%></option>  
+                                <option value="1"><%-lang.Yes%></option>
+                                <option value="0" selected><%-lang.No%></option>
                             </select></div>
                           </label>
                       </div>
@@ -1265,8 +1265,8 @@
               <div class="form-group">
                 <label><div><span><%-lang['Controllable']%></span></div>
                     <div><select class="form-control" detail="control" selector="h_c">
-                        <option value="0"><%-lang.No%></option>  
-                        <option value="1"><%-lang.Yes%></option>  
+                        <option value="0"><%-lang.No%></option>
+                        <option value="1"><%-lang.Yes%></option>
                     </select></div>
                 </label>
               </div>
@@ -1279,7 +1279,7 @@
                   <div class="form-group">
                     <label><div><span><%-lang['Call Method']%></span></div>
                         <div><select class="form-control" detail="control_url_method" selector="h_control_call">
-                            <option value="GET">GET (<%-lang.Default%>)</option>  
+                            <option value="GET">GET (<%-lang.Default%>)</option>
                             <option value="PUT">PUT</option>
                             <option value="POST">POST</option>
                             <option value="ONVIF">ONVIF</option>
@@ -1289,7 +1289,7 @@
                   <div class="form-group h_control_call_input h_control_call_GET h_control_call_PUT h_control_call_POST">
                     <label><div><span><%-lang['Digest Authentication']%></span></div>
                         <div><select class="form-control" detail="control_digest_auth">
-                            <option value="0"><%-lang.No%></option>  
+                            <option value="0"><%-lang.No%></option>
                             <option value="1"><%-lang.Yes%></option>
                         </select></div>
                     </label>
@@ -1297,7 +1297,7 @@
                   <div class="form-group">
                     <label><div><span><%-lang['Stop Command']%></span></div>
                         <div><select class="form-control" detail="control_stop" selector="h_cs">
-                            <option value="0"><%-lang.No%></option>  
+                            <option value="0"><%-lang.No%></option>
                             <option value="1"><%-lang.Yes%></option>
                         </select></div>
                     </label>
@@ -1398,8 +1398,8 @@
               <div class="form-group">
                   <label><div><span><%-lang['Copy to Settings']%></span></div>
                     <div><select class="form-control" id="copy_settings" selector="h_copy_settings">
-                        <option value="0" selected><%-lang.No%></option>  
-                        <option value="1"><%-lang.Yes%></option>  
+                        <option value="0" selected><%-lang.No%></option>
+                        <option value="1"><%-lang.Yes%></option>
                     </select></div>
                   </label>
               </div>
@@ -1407,32 +1407,32 @@
                   <div class="form-group">
                       <label><div><span><%-lang['Copy Connection Settings']%></span></div>
                         <div><select class="form-control" copy="#monSectionConnection">
-                            <option value="0" selected><%-lang.No%></option>  
-                            <option value="1"><%-lang.Yes%></option>  
+                            <option value="0" selected><%-lang.No%></option>
+                            <option value="1"><%-lang.Yes%></option>
                         </select></div>
                       </label>
                   </div>
                   <div class="form-group">
                       <label><div><span><%-lang['Copy Input Settings']%></span></div>
                         <div><select class="form-control" copy="#monSectionInput">
-                            <option value="0" selected><%-lang.No%></option>  
-                            <option value="1"><%-lang.Yes%></option>  
+                            <option value="0" selected><%-lang.No%></option>
+                            <option value="1"><%-lang.Yes%></option>
                         </select></div>
                       </label>
                   </div>
                   <div class="form-group">
                       <label><div><span><%-lang['Copy Stream Settings']%></span></div>
                         <div><select class="form-control" copy="#monSectionStream,#monSectionStreamTimestamp,#monSectionStreamWatermark">
-                            <option value="0" selected><%-lang.No%></option>  
-                            <option value="1"><%-lang.Yes%></option>  
+                            <option value="0" selected><%-lang.No%></option>
+                            <option value="1"><%-lang.Yes%></option>
                         </select></div>
                       </label>
                   </div>
                   <div class="form-group">
                       <label><div><span><%-lang['Copy JPEG API Settings']%></span></div>
                         <div><select class="form-control" copy="#monSectionJPEGAPI">
-                            <option value="0" selected><%-lang.No%></option>  
-                            <option value="1"><%-lang.Yes%></option>  
+                            <option value="0" selected><%-lang.No%></option>
+                            <option value="1"><%-lang.Yes%></option>
                         </select></div>
                       </label>
                   </div>
@@ -1440,8 +1440,8 @@
                   <div class="form-group">
                       <label><div><span><%-lang['Copy Stream Channel Settings']%></span></div>
                         <div><select class="form-control" copy="stream_channel">
-                            <option value="0" selected><%-lang.No%></option>  
-                            <option value="1"><%-lang.Yes%></option>  
+                            <option value="0" selected><%-lang.No%></option>
+                            <option value="1"><%-lang.Yes%></option>
                         </select></div>
                       </label>
                   </div>
@@ -1449,40 +1449,40 @@
                   <div class="form-group">
                       <label><div><span><%-lang['Copy Recording Settings']%></span></div>
                         <div><select class="form-control" copy="#monSectionRecording">
-                            <option value="0" selected><%-lang.No%></option>  
-                            <option value="1"><%-lang.Yes%></option>  
+                            <option value="0" selected><%-lang.No%></option>
+                            <option value="1"><%-lang.Yes%></option>
                         </select></div>
                       </label>
                   </div>
                   <div class="form-group">
                       <label><div><span><%-lang['Copy Detector Settings']%></span></div>
                         <div><select class="form-control" copy="#monSectionDetector,#monSectionDetectorBuffer,#monSectionLisencePlateDetector,#monSectionNoMotionDetector">
-                            <option value="0" selected><%-lang.No%></option>  
-                            <option value="1"><%-lang.Yes%></option>  
+                            <option value="0" selected><%-lang.No%></option>
+                            <option value="1"><%-lang.Yes%></option>
                         </select></div>
                       </label>
                   </div>
                   <div class="form-group">
                       <label><div><span><%-lang['Copy Custom Settings']%></span></div>
                         <div><select class="form-control" copy="#monSectionCustom">
-                            <option value="0" selected><%-lang.No%></option>  
-                            <option value="1"><%-lang.Yes%></option>  
+                            <option value="0" selected><%-lang.No%></option>
+                            <option value="1"><%-lang.Yes%></option>
                         </select></div>
                       </label>
                   </div>
                   <div class="form-group">
                       <label><div><span><%-lang['Copy Group Settings']%></span></div>
                         <div><select class="form-control" copy="#monSectionGrouping">
-                            <option value="0" selected><%-lang.No%></option>  
-                            <option value="1"><%-lang.Yes%></option>  
+                            <option value="0" selected><%-lang.No%></option>
+                            <option value="1"><%-lang.Yes%></option>
                         </select></div>
                       </label>
                   </div>
                   <div class="form-group">
                       <label><div><span><%-lang['Copy Logging Settings']%></span></div>
                         <div><select class="form-control" copy="#monSectionLogging">
-                            <option value="0" selected><%-lang.No%></option>  
-                            <option value="1"><%-lang.Yes%></option>  
+                            <option value="0" selected><%-lang.No%></option>
+                            <option value="1"><%-lang.Yes%></option>
                         </select></div>
                       </label>
                   </div>
@@ -1511,8 +1511,8 @@
             <div class="form-group">
               <label><div><span><%-lang['Save Log in SQL']%></span></div>
                 <div><select class="form-control" detail="sqllog">
-                    <option value="0" selected><%-lang.No%></option>  
-                    <option value="1"><%-lang.Yes%></option>  
+                    <option value="0" selected><%-lang.No%></option>
+                    <option value="1"><%-lang.Yes%></option>
                 </select></div>
               </label>
             </div>
@@ -1553,8 +1553,8 @@
           </div>
           <div style="display:inline-block;margin-right:5px">
             <div><select class="form-control btn-default" dropdown_toggle="monedit_user_type" selector="h_us">
-                <option value="simple" selected><%-lang['Simple']%></option>  
-                <option value="advanced"><%-lang['Advanced']%></option>  
+                <option value="simple" selected><%-lang['Simple']%></option>
+                <option value="advanced"><%-lang['Advanced']%></option>
             </select></div>
           </div>
           <button type="submit" class="btn btn-success"><i class="fa fa-check"></i> <%-lang.Save%></button>

@@ -20,6 +20,7 @@ if(data.url.charAt(data.url.length - 1) !== '/'){
 <script src="<%=data.url%>libs/js/poseidon.js"></script>
 <script src="<%=data.url%>libs/js/hls.min.js"></script>
 <script src="<%=data.url%>libs/js/flv.min.js"></script>
+<script src="<%=data.url%>libs/js/libde265.js"></script>
 <% if(data.addon){
     var ar={}
     decodeURI(data.addon).split('|').forEach(function(v){
@@ -133,7 +134,7 @@ $(document).ready(function(){
 })
 </script>
 <div class="shinobi_stream" id="<%= data.name %>">
-    
+
     <% switch(mon.details.stream_type){
         case'jpeg':
             %><img class="stream-element"><%
@@ -148,8 +149,8 @@ $(document).ready(function(){
             %><canvas class="stream-element"></canvas><%
         break;
     } %>
-    
-    
+
+
 <% if(data.addon&&data.addon.indexOf('gui')>-1){ %>
     <div class="shinobi_hud">
         <div class="shinobi_viewers" title="Current number of viewers"></div>
@@ -209,7 +210,7 @@ $(document).ready(function(){
         //                        }
         //                        ctx.getContext("2d").drawImage(image,d.x,d.y,d.width,d.height)
                                 ctx.getContext("2d").drawImage(image,d.x,d.y,ctx.width,ctx.height)
-                                URL.revokeObjectURL($.ccio.mon[d.ke+d.id+user.auth_token].imageUrl)
+                                URL.revokeObjectURL($.shinobi.mon[d.id].imageUrl)
                             }
                             ws.on('data',function(imageData){
                                 try{
@@ -260,6 +261,39 @@ $(document).ready(function(){
                         }else{
                             stream.attr('src','<%=data.url%><%=data.auth%>/mp4/'+d.ke+'/'+d.id+'/s.mp4')
                         }
+                    break;
+                    case'h265':
+                        var player = $.shinobi.mon[d.id].h265Player
+                        var video = $('#SHINOBI_'+d.ke+'_'+d.id+' .stream-element')[0]
+                        if (player) {
+                            player.stop()
+                        }
+                        player = new libde265.RawPlayer(video)
+                        player.set_status_callback(function(msg, fps) {
+                        })
+                        player.launch()
+                        if($.shinobi.mon[d.id].h265Socket && $.shinobi.mon[d.id].h265Socket.connected){
+                            $.shinobi.mon[d.id].h265Socket.disconnect()
+                        }
+                        $.shinobi.mon[d.id].h265Socket = io('<%=data.url%>',{transports: ['websocket'], forceNew: false})
+                        var ws = $.shinobi.mon[d.id].h265Socket
+                        var buffer
+                        ws.on('diconnect',function(){
+                            console.log('h265Socket Stream Disconnected')
+                        })
+                        ws.on('connect',function(){
+                            ws.emit('h265',{
+                              auth:'<%=data.auth%>',
+                              ke:d.ke,
+                              uid:'<%=data.uid%>',
+                              id:d.id,
+                              url: '<%=data.url%>'
+//                                channel: channel
+                            })
+                            ws.on('data',function(imageData){
+                                player._handle_onChunk(imageData)
+                            })
+                        })
                     break;
                     case'flv':
                         if (flvjs.isSupported()) {
