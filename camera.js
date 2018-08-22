@@ -1603,7 +1603,7 @@ s.createStreamChannel = function(e,number,channel){
     //stream - custom flags
     if(channel.cust_stream&&channel.cust_stream!==''){x.cust_stream=' '+channel.cust_stream}else{x.cust_stream=''}
     //stream - preset
-    if(channel.preset_stream&&channel.preset_stream!==''){x.preset_stream=' -preset '+channel.preset_stream;}else{x.preset_stream=''}
+    if(channel.stream_type !== 'h265' && channel.preset_stream && channel.preset_stream!==''){x.preset_stream=' -preset '+channel.preset_stream;}else{x.preset_stream=''}
     //hardware acceleration
     if(e.details.accelerator&&e.details.accelerator==='1'){
         if(e.details.hwaccel&&e.details.hwaccel!==''){
@@ -1927,7 +1927,8 @@ s.ffmpeg = function(e){
         e.details.hwaccel !== 'vaapi' &&
         e.details.hwaccel_vcodec !== 'auto' &&
         e.isStreamer === false &&
-        (!e.details.input_maps || e.details.input_maps.length === 0)
+        (!e.details.input_maps || e.details.input_maps.length === 0) &&
+        (e.details.snap === '1' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64' || e.details.detector === '1')
       ){
         e.coProcessor = true
     }
@@ -2111,7 +2112,7 @@ s.ffmpeg = function(e){
     //stream - custom flags
     if(e.details.cust_stream&&e.details.cust_stream!==''){x.cust_stream=' '+e.details.cust_stream}else{x.cust_stream=''}
     //stream - preset
-    if(e.details.preset_stream&&e.details.preset_stream!==''){x.preset_stream=' -preset '+e.details.preset_stream;}else{x.preset_stream=''}
+    if(e.details.stream_type !== 'h265' && e.details.preset_stream && e.details.preset_stream !== ''){x.preset_stream=' -preset '+e.details.preset_stream;}else{x.preset_stream=''}
     //stream - quality
     //hardware acceleration
     if(e.details.accelerator && e.details.accelerator==='1' && e.isStreamer === false){
@@ -2221,6 +2222,7 @@ s.ffmpeg = function(e){
     }
     if(e.details.stream_channels){
         e.details.stream_channels.forEach(function(v,n){
+            if(v.stream_type === 'mjpeg')e.coProcessor = true;
             x.pipe += s.createStreamChannel(e,n+config.pipeAddition,v)
         })
     }

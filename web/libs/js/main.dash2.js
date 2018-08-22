@@ -773,8 +773,10 @@ switch($user.details.lang){
                     ctx.drawImage(img, 0, 0,c.width,c.height);
                     extend(atob(c.toDataURL('image/jpeg').split(',')[1]),c.width,c.height)
                 break;
-                case'pam':
-                    alert('Need to add')
+                case'h265':
+                    var c = $('[mid='+e.mon.mid+'].monitor_item canvas')[0];
+                    var ctx = c.getContext('2d');
+                    extend(atob(c.toDataURL('image/jpeg').split(',')[1]),c.width,c.height)
                 break;
                 case'b64':
                     base64 = e.mon.last_frame.split(',')[1];
@@ -2047,7 +2049,14 @@ $.ccio.globalWebsocket=function(d,user){
                 clearInterval($.ccio.mon[d.ke+d.id+user.auth_token].signal);delete($.ccio.mon[d.ke+d.id+user.auth_token].signal);
                 $.ccio.mon[d.ke+d.id+user.auth_token].watch=0;
                 if($.ccio.mon[d.ke+d.id+user.auth_token].hls){$.ccio.mon[d.ke+d.id+user.auth_token].hls.destroy()}
+                if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){$.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.destroy()}
+                if($.ccio.mon[d.ke+d.id+user.auth_token].Base64){$.ccio.mon[d.ke+d.id+user.auth_token].Base64.disconnect()}
+                if($.ccio.mon[d.ke+d.id+user.auth_token].h265Socket){$.ccio.mon[d.ke+d.id+user.auth_token].h265Socket.disconnect()}
+                if($.ccio.mon[d.ke+d.id+user.auth_token].h265Player){$.ccio.mon[d.ke+d.id+user.auth_token].h265Player.stop()}
                 if($.ccio.mon[d.ke+d.id+user.auth_token].dash){$.ccio.mon[d.ke+d.id+user.auth_token].dash.reset()}
+                if($.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream && $.ccio.mon[d.ke+d.id+user.auth_token].abort){
+                    $.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream.abort()
+                }
                 $.grid.data().removeWidget($('#monitor_live_'+d.id+user.auth_token))
             }
         break;
@@ -2269,32 +2278,40 @@ $.ccio.globalWebsocket=function(d,user){
                         if (player) {
                             player.stop()
                         }
-                        player = new libde265.RawPlayer(video)
+                        $.ccio.mon[d.ke+d.id+user.auth_token].h265Player = new libde265.RawPlayer(video)
+                        var player = $.ccio.mon[d.ke+d.id+user.auth_token].h265Player
                         player.set_status_callback(function(msg, fps) {
                         })
                         player.launch()
                         if($.ccio.mon[d.ke+d.id+user.auth_token].h265Socket && $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket.connected){
                             $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket.disconnect()
                         }
-                        $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket = io(url,{transports: ['websocket'], forceNew: false})
-                        var ws = $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket
-                        var buffer
-                        ws.on('diconnect',function(){
-                            console.log('h265Socket Stream Disconnected')
-                        })
-                        ws.on('connect',function(){
-                            ws.emit('h265',{
-                                url: url,
-                                auth: user.auth_token,
-                                uid: user.uid,
-                                ke: d.ke,
-                                id: d.id,
-//                                channel: channel
-                            })
-                            ws.on('data',function(imageData){
-                                player._handle_onChunk(imageData)
-                            })
-                        })
+                        if($.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream && $.ccio.mon[d.ke+d.id+user.auth_token].abort){
+                            $.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream.abort()
+                        }
+                        if(d.d.stream_flv_type==='ws'){
+                          $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket = io(url,{transports: ['websocket'], forceNew: false})
+                          var ws = $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket
+                          ws.on('diconnect',function(){
+                              console.log('h265Socket Stream Disconnected')
+                          })
+                          ws.on('connect',function(){
+                              ws.emit('h265',{
+                                  url: url,
+                                  auth: user.auth_token,
+                                  uid: user.uid,
+                                  ke: d.ke,
+                                  id: d.id,
+  //                                channel: channel
+                              })
+                              ws.on('data',function(imageData){
+                                  player._handle_onChunk(imageData)
+                              })
+                          })
+                        }else{
+                          var url = $.ccio.init('location',user)+user.auth_token+'/h265/'+d.ke+'/'+d.id+'/s.hevc';
+                          $.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream = player.createHttpStream(url)
+                        }
                     break;
                 }
             }
