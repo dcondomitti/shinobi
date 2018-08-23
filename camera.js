@@ -631,6 +631,7 @@ s.kill = function(x,e,p){
             }catch(er){}
         }
         s.group[e.ke].mon[e.id].firstStreamChunk = {}
+        clearInterval(s.group[e.ke].mon[e.id].spawnLifeChecker)
         clearTimeout(s.group[e.ke].mon[e.id].checker);
         delete(s.group[e.ke].mon[e.id].checker);
         clearTimeout(s.group[e.ke].mon[e.id].checkStream);
@@ -3526,6 +3527,14 @@ s.camera=function(x,e,cn,tx){
                         if(!s.group[e.ke].mon[e.id].record){s.group[e.ke].mon[e.id].record={yes:1}};
                         //launch ffmpeg (main)
                         s.group[e.ke].mon[e.id].spawn = s.ffmpeg(e)
+                        s.group[e.ke].mon[e.id].spawnLife = true
+                        clearInterval(s.group[e.ke].mon[e.id].spawnLifeChecker)
+                        s.group[e.ke].mon[e.id].spawnLifeChecker = setInterval(function(){
+                            if(s.group[e.ke].mon[e.id].spawnLife === false){
+                                launchMonitorProcesses()
+                                s.log(e,{type:lang['Camera is not running'],msg:{cmd:s.group[e.ke].mon[e.id].ffmpeg}});
+                            }
+                        },1000 * 10)
                         if(e.type === 'dashcam'){
                             setTimeout(function(){
                                 s.group[e.ke].mon[e.id].allowStdinWrite = true
@@ -3539,9 +3548,10 @@ s.camera=function(x,e,cn,tx){
                         s.init('monitorStatus',{id:e.id,ke:e.ke,status:wantedStatus});
                         //on unexpected exit restart
                         s.group[e.ke].mon[e.id].spawn_exit=function(){
+                          s.group[e.ke].mon[e.id].spawnLife = false
                             if(s.group[e.ke].mon[e.id].started===1){
                                 if(e.details.loglevel!=='quiet'){
-                                    s.log(e,{type:lang['Process Unexpected Exit'],msg:{msg:lang['Process Crashed for Monitor']+' : '+e.id,cmd:s.group[e.ke].mon[e.id].ffmpeg}});
+                                    s.log(e,{type:lang['Process Unexpected Exit'],msg:{msg:lang['Process Crashed for Monitor'],cmd:s.group[e.ke].mon[e.id].ffmpeg}});
                                 }
                                 errorFatal('Process Unexpected Exit');
                             }
@@ -3552,7 +3562,7 @@ s.camera=function(x,e,cn,tx){
                         //emitter for mjpeg
                         if(!e.details.stream_mjpeg_clients||e.details.stream_mjpeg_clients===''||isNaN(e.details.stream_mjpeg_clients)===false){e.details.stream_mjpeg_clients=20;}else{e.details.stream_mjpeg_clients=parseInt(e.details.stream_mjpeg_clients)}
                         s.group[e.ke].mon[e.id].emitter = new events.EventEmitter().setMaxListeners(e.details.stream_mjpeg_clients);
-                        s.log(e,{type:'FFMPEG Process Started',msg:{cmd:s.group[e.ke].mon[e.id].ffmpeg}});
+                        s.log(e,{type:lang['Process Started'],msg:{cmd:s.group[e.ke].mon[e.id].ffmpeg}});
                         s.tx({f:'monitor_starting',mode:x,mid:e.id,time:s.formattedTime()},'GRP_'+e.ke);
                         //start workers
                         if(e.type==='jpeg'){
@@ -3969,7 +3979,6 @@ s.pluginInitiatorSuccess=function(mode,d,cn){
     s.api[d.plug]={pluginEngine:d.plug,permissions:{},details:{},ip:'0.0.0.0'};
 }
 s.pluginInitiatorFail=function(mode,d,cn){
-    s.connectedPlugins[d.plug].plugged=false
     if(mode==='client'){
         //is in client mode (camera.js is client)
         cn.disconnect()
