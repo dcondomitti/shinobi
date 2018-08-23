@@ -631,7 +631,6 @@ s.kill = function(x,e,p){
             }catch(er){}
         }
         s.group[e.ke].mon[e.id].firstStreamChunk = {}
-        clearInterval(s.group[e.ke].mon[e.id].spawnLifeChecker)
         clearTimeout(s.group[e.ke].mon[e.id].checker);
         delete(s.group[e.ke].mon[e.id].checker);
         clearTimeout(s.group[e.ke].mon[e.id].checkStream);
@@ -2358,7 +2357,7 @@ s.ffmpeg = function(e){
     //create executeable FFMPEG command
     x.ffmpegCommandString = x.loglevel+x.input_fps;
     //progress pipe
-//    x.ffmpegCommandString += ' -progress pipe:5';
+    x.ffmpegCommandString += ' -progress pipe:5';
     //add main input
     if((e.type === 'mp4' || e.type === 'mjpeg') && x.cust_input.indexOf('-re') === -1){
         x.cust_input += ' -re'
@@ -3527,14 +3526,15 @@ s.camera=function(x,e,cn,tx){
                         if(!s.group[e.ke].mon[e.id].record){s.group[e.ke].mon[e.id].record={yes:1}};
                         //launch ffmpeg (main)
                         s.group[e.ke].mon[e.id].spawn = s.ffmpeg(e)
-                        s.group[e.ke].mon[e.id].spawnLife = true
-                        clearInterval(s.group[e.ke].mon[e.id].spawnLifeChecker)
-                        s.group[e.ke].mon[e.id].spawnLifeChecker = setInterval(function(){
-                            if(s.group[e.ke].mon[e.id].spawnLife === false){
-                                launchMonitorProcesses()
-                                s.log(e,{type:lang['Camera is not running'],msg:{cmd:s.group[e.ke].mon[e.id].ffmpeg}});
-                            }
-                        },1000 * 10)
+                        s.group[e.ke].mon[e.id].spawn.stdio[5].on('data',function(data){
+                            resetStreamCheck()
+                            // var progress = {}
+                            // data.toString().split('\n').forEach(function(v){
+                            //     var split = v.split('=')
+                            //     var val = split[1]
+                            //     if(val)progress[split[0]] = val
+                            // })
+                        })
                         if(e.type === 'dashcam'){
                             setTimeout(function(){
                                 s.group[e.ke].mon[e.id].allowStdinWrite = true
@@ -3548,7 +3548,6 @@ s.camera=function(x,e,cn,tx){
                         s.init('monitorStatus',{id:e.id,ke:e.ke,status:wantedStatus});
                         //on unexpected exit restart
                         s.group[e.ke].mon[e.id].spawn_exit=function(){
-                          s.group[e.ke].mon[e.id].spawnLife = false
                             if(s.group[e.ke].mon[e.id].started===1){
                                 if(e.details.loglevel!=='quiet'){
                                     s.log(e,{type:lang['Process Unexpected Exit'],msg:{msg:lang['Process Crashed for Monitor'],cmd:s.group[e.ke].mon[e.id].ffmpeg}});
