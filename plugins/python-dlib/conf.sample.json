@@ -1,0 +1,10 @@
+{
+  "plug":"PythonDlib",
+  "host":"localhost",
+  "port":8080,
+  "pythonPort":7990,
+  "hostPort":8082,
+  "key":"SomeOpenALPRkeySoPeopleDontMessWithYourShinobi",
+  "mode":"client",
+  "type":"detector"
+}
