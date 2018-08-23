@@ -84,6 +84,7 @@ echo "Smoking pips..."
 pip3 install flask_socketio
 pip3 install flask
 pip3 install numpy
+pip3 install gevent gevent-websocket
 export PATH=/usr/local/cuda/bin:$PATH
 pip3 install lxml
 pip3 install numpy

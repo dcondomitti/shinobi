@@ -35,6 +35,14 @@ s.checkCorrectPathEnding=function(x){
     }
     return x.replace('__DIR__',__dirname)
 }
+s.debugLog = function(){
+    if(config.debugLog === true){
+        console.log(new Date(),arguments)
+        if(config.debugLogVerbose === true){
+            console.log(new Error())
+        }
+    }
+}
 if(!config.port){config.port=8080}
 if(!config.pythonScript){config.pythonScript=__dirname+'/pumpkin.py'}
 if(!config.pythonPort){config.pythonPort=7990}
@@ -96,9 +104,11 @@ s.detectObject=function(buffer,d,tx){
   }
   fs.writeFile(d.dir+d.tmpFile,buffer,function(err){
       if(err) return s.systemLog(err);
-      if(s.isPythonRunning === false)return console.log('Python Script is not Running.')
+      if(s.isPythonRunning === false){
+          return console.log('Python Script is not Running.')
+      }
       var callbackId = s.gid(10)
-      s.sendToPython({path:d.dir+d.tmpFile,id:callbackId},function(data){
+      s.group[d.ke][d.id].sendToPython({path:d.dir+d.tmpFile,id:callbackId},function(data){
           if(data.length > 0){
               var mats=[]
               data.forEach(function(v){
@@ -166,6 +176,7 @@ s.MainEventController=function(d,cn,tx){
                 }
                 if(!s.group[d.ke][d.id]){
                     s.group[d.ke][d.id]={
+                        sendToPython : s.createCameraBridgeToPython(d.ke+d.id)
                     }
                 }
                 if(!s.group[d.ke][d.id].buffer){
@@ -227,26 +238,31 @@ if(config.mode==='host'){
 }
 
 //Start Python Controller
-var pythonIo = socketIoClient('ws://localhost:'+config.pythonPort);
 s.callbacks = {}
-s.sendToPython = function(data,callback){
-    s.callbacks[data.id] = callback
-    pythonIo.emit('f',data)
-}
-pythonIo.on('connect',function(d){
-    console.log('Connected')
-})
-pythonIo.on('disconnect',function(d){
-    setTimeout(function(){
-        pythonIo.connect();
-        console.log('Disconnected')
-    },3000)
-})
-pythonIo.on('f',function(d){
-    if(s.callbacks[d.id]){
-        s.callbacks[d.id](d.data)
+s.createCameraBridgeToPython = function(uniqueId){
+    var pythonIo = socketIoClient('ws://localhost:'+config.pythonPort,{transports : ['websocket']});
+    var sendToPython = function(data,callback){
+        s.callbacks[data.id] = callback
+        pythonIo.emit('f',data)
     }
-})
+    pythonIo.on('connect',function(d){
+        s.debugLog(uniqueId+' is Connected from Python')
+    })
+    pythonIo.on('disconnect',function(d){
+        s.debugLog(uniqueId+' is Disconnected from Python')
+        setTimeout(function(){
+            pythonIo.connect();
+            s.debugLog(uniqueId+' is Attempting to Reconect to Python')
+        },3000)
+    })
+    pythonIo.on('f',function(d){
+        if(s.callbacks[d.id]){
+            s.callbacks[d.id](d.data)
+            delete(s.callbacks[d.id])
+        }
+    })
+    return sendToPython
+}
 
 
 //Start Python Daemon
@@ -255,25 +271,26 @@ s.createPythonProcess = function(){
     s.isPythonRunning = false
     s.pythonScript = spawn('sh',[__dirname+'/bootPy.sh',config.pythonScript,__dirname]);
     var onStdErr = function (data) {
-        console.log('Python ERR')
-        console.log(data.toString())
-        if(data.toString().indexOf('Done!') > -1){
+        s.debugLog('Python ERR')
+        data = data.toString()
+        s.debugLog(data)
+        if(data.indexOf('Done!') > -1){
+            console.log('PYTHON READY')
             s.isPythonRunning = true
-            onStdOut = function(){
-                console.log('Python ERR')
-                console.log(data.toString())
+            onStdErr = function(data){
+                s.debugLog(data.toString())
             }
         }
     }
     s.pythonScript.stderr.on('data',onStdErr);
 
     s.pythonScript.stdout.on('data', function (data) {
-        console.log('Python OUT')
-        console.log(data.toString())
+        s.debugLog('Python OUT')
+        s.debugLog(data.toString())
     });
 
     s.pythonScript.on('close', function () {
-        console.log('Python CLOSED')
+        s.debugLog('Python CLOSED')
     });
 }
 s.createPythonProcess()
