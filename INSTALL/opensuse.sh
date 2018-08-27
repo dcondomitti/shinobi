@@ -25,30 +25,38 @@ if [ ! -e "./super.json" ]; then
         sudo cp super.sample.json super.json
     fi
 fi
-echo "Shinobi - Run yum update"
+echo "Shinobi - Run zypper update"
 sudo zypper refresh
 sudo zypper install -y make
+echo "============="
+echo "Shinobi - Do you want to Install Node.js?"
+echo "(y)es or (N)o"
+NODEJSINSTALL=0
+read nodejsinstall
+if [ "$nodejsinstall" = "y" ] || [ "$nodejsinstall" = "Y" ]; then
+    sudo zypper install -y nodejs8
+    NODEJSINSTALL=1
+fi
 echo "============="
 echo "Shinobi - Do you want to Install FFMPEG?"
 echo "(y)es or (N)o"
 read ffmpeginstall
 if [ "$ffmpeginstall" = "y" ] || [ "$ffmpeginstall" = "Y" ]; then
-    echo "Shinobi - Do you want to Install FFMPEG with `apt` or download a static version provided with `npm`?"
-    echo "(a)pt or (N)pm"
-    echo "Press [ENTER] for default (npm)"
-    read ffmpegstaticinstall
-    if [ "$ffmpegstaticinstall" = "a" ] || [ "$ffmpegstaticinstall" = "A" ]; then
-        # Install ffmpeg and ffmpeg-devel
-        sudo zypper install -y ffmpeg ffmpeg-devel
+    # Without nodejs8 package we can't use npm command
+    if [ "$NODEJSINSTALL" -eq "1" ]; then
+        echo "Shinobi - Do you want to Install FFMPEG with `zypper --version` or download a static version provided with `npm --version`?"
+        echo "(z)ypper or (N)pm"
+        echo "Press [ENTER] for default (npm)"
+        read ffmpegstaticinstall
+        if [ "$ffmpegstaticinstall" = "z" ] || [ "$ffmpegstaticinstall" = "Z" ]; then
+            # Install ffmpeg and ffmpeg-devel
+            sudo zypper install -y ffmpeg ffmpeg-devel
+        else
+            sudo npm install ffmpeg-static@2.2.1
+        fi
     else
-        sudo npm install ffmpeg-static@2.2.1
+        sudo zypper install -y ffmpeg ffmpeg-devel
     fi
-fi
-echo "Shinobi - Do you want to Install Node.js?"
-echo "(y)es or (N)o"
-read nodejsinstall
-if [ "$nodejsinstall" = "y" ] || [ "$nodejsinstall" = "Y" ]; then
-    sudo zypper install -y nodejs8
 fi
 echo "============="
 echo "Shinobi - Do you want to use MariaDB or SQLite3?"
