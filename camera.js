@@ -2113,7 +2113,6 @@ s.ffmpeg = function(e){
     if(e.details.cust_stream&&e.details.cust_stream!==''){x.cust_stream=' '+e.details.cust_stream}else{x.cust_stream=''}
     //stream - preset
     if(e.details.stream_type !== 'h265' && e.details.preset_stream && e.details.preset_stream !== ''){x.preset_stream=' -preset '+e.details.preset_stream;}else{x.preset_stream=''}
-    //stream - quality
     //hardware acceleration
     if(e.details.accelerator && e.details.accelerator==='1' && e.isStreamer === false){
         if(e.details.hwaccel&&e.details.hwaccel!==''){
@@ -2283,6 +2282,9 @@ s.ffmpeg = function(e){
         }
         if(!e.details.detector_buffer_acodec||e.details.detector_buffer_acodec===''||e.details.detector_buffer_acodec==='auto'){
             switch(e.type){
+                case'mjpeg':case'jpeg':case'socket':
+                    e.details.detector_buffer_acodec = 'no'
+                break;
                 case'h264':case'hls':case'mp4':
                     e.details.detector_buffer_acodec = 'copy'
                 break;
@@ -2424,7 +2426,7 @@ s.file=function(x,e){
 s.event = function(x,e,cn){
     switch(x){
         case'trigger':
-            var d=e;
+            var d = e;
             var filter = {
                 halt : false,
                 addToMotionCounter : true,
@@ -3693,18 +3695,6 @@ s.camera=function(x,e,cn,tx){
                                    s.group[e.ke].mon[e.id].emitter.emit('data',d);
                                }
                            break;
-//                               case'pam':
-//                                   s.group[e.ke].mon[e.id].p2pStream = new P2P();
-//                                   s.group[e.ke].mon[e.id].spawn.stdout.pipe(s.group[e.ke].mon[e.id].p2pStream)
-//                                   s.group[e.ke].mon[e.id].p2pStream.on('pam',function(d){
-//                                       resetStreamCheck()
-//                                       s.tx({f:'pam_frame',ke:e.ke,id:e.id,imageData:{
-//                                           data : d.pixels,
-//                                           height : d.height,
-//                                           width : d.width
-//                                       }},'MON_STREAM_'+e.id);
-//                                    })
-//                               break;
                            case'b64':case undefined:case null:case'':
                                var buffer
                                e.frame_to_stream=function(d){
@@ -3978,6 +3968,7 @@ s.pluginInitiatorSuccess=function(mode,d,cn){
     s.api[d.plug]={pluginEngine:d.plug,permissions:{},details:{},ip:'0.0.0.0'};
 }
 s.pluginInitiatorFail=function(mode,d,cn){
+    if(s.connectedPlugins[d.plug])s.connectedPlugins[d.plug].plugged=false
     if(mode==='client'){
         //is in client mode (camera.js is client)
         cn.disconnect()
@@ -4050,7 +4041,7 @@ var tx;
             }
         }
     })
-    //unique Base64 socket stream
+    //unique h265 socket stream
     cn.on('h265',function(d){
         if(!s.group[d.ke]||!s.group[d.ke].mon||!s.group[d.ke].mon[d.id]){
             cn.disconnect();return;
