@@ -25,7 +25,7 @@ if [ ! -e "./super.json" ]; then
         sudo cp super.sample.json super.json
     fi
 fi
-echo "Shinobi - Run zypper update"
+echo "Shinobi - Run zypper refresh"
 sudo zypper refresh
 sudo zypper install -y make
 echo "============="
