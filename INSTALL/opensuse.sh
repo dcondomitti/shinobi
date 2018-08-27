@@ -44,7 +44,7 @@ read ffmpeginstall
 if [ "$ffmpeginstall" = "y" ] || [ "$ffmpeginstall" = "Y" ]; then
     # Without nodejs8 package we can't use npm command
     if [ "$NODEJSINSTALL" -eq "1" ]; then
-        echo "Shinobi - Do you want to Install FFMPEG with `zypper --version` or download a static version provided with `npm --version`?"
+        echo "Shinobi - Do you want to Install FFMPEG with `zypper --version` or download a static version provided with npm `npm --version`?"
         echo "(z)ypper or (N)pm"
         echo "Press [ENTER] for default (npm)"
         read ffmpegstaticinstall
