@@ -59,6 +59,8 @@ echo "Installing Dlib..."
 cd /opt
 git clone https://github.com/davisking/dlib.git dlib
 cd dlib
-python3 setup.py install --yes DLIB_USE_CUDA
+cmake -DCUDA_CUDART_LIBRARY=/usr/local/cuda/lib64/libcudart.so
+make install
+pip3 install dlib
 echo "Start the plugin with pm2 like so :"
 echo "pm2 start shinobi-python-dlib.js"
