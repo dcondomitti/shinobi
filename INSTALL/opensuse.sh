@@ -6,9 +6,12 @@ echo "To answer yes type the letter (y) in lowercase and press ENTER."
 echo "Default is no (N). Skip any components you already have or don't need."
 echo "============="
 if [ ! -e "./conf.json" ]; then
-    sudo cp conf.sample.json conf.json
+    cp conf.sample.json conf.json
 fi
 if [ ! -e "./super.json" ]; then
+    echo "Default Superuser : admin@shinobi.video"
+    echo "Default Password : admin"
+    sudo cp super.sample.json super.json
     echo "Shinobi - Do you want to enable superuser access?"
     echo "This may be useful if passwords are forgotten or"
     echo "if you would like to limit accessibility of an"
@@ -22,48 +25,37 @@ if [ ! -e "./super.json" ]; then
         sudo cp super.sample.json super.json
     fi
 fi
+echo "Shinobi - Run zypper refresh"
+sudo zypper refresh
+sudo zypper install -y make
+echo "============="
 echo "Shinobi - Do you want to Install Node.js?"
 echo "(y)es or (N)o"
+NODEJSINSTALL=0
 read nodejsinstall
 if [ "$nodejsinstall" = "y" ] || [ "$nodejsinstall" = "Y" ]; then
-    wget https://deb.nodesource.com/setup_8.x
-    chmod +x setup_8.x
-    ./setup_8.x
-    sudo apt install nodejs -y
+    sudo zypper install -y nodejs8
+    NODEJSINSTALL=1
 fi
-sudo apt install make -y
 echo "============="
 echo "Shinobi - Do you want to Install FFMPEG?"
 echo "(y)es or (N)o"
 read ffmpeginstall
 if [ "$ffmpeginstall" = "y" ] || [ "$ffmpeginstall" = "Y" ]; then
-    echo "Shinobi - Do you want to Install FFMPEG with `apt` or download a static version provided with `npm`?"
-    echo "(a)pt or (N)pm"
-    echo "Press [ENTER] for default (npm)"
-    read ffmpegstaticinstall
-    if [ "$ffmpegstaticinstall" = "a" ] || [ "$ffmpegstaticinstall" = "A" ]; then
-        #Detect Ubuntu Version
-        echo "============="
-        echo " Detecting Ubuntu Version"
-        echo "============="
-        declare -i getubuntuversion=$(lsb_release -r | awk '{print $2}' | cut -d . -f1)
-        echo "============="
-        echo " Ubuntu Version: $getubuntuversion"
-        echo "============="
-        if [[ "$getubuntuversion" == "16" || "$getubuntuversion" < "16" ]]; then
-            echo "============="
-            echo "Shinobi - Get FFMPEG 3.x from ppa:jonathonf/ffmpeg-3"
-            sudo add-apt-repository ppa:jonathonf/ffmpeg-3 -y
-            sudo apt update -y && sudo apt install ffmpeg libav-tools x264 x265 -y
-            echo "============="
+    # Without nodejs8 package we can't use npm command
+    if [ "$NODEJSINSTALL" -eq "1" ]; then
+        echo "Shinobi - Do you want to Install FFMPEG with `zypper --version` or download a static version provided with npm `npm --version`?"
+        echo "(z)ypper or (N)pm"
+        echo "Press [ENTER] for default (npm)"
+        read ffmpegstaticinstall
+        if [ "$ffmpegstaticinstall" = "z" ] || [ "$ffmpegstaticinstall" = "Z" ]; then
+            # Install ffmpeg and ffmpeg-devel
+            sudo zypper install -y ffmpeg ffmpeg-devel
         else
-            echo "============="
-            echo "Shinobi - Installing FFMPEG"
-            sudo apt install ffmpeg -y
-            echo "============="
+            sudo npm install ffmpeg-static@2.2.1
         fi
     else
-        sudo npm install ffmpeg-static@2.2.1
+        sudo zypper install -y ffmpeg ffmpeg-devel
     fi
 fi
 echo "============="
@@ -75,7 +67,7 @@ echo "Press [ENTER] for default (MariaDB)"
 read sqliteormariadb
 if [ "$sqliteormariadb" = "S" ] || [ "$sqliteormariadb" = "s" ]; then
     sudo npm install jsonfile
-    sudo apt-get install sqlite3 libsqlite3-dev -y
+    sudo zypper install -y sqlite3 sqlite3-devel
     sudo npm install sqlite3
     node ./tools/modifyConfiguration.js databaseType=sqlite3
     if [ ! -e "./shinobi.sqlite" ]; then
@@ -85,32 +77,27 @@ if [ "$sqliteormariadb" = "S" ] || [ "$sqliteormariadb" = "s" ]; then
         echo "shinobi.sqlite already exists. Continuing..."
     fi
 else
-    echo "Shinobi - Do you want to Install MariaDB? Choose No if you already have it."
+    echo "============="
+    echo "Shinobi - Do you want to Install MariaDB?"
     echo "(y)es or (N)o"
     read mysqlagree
     if [ "$mysqlagree" = "y" ] || [ "$mysqlagree" = "Y" ]; then
-        echo "Shinobi - Installing MariaDB"
-        echo "Password for root SQL user, If you are installing SQL now then you may put anything:"
-        read sqlpass
-        echo "mariadb-server mariadb-server/root_password password $sqlpass" | debconf-set-selections
-        echo "mariadb-server mariadb-server/root_password_again password $sqlpass" | debconf-set-selections
-        sudo apt install mariadb-server -y
-        sudo service mysql start
+        sudo zypper install -y mariadb
+        #Start mysql and enable on boot
+        sudo systemctl start mariadb
+        sudo systemctl enable mariadb
+        #Run mysql install
+        sudo mysql_secure_installation
     fi
     echo "============="
     echo "Shinobi - Database Installation"
     echo "(y)es or (N)o"
     read mysqlagreeData
     if [ "$mysqlagreeData" = "y" ] || [ "$mysqlagreeData" = "Y" ]; then
-        if [ "$mysqlagree" = "y" ] || [ "$mysqlagree" = "Y" ]; then
-            sqluser="root"
-        fi
-        if [ ! "$mysqlagree" = "y" ]; then
-            echo "What is your SQL Username?"
-            read sqluser
-            echo "What is your SQL Password?"
-            read sqlpass
-        fi
+        echo "What is your SQL Username?"
+        read sqluser
+        echo "What is your SQL Password?"
+        read sqlpass
         sudo mysql -u $sqluser -p$sqlpass -e "source sql/user.sql" || true
         sudo mysql -u $sqluser -p$sqlpass -e "source sql/framework.sql" || true
         echo "Shinobi - Do you want to create a new user for viewing and managing cameras in Shinobi? You can do this later in the Superuser panel."
@@ -147,9 +134,7 @@ else
 fi
 echo "============="
 echo "Shinobi - Install NPM Libraries"
-sudo npm i npm -g
-sudo npm install --unsafe-perm
-sudo npm audit fix --unsafe-perm
+sudo npm install
 echo "============="
 echo "Shinobi - Install PM2"
 sudo npm install pm2 -g
@@ -168,7 +153,7 @@ fi
 echo "Shinobi - Start Shinobi and set to start on boot?"
 echo "(y)es or (N)o"
 read startShinobi
-if [ "$startShinobi" = "y" ] || [ "$startShinobi" = "y" ]; then
+if [ "$startShinobi" = "y" ] || [ "$startShinobi" = "Y" ]; then
     sudo pm2 start camera.js
     sudo pm2 start cron.js
     sudo pm2 startup
@@ -191,7 +176,7 @@ if [ ! "$sqliteormariadb" = "M" ] && [ ! "$sqliteormariadb" = "m" ]; then
     echo "====================================="
     echo "|| Login with the Superuser and create a new user!!"
     echo "||==================================="
-    echo "|| Open http://$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'):8080/super in your web browser."
+    echo "|| Open http://$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1):8080/super in your web browser."
     echo "||==================================="
     echo "|| Default Superuser : admin@shinobi.video"
     echo "|| Default Password : admin"
@@ -200,6 +185,6 @@ if [ ! "$sqliteormariadb" = "M" ] && [ ! "$sqliteormariadb" = "m" ]; then
 else
     echo "+=================================+"
     echo "||=====   Install Completed   =====||"
-    echo "|| Access the main Shinobi panel at http://$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'):8080 in your web browser."
+    echo "|| Access the main Shinobi panel at http://$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1):8080 in your web browser."
     echo "+=================================+"
-fi
+fi 

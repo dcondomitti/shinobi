@@ -41,7 +41,9 @@ if ( $mysqlagreeData == "y" ) then
 endif
 echo "============="
 echo "Shinobi - Install NPM Libraries"
-npm install
+npm i npm -g
+npm install --unsafe-perm
+npm audit fix --unsafe-perm
 echo "============="
 echo "Shinobi - Install PM2"
 npm install pm2 -g

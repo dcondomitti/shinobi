@@ -1,0 +1,249 @@
+<!--Detector Filter Window-->
+<div class="modal full fade dark" id="detector_filter" tabindex="-1" role="dialog" aria-labelledby="detector_filterLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <form class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <h4 class="modal-title" id="detector_filterLabel"><i class="fa fa-grav"></i> &nbsp; <%-lang['Detector Filters']%></h4>
+      </div>
+      <div class="modal-body">
+          <div class="form-group-group green">
+              <h4><%- lang['Saved Filters'] %> : <small class="filter_name"></small></h4>
+                <div class="form-group">
+                    <label>
+                        <div><span><%-lang.Filters%></span></div>
+                        <div><select id="detector_filters" class="form-control">
+                            <option value=""><%-lang['Add New']%></option>
+                            <optgroup label="Saved"></optgroup>
+                            </select></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%- lang['Filter Name'] %></span></div>
+                        <div><input class="form-control" name="id" type="hidden">
+                        <input class="form-control" name="filter_name"></div>
+                    </label>
+                </div>
+          </div>
+          <div class="form-group-group blue where">
+              <h4>Conditions
+                <div class="pull-right">
+                    <a class="btn btn-success btn-xs add">&nbsp;<i class="fa fa-plus"></i>&nbsp;</a> 
+                    <a class="btn btn-danger btn-xs remove">&nbsp;<i class="fa fa-trash-o"></i>&nbsp;</a>  
+                </div>
+              </h4>
+              <div id="detector_filters_where"></div>
+          </div>
+          <div class="form-group-group red actions">
+                <h4><%- lang['Action for Selected'] %></h4>
+          <% 
+            var possibleActions = [
+                {
+                  "name": "halt",
+                  "field": "Drop Event",
+                  "description": "Make the event do nothing, as if it never happened.",
+                  "default": "No",
+                  "example": "",
+                  "possible": [
+                     {
+                        "name": "No",
+                        "value": "0",
+                        "info": "Allow other functions to continue.",
+                         selected:true
+                     },
+                     {
+                        "name": "Yes",
+                        "value": "1",
+                        "info": "Use Traditional Recording, Hotswap, or Delete Motionless with their currently set options in the Global Detection Settings section."
+                     }
+                  ]
+                },
+                {
+                  "name": "save",
+                  "field": "Save Events to SQL",
+                  "description": "Save Motion Events in SQL. This will allow display of motion over video during the time motion events occured in the Power Viewer.",
+                  "default": "Yes",
+                  "example": "",
+                  "possible": [
+                     {
+                        "name": "Default",
+                        "value": "",
+                        "info": "Use values set in Global Detector Settings.",
+                        "selected": true
+                     },
+                     {
+                        "name": "No",
+                        "value": "0",
+                        "info": "Finish the current 10 minute order."
+                     },
+                     {
+                        "name": "Yes",
+                        "value": "1",
+                        "info": "Reset the timer"
+                     }
+                  ]
+                },
+                {
+                  "name": "mail",
+                  "field": "Email on Trigger",
+                  "description": "Recieve an email of an image during a motion event to the master account for the camera group. You must setup SMTP details in conf.json.",
+                  "default": "No",
+                  "example": "1",
+                  "possible": [
+                     {
+                        "name": "Default",
+                        "value": "",
+                        "info": "Use values set in Global Detector Settings.",
+                        "selected": true
+                     },
+                     {
+                        "name": "No",
+                        "value": "0",
+                        "info": "No Email."
+                     },
+                     {
+                        "name": "Yes",
+                        "value": "1",
+                        "info": "Send Email."
+                     }
+                  ]
+                },
+                {
+                  "name": "webhook",
+                  "field": "Webhook on Trigger",
+                  "description": "Send a GET request during an event to the URL specified. Webhook location can be specified in the Global Detector Settings for the Monitor.",
+                  "default": "No",
+                  "example": "1",
+                  "possible": [
+                     {
+                        "name": "Default",
+                        "value": "",
+                        "info": "Use values set in Global Detector Settings.",
+                        "selected": true
+                     },
+                     {
+                        "name": "No",
+                        "value": "0",
+                        "info": "No Webhook."
+                     },
+                     {
+                        "name": "Yes",
+                        "value": "1",
+                        "info": "Send Webhook."
+                     }
+                  ]
+                },
+                {
+                  "name": "discord",
+                  "field": "Discord Alert on Trigger",
+                  "description": "Recieve a Discord Notification with an image or video during an event to the Discord channel specified. Discord Bot and Channel settings can be changed in your Account Settings.",
+                  "default": "No",
+                  "example": "1",
+                  "possible": [
+                     {
+                        "name": "Default",
+                        "value": "",
+                        "info": "Use values set in Global Detector Settings.",
+                        "selected": true
+                     },
+                     {
+                        "name": "No",
+                        "value": "0",
+                        "info": "No Alert."
+                     },
+                     {
+                        "name": "Yes",
+                        "value": "1",
+                        "info": "Get a Message to Discord."
+                     }
+                  ]
+               },
+               {
+                  "name": "command",
+                  "field": "Detector Command",
+                  "description": "You may use this to trigger a script on command.",
+                  "default": "No",
+                  "example": "",
+                  "possible": [
+                     {
+                        "name": "Default",
+                        "value": "",
+                        "info": "Use values set in Global Detector Settings.",
+                        "selected": true
+                     },
+                     {
+                        "name": "No",
+                        "value": "0",
+                        "info": "No script will run."
+                     },
+                     {
+                        "name": "Yes",
+                        "value": "1",
+                        "info": "Trigger the script that is set in the <b>Command</b> option. <b>Command</b> is only visible when selecting this option."
+                     }
+                  ]
+               },
+               {
+                  "name": "record",
+                  "field": "Use Record Method",
+                  "description": "Use Traditional Recording, Hotswap, or Delete Motionless with their currently set options in the Global Detection Settings section.",
+                  "default": "No",
+                  "example": "",
+                  "possible": [
+                     {
+                        "name": "Default",
+                        "value": "",
+                        "info": "Use values set in Global Detector Settings.",
+                        "selected": true
+                     },
+                     {
+                        "name": "No",
+                        "value": "0",
+                        "info": "No Traditional Recording, Hotswap, or Delete Motionless."
+                     },
+                     {
+                        "name": "Yes",
+                        "value": "1",
+                        "info": "Use Traditional Recording, Hotswap, or Delete Motionless with their currently set options in the Global Detection Settings section."
+                     }
+                  ]
+               },
+            ].forEach(function(item){ %>
+              <%
+                var name = 'actions='+item.name
+                if(item.name.indexOf('=') > -1){
+                    name = item.name
+                }
+              %>
+                <div class="form-group actions-row">
+                    <label>
+                        <div>
+                            <span>
+                                <%-item.field%>
+                                <small><%-item.description%></small>
+                            </span>
+                        </div>
+                        <div>
+                            <select <%- name %> class="form-control">
+                                <% item.possible.forEach(function(option){ %>
+                                    <option value="<%-option.value%>"><%-option.name%></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                    </label>
+                </div>
+            <% }) %>
+          </div>
+      </div>
+      <div class="modal-footer">
+          <div class="pull-left">
+            <button type="button" class="btn btn-default" data-dismiss="modal"><%- lang['Close'] %></button>
+            <button type="button" class="btn btn-danger delete"><%- lang['Delete'] %></button>
+          </div>
+        <button type="submit" class="btn btn-success"><%- lang['Save'] %></button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -20,6 +20,7 @@ if(data.url.charAt(data.url.length - 1) !== '/'){
 <script src="<%=data.url%>libs/js/poseidon.js"></script>
 <script src="<%=data.url%>libs/js/hls.min.js"></script>
 <script src="<%=data.url%>libs/js/flv.min.js"></script>
+<script src="<%=data.url%>libs/js/libde265.min.js"></script>
 <% if(data.addon){
     var ar={}
     decodeURI(data.addon).split('|').forEach(function(v){
@@ -133,7 +134,7 @@ $(document).ready(function(){
 })
 </script>
 <div class="shinobi_stream" id="<%= data.name %>">
-    
+
     <% switch(mon.details.stream_type){
         case'jpeg':
             %><img class="stream-element"><%
@@ -148,8 +149,8 @@ $(document).ready(function(){
             %><canvas class="stream-element"></canvas><%
         break;
     } %>
-    
-    
+
+
 <% if(data.addon&&data.addon.indexOf('gui')>-1){ %>
     <div class="shinobi_hud">
         <div class="shinobi_viewers" title="Current number of viewers"></div>
@@ -170,11 +171,30 @@ $(document).ready(function(){
                 $.shinobi.mon={}
             };
             $.shinobi.init=function(d){
+                  if($.shinobi.mon[d.id].Base64 && $.shinobi.mon[d.id].Base64.connected){
+                      $.shinobi.mon[d.id].Base64.disconnect()
+                  }
+                  if($.shinobi.mon[d.id].Poseidon){
+                      $.shinobi.mon[d.id].Poseidon.destroy()
+                  }
+                  if ($.shinobi.mon[d.id].h265Player) {
+                      $.shinobi.mon[d.id].h265Player.stop()
+                  }
+                  if($.shinobi.mon[d.id].h265Socket && $.shinobi.mon[d.id].h265Socket.connected){
+                      $.shinobi.mon[d.id].h265Socket.disconnect()
+                  }
+                  if($.shinobi.mon[d.id].h265HttpStream && $.shinobi.mon[d.id].abort){
+                      $.shinobi.mon[d.id].h265HttpStream.abort()
+                  }
+                  if($.shinobi.mon[d.id].flv){
+                      $.shinobi.mon[d.id].flv.destroy()
+                  }
+                  if($.shinobi.mon[d.id].hls){
+                      $.shinobi.mon[d.id].hls.destroy()
+                  }
+                  clearInterval($.shinobi.mon[d.id].jpegInterval);
                   switch($.shinobi.mon[d.id].details.stream_type){
                     case'b64':
-                        if($.shinobi.mon[d.id].Base64 && $.shinobi.mon[d.id].Base64.connected){
-                            $.shinobi.mon[d.id].Base64.disconnect()
-                        }
                         $.shinobi.mon[d.id].Base64 = io('<%=data.url%>',{transports: ['websocket'], forceNew: false})
                         var ws = $.shinobi.mon[d.id].Base64
                         ws.on('diconnect',function(){
@@ -209,7 +229,7 @@ $(document).ready(function(){
         //                        }
         //                        ctx.getContext("2d").drawImage(image,d.x,d.y,d.width,d.height)
                                 ctx.getContext("2d").drawImage(image,d.x,d.y,ctx.width,ctx.height)
-                                URL.revokeObjectURL($.ccio.mon[d.ke+d.id+user.auth_token].imageUrl)
+                                URL.revokeObjectURL($.shinobi.mon[d.id].imageUrl)
                             }
                             ws.on('data',function(imageData){
                                 try{
@@ -232,9 +252,6 @@ $(document).ready(function(){
                     case'mp4':
                         var stream = $('#SHINOBI_'+d.ke+'_'+d.id+' .stream-element');
                         if($.shinobi.mon[d.id].details.stream_flv_type==='ws'){
-                            if($.shinobi.mon[d.id].Poseidon){
-                                $.shinobi.mon[d.id].Poseidon.destroy()
-                            }
                             var createPoseidon = function(){
                                 $.shinobi.mon[d.id].Poseidon = new Poseidon({
                                     video: stream[0],
@@ -261,11 +278,38 @@ $(document).ready(function(){
                             stream.attr('src','<%=data.url%><%=data.auth%>/mp4/'+d.ke+'/'+d.id+'/s.mp4')
                         }
                     break;
+                    case'h265':
+                        var player = $.shinobi.mon[d.id].h265Player
+                        var video = $('#SHINOBI_'+d.ke+'_'+d.id+' .stream-element')[0]
+                        player = new libde265.RawPlayer(video)
+                        player.set_status_callback(function(msg, fps) {
+                        })
+                        player.launch()
+                        if($.shinobi.mon[d.id].details.stream_flv_type==='ws'){
+                          $.shinobi.mon[d.id].h265Socket = io(url,{transports: ['websocket'], forceNew: false})
+                          var ws = $.shinobi.mon[d.id].h265Socket
+                          ws.on('diconnect',function(){
+                              console.log('h265Socket Stream Disconnected')
+                          })
+                          ws.on('connect',function(){
+                              ws.emit('h265',{
+                                auth:'<%=data.auth%>',
+                                ke:d.ke,
+                                uid:'<%=data.uid%>',
+                                id:d.id,
+                                url: '<%=data.url%>'
+  //                                channel: channel
+                              })
+                              ws.on('data',function(imageData){
+                                  player._handle_onChunk(imageData)
+                              })
+                          })
+                        }else{
+                          $.shinobi.mon[d.id].h265HttpStream = player.createHttpStream('<%=data.url%><%=data.auth%>/h265/'+d.ke+'/'+d.id+'/s.hevc')
+                        }
+                    break;
                     case'flv':
                         if (flvjs.isSupported()) {
-                            if($.shinobi.mon[d.id].flv){
-                                $.shinobi.mon[d.id].flv.destroy()
-                            }
                             var options = {};
 //                            if($.shinobi.mon[d.id].details.stream_flv_type==='ws'){
 //                                if($.shinobi.mon[d.id].details.stream_flv_maxLatency&&$.shinobi.mon[d.id].details.stream_flv_maxLatency!==''){
@@ -307,9 +351,9 @@ $(document).ready(function(){
                         k=d.mon.details;
                         k.jpegInterval=parseFloat(k.jpegInterval);
                         if(!k.jpegInterval||k.jpegInterval===''||isNaN(k.jpegInterval)){k.jpegInterval=1}
-                        if(!$.shinobi.mon[d.mon.mid].jpegInterval){
-                            clearInterval($.shinobi.mon[d.mon.mid].jpegInterval);
-                            $.shinobi.mon[d.mon.mid].jpegInterval=setInterval(function(){
+                        if(!$.shinobi.mon[d.id].jpegInterval){
+                            clearInterval($.shinobi.mon[d.id].jpegInterval);
+                            $.shinobi.mon[d.id].jpegInterval=setInterval(function(){
                                 $('#SHINOBI_'+d.ke+'_'+d.id+' .stream-element').attr('src','<%=data.url%><%=data.auth%>/jpeg/'+d.mon.ke+'/'+d.mon.mid+'/s.jpg?time='+(new Date()).getTime())
                             },1000/k.jpegInterval);
                         }
@@ -317,9 +361,6 @@ $(document).ready(function(){
                     case'hls':
                     var video = $('#SHINOBI_'+d.ke+'_'+d.id+' .stream-element')[0];
                     d.url='<%=data.url%><%=data.auth%>/hls/'+d.ke+'/'+d.id+'/s.m3u8';
-                    if($.shinobi.mon[d.id].hls){
-                        $.shinobi.mon[d.id].hls.destroy()
-                    }
                     if (navigator.userAgent.match(/(iPod|iPhone|iPad)/)||(navigator.userAgent.match(/(Safari)/)&&!navigator.userAgent.match('Chrome'))) {
                         video.src=d.url;
                         video.play();
@@ -386,7 +427,7 @@ $(document).ready(function(){
                         $(window).resize();
 //                        d.mon.details=JSON.stringify(d.mon.details);
                         d.mon.id = d.mon.mid
-                        $.shinobi.mon[d.mon.mid]=d.mon;
+                        $.shinobi.mon[d.id] = d.mon;
                         $.shinobi.init(d.mon);
                     break;
                   }
