@@ -2573,6 +2573,10 @@ s.event = function(x,e,cn){
                         .replace(/{{MONITOR_ID}}/g,d.id)
                         .replace(/{{GROUP_KEY}}/g,d.ke)
                         .replace(/{{DETAILS}}/g,detailString)
+                    if(d.details.confidence){
+                        detector_webhook_url = detector_webhook_url
+                        .replace(/{{CONFIDENCE}}/g,d.details.confidence)
+                    }
                     request({url:detector_webhook_url,method:'GET',encoding:null},function(err,data){
                         if(err){
                             s.log(d,{type:lang["Event Webhook Error"],msg:{error:err,data:data}})
