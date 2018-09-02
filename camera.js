@@ -893,7 +893,7 @@ s.init=function(x,e,k,fn){
                         //disk Used Emitter
                         if(!s.group[e.ke].diskUsedEmitter){
                             s.group[e.ke].diskUsedEmitter = new events.EventEmitter()
-                            s.group[e.ke].diskUsedEmitter.on('data',function(currentChange){
+                            s.group[e.ke].diskUsedEmitter.on('set',function(currentChange){
                                 //validate current values
                                 if(!s.group[e.ke].usedSpace){
                                     s.group[e.ke].usedSpace=0
@@ -908,8 +908,7 @@ s.init=function(x,e,k,fn){
                                 //remove value just used from queue
                                 s.init('diskUsedEmit',e)
                             })
-                            s.group[e.ke].diskPurgedEmitter = new events.EventEmitter()
-                            s.group[e.ke].diskPurgedEmitter.on('data',function(currentPurge){
+                            s.group[e.ke].diskUsedEmitter.on('purge',function(currentPurge){
                                 s.init('diskUsedSet',e,currentPurge.filesizeMB)
                                 if(config.cron.deleteOverMax===true){
                                         //set queue processor
@@ -1000,7 +999,7 @@ s.init=function(x,e,k,fn){
         break;
         case'diskUsedSet':
             //`k` will be used as the value to add or substract
-            s.group[e.ke].diskUsedEmitter.emit('data',k)
+            s.group[e.ke].diskUsedEmitter.emit('set',k)
         break;
         case'monitorStatus':
 //            s.discordMsg({
@@ -1272,7 +1271,7 @@ s.video=function(x,e,k){
         break;
         case'diskUseUpdate'://sizePurgeQueue
             if(s.group[e.ke].init){
-                s.group[e.ke].diskPurgedEmitter.emit('data',k)
+                s.group[e.ke].diskUsedEmitter.emit('purge',k)
             }
         break;
         case'insertCompleted':
@@ -3540,9 +3539,10 @@ s.camera=function(x,e,cn,tx){
                         //start workers
                         if(e.type==='jpeg'){
                             if(!e.details.sfps||e.details.sfps===''){
-                                var capture_fps=parseFloat(e.details.sfps);
-                                if(isNaN(capture_fps)){capture_fps=1}
+                                e.details.sfps = 1
                             }
+                            var capture_fps = parseFloat(e.details.sfps);
+                            if(isNaN(capture_fps)){capture_fps = 1}
                             if(s.group[e.ke].mon[e.id].spawn){
                                 s.group[e.ke].mon[e.id].spawn.stdin.on('error',function(err){
                                     if(err&&e.details.loglevel!=='quiet'){
