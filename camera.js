@@ -53,7 +53,7 @@ var jsonfile = require("jsonfile");
 var connectionTester = require('connection-tester');
 var events = require('events');
 var onvif = require('node-onvif');
-var onvifHawk = require('onvif-nvt');
+// var onvifHawk = require('onvif-nvt');
 var knex = require('knex');
 var Mp4Frag = require('mp4frag');
 var P2P = require('pipe2pam');
@@ -522,9 +522,6 @@ s.createPamDiffEngine = function(e){
         }
         detectorObject.doObjectDetection = (s.ocv && e.details.detector_use_detect_object === '1')
         s.event('trigger',detectorObject)
-        if(detectorObject.doObjectDetection === true){
-            s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:s.group[e.ke].mon[e.id].lastJpegDetectorFrame});
-        }
     }
     var filterTheNoise = function(trigger){
         if(noiseFilterArray[trigger.name].length > 2){
@@ -2407,7 +2404,8 @@ s.event = function(x,e,cn){
                 webhook : true,
                 command : true,
                 mail : true,
-                record : true
+                record : true,
+                indifference : false
             }
             if(s.group[d.ke].mon[d.id].open){
                 d.details.videoTime = s.group[d.ke].mon[d.id].open;
@@ -2470,7 +2468,6 @@ s.event = function(x,e,cn){
                                     }
                                 break;
                                 default:
-                                    var cmd = 'param '+condition.p2+' "'+condition.p3.replace(/"/g,'\\"')+'"'
                                     if(eval('param '+condition.p2+' "'+condition.p3.replace(/"/g,'\\"')+'"')){
                                         pass()
                                     }
@@ -2487,6 +2484,24 @@ s.event = function(x,e,cn){
                                     d.details.matrices.forEach(function(matrix,position){
                                         modifyFilters(matrix,position)
                                     })
+                                }
+                            break;
+                            case'time':
+                                var timeNow = new Date()
+                                var timeCondition = new Date()
+                                var doAtTime = condition.p3.split(':')
+                                var atHour = parseInt(doAtTime[0]) - 1
+                                var atHourNow = timeNow.getHours()
+                                var atMinuteNow = timeNow.getMinutes()
+                                var atSecondNow = timeNow.getSeconds()
+                                if(atHour){
+                                    var atMinute = parseInt(doAtTime[1]) - 1 || timeNow.getMinutes()
+                                    var atSecond = parseInt(doAtTime[2]) - 1 || timeNow.getSeconds()
+                                    var nowAddedInSeconds = atHourNow * 60 * 60 + atMinuteNow * 60 + atSecondNow
+                                    var conditionAddedInSeconds = atHour * 60 * 60 + atMinute * 60 + atSecond
+                                    if(eval('nowAddedInSeconds '+condition.p2+' conditionAddedInSeconds')){
+                                        conditionChain[place].ok = true
+                                    }
                                 }
                             break;
                             default:
@@ -2549,7 +2564,22 @@ s.event = function(x,e,cn){
                     return
                 }
             }
-            if(d.doObjectDetection !== true){
+            // check modified indifference
+            if(filter.indifference !== false && d.details.confidence < parseFloat(filter.indifference)){
+                // fails indifference check for modified indifference
+                return
+            }
+            //
+            if(d.doObjectDetection === true){
+                s.ocvTx({
+                    f : 'frame',
+                    mon : s.group[e.ke].mon_conf[e.id].details,
+                    ke : e.ke,
+                    id : e.id,
+                    time : s.formattedTime(),
+                    frame : s.group[e.ke].mon[e.id].lastJpegDetectorFrame
+                })
+            }else{
                 //save this detection result in SQL, only coords. not image.
                 if(filter.save && currentConfig.detector_save==='1'){
                     s.sqlQuery('INSERT INTO Events (ke,mid,details) VALUES (?,?,?)',[d.ke,d.id,detailString])
@@ -3273,66 +3303,66 @@ s.camera=function(x,e,cn,tx){
             }
             setStreamDir()
             //try to create HawkEye Onvif Object
-            if(e.details.is_onvif === '1'){
-                console.log('onvifHawk',e.hosty, e.porty.replace(':',''), e.username, e.password)
-                var doOnvifHawk = true
-                var errorCount = 0
-                var hawkFail = function(msg,callback){
-                    ++errorCount
-                    if(errorCount > 2){
-                        callback()
-                        s.log(e,msg);
-                    }
-                }
-                var createHawkOnvif = function(){
-                    if(doOnvifHawk === false){
-                        return false
-                    }
-                    if(!e.details.onvif_port || e.details.onvif_port === ''){
-                        e.details.onvif_port = 8000
-                    }
-                    onvifHawk.connect(e.hosty, e.details.onvif_port, e.username, e.password).then(function(results){
-                        var camera = results
-                        // if the camera supports events, the module will already be loaded.
-                        if (camera.events) {
-                            camera.events.soap.username = e.username
-                            camera.events.soap.password = e.password
-                            camera.events.on('messages', messages => {
-                                console.log('Messages Received:', (typeof messages))
-                            })
-                            camera.events.on('messages:error', error => {
-                                if(error.body.indexOf('anonymous') > -1){
-                                    hawkFail({type:lang.ONVIFEventsNotAvailable,msg:{msg:lang.ONVIFnotCompliantProfileT}},function(){
-                                        camera.events.stopPull()
-                                    })
-                                }
-                            })
-                            // start a pull event loop
-                            setTimeout(function(){
-                                camera.events.startPull()
-                            },3000)
-                            // call stopPull() to end the event loop
-                            // camera.events.stopPull()
-                            s.group[e.ke].mon[e.id].HawkEyeOnvifConnection = camera
-                        }
-                        if(s.group[e.ke].mon[e.id].HawkEyeOnvifConnection){
-                            console.log('Found')
-                        }else{
-                            console.log('Not Found')
-                        }
-                    }).catch(function(err){
-                        console.log('Error Connecting')
-                        console.log(err.code)
-                        hawkFail({type:lang.ONVIFEventsNotAvailable,msg:{msg:lang.ONVIFnotCompliantProfileT}},function(){
-                            doOnvifHawk = false
-                        })
-                        setTimeout(function(){
-                            createHawkOnvif()
-                        },3000)
-                    })
-                }
-                createHawkOnvif()
-            }
+            // if(e.details.is_onvif === '1'){
+            //     console.log('onvifHawk',e.hosty, e.porty.replace(':',''), e.username, e.password)
+            //     var doOnvifHawk = true
+            //     var errorCount = 0
+            //     var hawkFail = function(msg,callback){
+            //         ++errorCount
+            //         if(errorCount > 2){
+            //             callback()
+            //             s.log(e,msg);
+            //         }
+            //     }
+            //     var createHawkOnvif = function(){
+            //         if(doOnvifHawk === false){
+            //             return false
+            //         }
+            //         if(!e.details.onvif_port || e.details.onvif_port === ''){
+            //             e.details.onvif_port = 8000
+            //         }
+            //         onvifHawk.connect(e.hosty, e.details.onvif_port, e.username, e.password).then(function(results){
+            //             var camera = results
+            //             // if the camera supports events, the module will already be loaded.
+            //             if (camera.events) {
+            //                 camera.events.soap.username = e.username
+            //                 camera.events.soap.password = e.password
+            //                 camera.events.on('messages', messages => {
+            //                     console.log(messages.data.PullMessagesResponse.NotificationMessage.Message.Message.Data)
+            //                 })
+            //                 camera.events.on('messages:error', error => {
+            //                     if(error.body.indexOf('anonymous') > -1){
+            //                         hawkFail({type:lang.ONVIFEventsNotAvailable,msg:{msg:lang.ONVIFnotCompliantProfileT}},function(){
+            //                             camera.events.stopPull()
+            //                         })
+            //                     }
+            //                 })
+            //                 // start a pull event loop
+            //                 setTimeout(function(){
+            //                     camera.events.startPull()
+            //                 },3000)
+            //                 // call stopPull() to end the event loop
+            //                 // camera.events.stopPull()
+            //                 s.group[e.ke].mon[e.id].HawkEyeOnvifConnection = camera
+            //             }
+            //             if(s.group[e.ke].mon[e.id].HawkEyeOnvifConnection){
+            //                 console.log('Found')
+            //             }else{
+            //                 console.log('Not Found')
+            //             }
+            //         }).catch(function(err){
+            //             console.log('Error Connecting')
+            //             console.log(err.code)
+            //             hawkFail({type:lang.ONVIFEventsNotAvailable,msg:{msg:lang.ONVIFnotCompliantProfileT}},function(){
+            //                 doOnvifHawk = false
+            //             })
+            //             // setTimeout(function(){
+            //             //     createHawkOnvif()
+            //             // },3000)
+            //         })
+            //     }
+            //     createHawkOnvif()
+            // }
             //set up fatal error handler
             if(e.details.fatal_max===''){
                 e.details.fatal_max = 10

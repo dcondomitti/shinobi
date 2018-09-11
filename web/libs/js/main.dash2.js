@@ -1172,6 +1172,7 @@ switch($user.details.lang){
                 tmp+='               <option value="indifference" selected><%-cleanLang(lang['Indifference'])%></option>'
                 tmp+='               <option value="name"><%-cleanLang(lang['Region Name'])%></option>'
                 tmp+='               <option value="reason"><%-cleanLang(lang['Reason'])%></option>'
+                tmp+='               <option value="time"><%-cleanLang(lang['Time'])%></option>'
                 tmp+='               <option value="plug"><%-cleanLang(lang['Detection Engine'])%></option>'
                 tmp+='               <optgroup label="Matrix">'
                 tmp+='                  <option value="tag"><%-cleanLang(lang['Object Tag'])%></option>'
