@@ -4248,6 +4248,11 @@ $.detectorFilters.e.on('change','[where="p1"]',function(e){
     var p3 = parent.find('[where="p3"]')
     var options = []
     switch(p1v){
+        case'time':
+            options = [
+                '00:00:00'
+            ]
+        break;
         case'reason':
             options = [
                 'licensePlate',
@@ -4449,7 +4454,14 @@ $.sM.e.find('.linkShinobi .add').click(function(){
     $.sM.linkChange()
 })
 //videos window
-$.vidview={e:$('#videos_viewer'),pages:$('#videos_viewer_pages'),limit:$('#videos_viewer_limit'),dr:$('#videos_viewer_daterange'),preview:$('#videos_viewer_preview')};
+$.vidview={
+    e:$('#videos_viewer'),
+    pages:$('#videos_viewer_pages'),
+    limit:$('#videos_viewer_limit'),
+    dr:$('#videos_viewer_daterange'),
+    preview:$('#videos_viewer_preview'),
+    set:$('#videos_viewer_set')
+};
 $.vidview.f=$.vidview.e.find('form')
 $.vidview.dr.daterangepicker({
     startDate:$.ccio.timeObject().subtract(moment.duration("24:00:00")),
@@ -4478,7 +4490,7 @@ $.vidview.f.submit(function(e){
     $.vidview.launcher.click()
     return false;
 })
-$('#videos_viewer_limit,#videos_viewer_daterange').change(function(){
+$('#videos_viewer_limit,#videos_viewer_daterange,#videos_viewer_set').change(function(){
     $.vidview.f.submit()
 })
 $.vidview.getSelected = function(getArray){
@@ -5630,7 +5642,13 @@ $('body')
                 $.vidview.limit.val(e.limit)
             }
             e.dateRange=$('#videos_viewer_daterange').data('daterangepicker');
-            e.videoURL=$.ccio.init('location',user)+user.auth_token+'/videos/'+e.ke+'/'+e.mid+'?limit='+e.limit+'&start='+$.ccio.init('th',e.dateRange.startDate)+'&end='+$.ccio.init('th',e.dateRange.endDate);
+            var videoSet = 'videos'
+            switch($.vidview.set.val()){
+                case'cloud':
+                    videoSet = 'cloudVideos'
+                break;
+            }
+            e.videoURL=$.ccio.init('location',user)+user.auth_token+'/'+videoSet+'/'+e.ke+'/'+e.mid+'?limit='+e.limit+'&start='+$.ccio.init('th',e.dateRange.startDate)+'&end='+$.ccio.init('th',e.dateRange.endDate);
             $.getJSON(e.videoURL,function(d){
                 d.pages=d.total/100;
                 $('.video_viewer_total').text(d.total)

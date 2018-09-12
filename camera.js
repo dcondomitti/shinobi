@@ -1147,6 +1147,11 @@ s.video=function(x,e,k){
                 }
             })
         break;
+        case'deleteFromCloud':
+            s.sqlQuery('DELETE FROM `Cloud Videos` WHERE `mid`=? AND `ke`=? AND `time`=?',[e.id,e.ke,new Date(e.time)],function(){
+                s.tx({f:'video_delete_cloud',mid:e.mid,ke:e.ke,time:e.time,end:e.end},'GRP_'+e.ke);
+            })
+        break;
 //        case'open':
 //            //on video open
 //            e.save=[e.id,e.ke,s.nameToTime(e.filename),e.ext];
@@ -1255,14 +1260,20 @@ s.video=function(x,e,k){
                 }else{
                     queryString = ''
                 }
-                v.filename = s.formattedTime(v.time)+'.'+v.ext;
-                v.href = '/'+k+'/videos/'+v.ke+'/'+v.mid+'/'+v.filename;
-                v.links = {
-                    deleteVideo : v.href+'/delete' + queryString,
-                    changeToUnread : v.href+'/status/1' + queryString,
-                    changeToRead : v.href+'/status/2' + queryString
+                if(!v.ext && v.href){
+                    v.ext = v.href.split('.')
+                    v.ext = v.ext[v.ext.length - 1]
                 }
-                v.href = v.href + queryString
+                v.filename = s.formattedTime(v.time)+'.'+v.ext;
+                if(!k.videoParam)k.videoParam = 'videos'
+                var href = '/'+k.auth+'/'+k.videoParam+'/'+v.ke+'/'+v.mid+'/'+v.filename;
+                v.actionUrl = href
+                v.links = {
+                    deleteVideo : href+'/delete' + queryString,
+                    changeToUnread : href+'/status/1' + queryString,
+                    changeToRead : href+'/status/2' + queryString
+                }
+                if(!v.href)v.href = href + queryString
                 v.details = details
             })
         break;
@@ -1400,7 +1411,7 @@ s.video=function(x,e,k){
                                     e.mid,
                                     e.ke,
                                     k.startTime,
-                                    0,
+                                    1,
                                     '{}',
                                     k.filesize,
                                     k.endTime,
@@ -4749,7 +4760,9 @@ var tx;
                                                     getVideos(callback)
                                                 },2000)
                                             }else{
-                                                s.video('linkBuild',r,cn.auth)
+                                                s.video('linkBuild',r,{
+                                                    auth : cn.auth
+                                                })
                                                 callback({total:r.length,limit:d.videoLimit,videos:r})
                                             }
                                         })
@@ -6498,7 +6511,12 @@ app.get([config.webPaths.apiPrefix+':auth/monitor/:ke',config.webPaths.apiPrefix
     s.auth(req.params,req.fn,res,req);
 });
 // Get videos json
-app.get([config.webPaths.apiPrefix+':auth/videos/:ke',config.webPaths.apiPrefix+':auth/videos/:ke/:id'], function (req,res){
+app.get([
+    config.webPaths.apiPrefix+':auth/videos/:ke',
+    config.webPaths.apiPrefix+':auth/videos/:ke/:id',
+    config.webPaths.apiPrefix+':auth/cloudVideos/:ke',
+    config.webPaths.apiPrefix+':auth/cloudVideos/:ke/:id'
+], function (req,res){
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
@@ -6510,8 +6528,16 @@ app.get([config.webPaths.apiPrefix+':auth/videos/:ke',config.webPaths.apiPrefix+
             res.end(s.s([]))
             return
         }
-        req.sql='SELECT * FROM Videos WHERE ke=?';req.ar=[req.params.ke];
-        req.count_sql='SELECT COUNT(*) FROM Videos WHERE ke=?';req.count_ar=[req.params.ke];
+        var origURL = req.originalUrl.split('/')
+        var videoParam = origURL[origURL.indexOf(req.params.auth) + 1]
+        var videoSet = 'Videos'
+        switch(videoParam){
+            case'cloudVideos':
+                videoSet = 'Cloud Videos'
+            break;
+        }
+        req.sql='SELECT * FROM `'+videoSet+'` WHERE ke=?';req.ar=[req.params.ke];
+        req.count_sql='SELECT COUNT(*) FROM `'+videoSet+'` WHERE ke=?';req.count_ar=[req.params.ke];
         if(req.query.archived=='1'){
             req.sql+=' AND details LIKE \'%"archived":"1"\''
             req.count_sql+=' AND details LIKE \'%"archived":"1"\''
@@ -6584,10 +6610,13 @@ app.get([config.webPaths.apiPrefix+':auth/videos/:ke',config.webPaths.apiPrefix+
                 return
             }
             s.sqlQuery(req.count_sql,req.count_ar,function(err,count){
-                s.video('linkBuild',r,req.params.auth)
+                s.video('linkBuild',r,{
+                    auth : req.params.auth,
+                    videoParam : videoParam
+                })
                 if(req.query.limit.indexOf(',')>-1){
                     req.skip=parseInt(req.query.limit.split(',')[0])
-                    req.query.limit=parseInt(req.query.limit.split(',')[0])
+                    req.query.limit=parseInt(req.query.limit.split(',')[1])
                 }else{
                     req.skip=0
                     req.query.limit=parseInt(req.query.limit)
@@ -7233,7 +7262,12 @@ app.get(config.webPaths.apiPrefix+':auth/control/:ke/:id/:direction', function (
     },res,req);
 })
 //modify video file
-app.get([config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode',config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode/:f'], function (req,res){
+app.get([
+    config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode',
+    config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode/:f',
+    config.webPaths.apiPrefix+':auth/cloudVideos/:ke/:id/:file/:mode',
+    config.webPaths.apiPrefix+':auth/cloudVideos/:ke/:id/:file/:mode/:f'
+], function (req,res){
     req.ret={ok:false};
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -7247,7 +7281,15 @@ app.get([config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode',config.web
             time = s.utcToLocal(time)
         }
         time = new Date(time)
-        req.sql='SELECT * FROM Videos WHERE ke=? AND mid=? AND `time`=?';
+        var origURL = req.originalUrl.split('/')
+        var videoParam = origURL[origURL.indexOf(req.params.auth) + 1]
+        var videoSet = 'Videos'
+        switch(videoParam){
+            case'cloudVideos':
+                videoSet = 'Cloud Videos'
+            break;
+        }
+        req.sql='SELECT * FROM `'+videoSet+'` WHERE ke=? AND mid=? AND `time`=?';
         req.ar=[req.params.ke,req.params.id,time];
         s.sqlQuery(req.sql,req.ar,function(err,r){
             if(r&&r[0]){
@@ -7259,18 +7301,30 @@ app.get([config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode',config.web
                     break;
                     case'status':
                         r.f = 'video_edit'
+                        switch(videoParam){
+                            case'cloudVideos':
+                                r.f += '_cloud'
+                            break;
+                        }
                         r.status = parseInt(req.params.f)
                         if(isNaN(req.params.f)||req.params.f===0){
                             req.ret.msg='Not a valid value.';
                         }else{
                             req.ret.ok=true;
-                            s.sqlQuery('UPDATE Videos SET status=? WHERE ke=? AND mid=? AND `time`=?',[req.params.f,req.params.ke,req.params.id,time])
+                            s.sqlQuery('UPDATE `'+videoSet+'` SET status=? WHERE ke=? AND mid=? AND `time`=?',[req.params.f,req.params.ke,req.params.id,time])
                             s.tx(r,'GRP_'+r.ke);
                         }
                     break;
                     case'delete':
                         req.ret.ok=true;
-                        s.video('delete',r)
+                        switch(videoParam){
+                            case'cloudVideos':
+                                s.video('deleteFromCloud',r)
+                            break;
+                            default:
+                                s.video('delete',r)
+                            break;
+                        }
                     break;
                     default:
                         req.ret.msg=user.lang.modifyVideoText1;
