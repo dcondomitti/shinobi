@@ -3871,7 +3871,7 @@ s.camera=function(x,e,cn,tx){
                           errorFatal("Ping Failed");return;
                     }
                 }
-                if(e.type!=='socket'&&e.type!=='dashcam'&&e.protocol!=='udp'&&e.type!=='local'||e.details.skip_ping !== '1'){
+                if(e.type!=='socket'&&e.type!=='dashcam'&&e.protocol!=='udp'&&e.type!=='local' && e.details.skip_ping !== '1'){
                     connectionTester.test(e.hosty,e.port,2000,startVideoProcessor);
                 }else{
                     startVideoProcessor(null,{success:true})
