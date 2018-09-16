@@ -30,14 +30,14 @@
                     <label><div><span><%-lang['Enabled']%></span></div>
                         <div><select class="form-control" detail="factorAuth">
                             <option value="0" selected><%-lang.No%></option>
-                            <option value="1"><%-lang.Yes%></option>  
+                            <option value="1"><%-lang.Yes%></option>
                         </select></div>
                     </label>
                 </div>
                 <div class="form-group">
                     <label><div><span><%-lang.Email%></span></div>
                         <div><select class="form-control" detail="factor_mail">
-                            <option value="1" selected><%-lang.Yes%></option>  
+                            <option value="1" selected><%-lang.Yes%></option>
                             <option value="0"><%-lang.No%></option>
                         </select></div>
                     </label>
@@ -46,7 +46,7 @@
                     <label><div><span><%-lang.Discord%></span></div>
                         <div><select class="form-control" detail="factor_discord">
                             <option value="0" selected><%-lang.No%></option>
-                            <option value="1"><%-lang.Yes%></option>  
+                            <option value="1"><%-lang.Yes%></option>
                         </select></div>
                     </label>
                 </div>
@@ -144,7 +144,7 @@
                 <label><div><span><%-lang['Popout Monitor on Event']%></span></div>
                     <div><select class="form-control" detail="event_mon_pop">
                         <option value="0" selected><%-lang.No%></option>
-                        <option value="1"><%-lang.Yes%></option>  
+                        <option value="1"><%-lang.Yes%></option>
                     </select></div>
                 </label>
             </div>
@@ -194,8 +194,16 @@
                 <div class="form-group">
                     <label><div><span><%-lang.Autosave%></span></div>
                             <div><select class="form-control" detail="webdav_save">
-                                <option value="0"><%-lang.No%></option>  
-                                <option value="1"><%-lang.Yes%></option>  
+                                <option value="0"><%-lang.No%></option>
+                                <option value="1"><%-lang.Yes%></option>
+                            </select></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang['Save Links to Database']%></span></div>
+                            <div><select class="form-control" detail="webdav_log">
+                                <option value="0"><%-lang.No%></option>
+                                <option value="1" selected><%-lang.Yes%></option>
                             </select></div>
                     </label>
                 </div>
@@ -246,23 +254,23 @@
                             <option value="eu-west-1">EU (Ireland)</option>
                             <option value="eu-west-2">EU (London)</option>
                             <option value="eu-west-3">EU (Paris)</option>
-                            <option value="sa-east-1">South America (São Paulo)</option>  
+                            <option value="sa-east-1">South America (São Paulo)</option>
                         </select></div>
                     </label>
                 </div>
                 <div class="form-group">
                     <label><div><span><%-lang.Autosave%></span></div>
                             <div><select class="form-control" detail="aws_s3_save">
-                                <option value="0" selected><%-lang.No%></option>  
-                                <option value="1"><%-lang.Yes%></option>  
+                                <option value="0" selected><%-lang.No%></option>
+                                <option value="1"><%-lang.Yes%></option>
                             </select></div>
                     </label>
                 </div>
                 <div class="form-group">
                     <label><div><span><%-lang['Save Links to Database']%></span></div>
                             <div><select class="form-control" detail="aws_s3_log">
-                                <option value="0"><%-lang.No%></option>  
-                                <option value="1" selected><%-lang.Yes%></option>  
+                                <option value="0"><%-lang.No%></option>
+                                <option value="1" selected><%-lang.Yes%></option>
                             </select></div>
                     </label>
                 </div>
@@ -279,8 +287,8 @@
                 <div class="form-group">
                     <label><div><span><%-lang.Enabled%></span></div>
                             <div><select class="form-control" detail="discordbot" selector="u_discord_bot">
-                                <option value="0" selected><%-lang.No%></option>  
-                                <option value="1"><%-lang.Yes%></option>  
+                                <option value="0" selected><%-lang.No%></option>
+                                <option value="1"><%-lang.Yes%></option>
                             </select></div>
                     </label>
                 </div>
@@ -304,8 +312,8 @@
                 <div class="form-group">
                     <label><div><span><%-lang.Enable%></span></div>
                             <div><select class="form-control" detail="ldap_enable" selector="ldap_i">
-                                <option value="0"><%-lang.No%></option>  
-                                <option value="1"><%-lang.Yes%></option>  
+                                <option value="0"><%-lang.No%></option>
+                                <option value="1"><%-lang.Yes%></option>
                             </select></div>
                     </label>
                 </div>
@@ -349,7 +357,7 @@
                 <div class="form-group">
                     <label><div><span><%-lang['Force Monitors Per Row']%></span></div>
                             <div><select class="form-control" localStorage="montage_use" selector="st_force_mon_rows">
-                                <option value="1"><%-lang.Yes%></option>  
+                                <option value="1"><%-lang.Yes%></option>
                                 <option value="0" selected><%-lang.No%></option>
                             </select></div>
                     </label>
@@ -362,15 +370,15 @@
                 <div class="form-group">
                     <label><div><span><%-lang['Browser Console Log']%></span></div>
                             <div><select class="form-control" localStorage="browserLog">
-                                <option value="0" selected><%-lang.No%></option>  
-                                <option value="1"><%-lang.Yes%></option>  
+                                <option value="0" selected><%-lang.No%></option>
+                                <option value="1"><%-lang.Yes%></option>
                             </select></div>
                     </label>
                 </div>
                 <div class="form-group">
                     <label><div><span><%-lang['Get Logs to Client']%></span></div>
                             <div><select class="form-control" detail="get_server_log">
-                                <option value="1" selected><%-lang.Yes%></option>  
+                                <option value="1" selected><%-lang.Yes%></option>
                                 <option value="0"><%-lang.No%></option>
                             </select></div>
                     </label>

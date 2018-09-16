@@ -4461,7 +4461,18 @@ $.vidview={
     dr:$('#videos_viewer_daterange'),
     preview:$('#videos_viewer_preview'),
     set:$('#videos_viewer_set')
-};
+}
+$.vidview.set.change(function(){
+    var el = $(this)
+    var isCloud = (el.val() === 'cloud')
+    var zipDlButton = $.vidview.e.find('.export_selected')
+    if(isCloud){
+        zipDlButton.hide()
+    }else{
+        zipDlButton.show()
+    }
+
+})
 $.vidview.f=$.vidview.e.find('form')
 $.vidview.dr.daterangepicker({
     startDate:$.ccio.timeObject().subtract(moment.duration("24:00:00")),

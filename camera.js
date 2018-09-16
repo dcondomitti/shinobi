@@ -48,7 +48,7 @@ var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var socketIOclient = require('socket.io-client');
 var crypto = require('crypto');
-var webdav = require("webdav");
+var webdav = require("webdav-fs");
 var jsonfile = require("jsonfile");
 var connectionTester = require('connection-tester');
 var events = require('events');
@@ -122,6 +122,7 @@ if(config.databaseLogs === undefined){config.databaseLogs=false}
 if(config.useUTC === undefined){config.useUTC=false}
 if(config.iconURL === undefined){config.iconURL = "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"}
 if(config.pipeAddition === undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
+if(config.hideCloudSaveUrls === undefined){config.hideCloudSaveUrls = true}
 //Child Nodes
 if(config.childNodes === undefined)config.childNodes = {};
     //enabled
@@ -310,7 +311,12 @@ s.checkRelativePath=function(x){
     }
     return x
 }
-s.checkCorrectPathEnding=function(x){
+s.addUserPassToUrl = function(url,user,pass){
+    var splitted = url.split('://')
+    splitted[1] = user + ':' + pass + '@' + splitted[1]
+    return splitted.join('://')
+}
+s.checkCorrectPathEnding = function(x){
     var length=x.length
     if(x.charAt(length-1)!=='/'){
         x=x+'/'
@@ -848,7 +854,7 @@ s.init=function(x,e,k,fn){
                                 ar.webdav_url,
                                 ar.webdav_user,
                                 ar.webdav_pass
-                            );
+                            )
                         }
                         //Amazon S3
                         if(!s.group[e.ke].aws &&
@@ -1273,7 +1279,7 @@ s.video=function(x,e,k){
                     changeToUnread : href+'/status/1' + queryString,
                     changeToRead : href+'/status/2' + queryString
                 }
-                if(!v.href)v.href = href + queryString
+                if(!v.href || k.hideRemote === true)v.href = href + queryString
                 v.details = details
             })
         break;
@@ -1362,36 +1368,84 @@ s.video=function(x,e,k){
                             end:k.endTime
                         },'GRP_'+e.ke,'video_view');
                     }
-                    //cloud auto savers
-                    //webdav
-    //                var webDAV = s.group[e.ke].webdav
-    //                if(webDAV&&s.group[e.ke].init.use_webdav!=='0'&&s.group[e.ke].init.webdav_save=="1"){
-    //                   fs.readFile(k.dir+k.filename,function(err,data){
-    //                       var webdavUploadDir = s.group[e.ke].init.webdav_dir+e.ke+'/'+e.mid+'/'
-    //                       fs.readFile(k.dir+k.filename,function(err,data){
-    //                           webDAV.putFileContents(webdavUploadDir+k.filename,"binary",data).catch(function(err) {
-    //                               if(err){
-    //                                   webDAV.createDirectory(webdavUploadDir).catch(function(err) {
-    //                                       s.log(e,{type:lang['Webdav Error'],msg:{msg:lang.WebdavErrorText+' <b>/'+webdavUploadDir+'</b>',info:err}})
-    //                                   })
-    //                                   webDAV.putFileContents(webdavUploadDir+k.filename,"binary",data).catch(function(err) {
-    //                                       s.log(e,{type:lang['Webdav Error'],msg:{msg:lang.WebdavErrorText+' <b>/'+webdavUploadDir+'</b>',info:err}})
-    //                                   })
-    //                                   s.log(e,{type:lang['Webdav Error'],msg:{msg:lang.WebdavErrorText+' <b>/'+webdavUploadDir+'</b>',info:err}})
-    //                               }
-    //                           });
-    //                        });
-    //                    });
-    //                }
-                    if(s.group[e.ke].webdav&&s.group[e.ke].init.use_webdav!=='0'&&s.group[e.ke].init.webdav_save=='1'){
-                       fs.readFile(k.dir+k.filename,function(err,data){
-                           s.group[e.ke].webdav.putFileContents(s.group[e.ke].init.webdav_dir+e.ke+'/'+e.mid+'/'+k.filename,"binary",data)
-                        .catch(function(err) {
-                               s.log(e,{type:lang['Webdav Error'],msg:{msg:lang.WebdavErrorText+' <b>/'+e.ke+'/'+e.id+'</b>',info:err},ffmpeg:s.group[e.ke].mon[e.id].ffmpeg})
-                            console.error(err);
-                           });
-                        });
-                    }
+                    //cloud auto savers - webdav
+                   var wfs = s.group[e.ke].webdav
+                   if(wfs && s.group[e.ke].init.use_webdav !== '0' && s.group[e.ke].init.webdav_save === "1"){
+                       var webdavUploadDir = s.group[e.ke].init.webdav_dir+e.ke+'/'+e.mid+'/'
+                       var startWebDavUpload = function(){
+                           s.group[e.ke].mon[e.id].webdavDirExist = true
+                           var wfsWriteStream =
+                           fs.createReadStream(k.dir + k.filename).pipe(wfs.createWriteStream(webdavUploadDir + k.filename))
+                           if(s.group[e.ke].init.webdav_log === '1'){
+                               var webdavRemoteUrl = s.addUserPassToUrl(s.checkCorrectPathEnding(s.group[e.ke].init.webdav_url),s.group[e.ke].init.webdav_user,s.group[e.ke].init.webdav_pass) + s.group[e.ke].init.webdav_dir + e.ke + '/'+e.mid+'/'+k.filename
+                               var save = [
+                                   e.mid,
+                                   e.ke,
+                                   k.startTime,
+                                   1,
+                                   s.s({
+                                       type : 'webdav'
+                                   }),
+                                   k.filesize,
+                                   k.endTime,
+                                   webdavRemoteUrl
+                               ]
+                               s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end,href) VALUES (?,?,?,?,?,?,?,?)',save)
+                           }
+                       }
+                       if(s.group[e.ke].mon[e.id].webdavDirExist !== true){
+                           //check if webdav dir exist
+                           var parentPoint = 0
+                           var webDavParentz = webdavUploadDir.split('/')
+                           var webDavParents = []
+                           webDavParentz.forEach(function(v){
+                               if(v && v !== '')webDavParents.push(v)
+                           })
+                           var stitchPieces = './'
+                           var lastParentCheck = function(){
+                               ++parentPoint
+                               if(parentPoint === webDavParents.length){
+                                   startWebDavUpload()
+                               }
+                               checkPathPiece(webDavParents[parentPoint])
+                           }
+                           var checkPathPiece = function(pathPiece){
+                               if(pathPiece && pathPiece !== ''){
+                                   stitchPieces += pathPiece + '/'
+                                   wfs.stat(stitchPieces, function(error, stats) {
+                                       if(error){
+                                           reply = {
+                                               status : error.status,
+                                               msg : lang.WebdavErrorTextTryCreatingDir,
+                                               dir : stitchPieces,
+                                           }
+                                           s.log(e,{type:lang['Webdav Error'],msg:reply})
+                                           wfs.mkdir(stitchPieces, function(error) {
+                                               if(error){
+                                                   reply = {
+                                                       status : error.status,
+                                                       msg : lang.WebdavErrorTextCreatingDir,
+                                                       dir : stitchPieces,
+                                                   }
+                                                   s.log(e,{type:lang['Webdav Error'],msg:reply})
+                                               }else{
+                                                   lastParentCheck()
+                                               }
+                                           })
+                                       }else{
+                                           lastParentCheck()
+                                       }
+                                   })
+                               }else{
+                                   ++parentPoint
+                               }
+                           }
+                           checkPathPiece(webDavParents[0])
+                       }else{
+                           startWebDavUpload()
+                       }
+                   }
+                    //cloud auto savers - amazon s3
                     if(s.group[e.ke].aws_s3 && s.group[e.ke].init.use_aws_s3 !== '0' && s.group[e.ke].init.aws_s3_save === '1'){
                         var fileStream = fs.createReadStream(k.dir+k.filename);
                         fileStream.on('error', function (err) {
@@ -4621,7 +4675,7 @@ var tx;
                                         s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE ke=? AND uid=?',d.ar,function(err,r){
                                             if(!d.d.sub){
                                                 s.group[d.ke].sizeLimit = parseFloat(newSize)
-                                                delete(s.group[d.ke].webdav)
+                                                s.group[d.ke].webdav = null
                                                 s.group[d.ke].aws = null
                                                 s.group[d.ke].aws_s3 = null
                                                 if(s.group[d.ke].discordBot && s.group[d.ke].discordBot.destroy){
@@ -6612,7 +6666,8 @@ app.get([
             s.sqlQuery(req.count_sql,req.count_ar,function(err,count){
                 s.video('linkBuild',r,{
                     auth : req.params.auth,
-                    videoParam : videoParam
+                    videoParam : videoParam,
+                    hideRemote : config.hideCloudSaveUrls
                 })
                 if(req.query.limit.indexOf(',')>-1){
                     req.skip=parseInt(req.query.limit.split(',')[0])
@@ -7168,6 +7223,28 @@ app.get(config.webPaths.apiPrefix+':auth/zipVideos/:ke', function (req,res){
         failed({ok:false,msg:'"videos" query variable is missing from request.'})
     }
 });
+// Get cloud video file (proxy)
+app.get(config.webPaths.apiPrefix+':auth/cloudVideos/:ke/:id/:file', function (req,res){
+    s.auth(req.params,function(user){
+        if(user.permissions.watch_videos==="0"||user.details.sub&&user.details.allmonitors!=='1'&&user.details.monitors.indexOf(req.params.id)===-1){
+            res.end(user.lang['Not Permitted'])
+            return
+        }
+        var time = s.nameToTime(req.params.file)
+        if(req.query.isUTC === 'true'){
+            time = s.utcToLocal(time)
+        }
+        time = new Date(time)
+        s.sqlQuery('SELECT * FROM `Cloud Videos` WHERE ke=? AND mid=? AND `time`=? LIMIT 1',[req.params.ke,req.params.id,time],function(err,r){
+            if(r&&r[0]){
+                r = r[0]
+                req.pipe(request(r.href)).pipe(res)
+            }else{
+                res.end(user.lang['File Not Found in Database'])
+            }
+        })
+    },res,req);
+});
 // Get video file
 app.get(config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file', function (req,res){
     s.auth(req.params,function(user){
@@ -7180,7 +7257,7 @@ app.get(config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file', function (req,re
             time = s.utcToLocal(time)
         }
         time = new Date(time)
-        s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND `time`=?',[req.params.ke,req.params.id,time],function(err,r){
+        s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND `time`=? LIMIT 1',[req.params.ke,req.params.id,time],function(err,r){
             if(r&&r[0]){
                 req.dir=s.video('getDir',r[0])+req.params.file
                 if (fs.existsSync(req.dir)){
