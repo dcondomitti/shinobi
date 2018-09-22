@@ -53,6 +53,7 @@ var jsonfile = require("jsonfile");
 var connectionTester = require('connection-tester');
 var events = require('events');
 var onvif = require('node-onvif');
+// var casper = require('casper');
 // var onvifHawk = require('onvif-nvt');
 var knex = require('knex');
 var Mp4Frag = require('mp4frag');
@@ -647,10 +648,14 @@ s.kill = function(x,e,p){
             clearTimeout(s.group[e.ke].mon[e.id].record.capturing);
 //            if(s.group[e.ke].mon[e.id].record.request){s.group[e.ke].mon[e.id].record.request.abort();delete(s.group[e.ke].mon[e.id].record.request);}
         };
+        // if(s.group[e.ke].mon[e.id].casper){
+        //     s.group[e.ke].mon[e.id].casper.done()
+        //     delete(s.group[e.ke].mon[e.id].casper)
+        //     clearInterval(s.group[e.ke].mon[e.id].casperCapture)
+        // }
         if(s.group[e.ke].mon[e.id].childNode){
             s.cx({f:'kill',d:s.init('noReference',e)},s.group[e.ke].mon[e.id].childNodeId)
         }else{
-            s.coSpawnClose(e)
             if(!x||x===1){return};
             p=x.pid;
             if(s.group[e.ke].mon_conf[e.id].type===('dashcam'||'socket'||'jpeg'||'pipe')){
@@ -1761,209 +1766,11 @@ s.createStreamChannel = function(e,number,channel){
     }
     return x.pipe
 }
-s.ffmpegCoProcessor = function(e){
-    if(e.coProcessor === false)return;
-    var x = {}
-    //x.input is the input and connection
-    if(e.details.loglevel&&e.details.loglevel!==''){x.loglevel='-loglevel '+e.details.loglevel;}else{x.loglevel='-loglevel error'}
-    x.input = x.loglevel+' -re -i '+e.sdir+'cpuOnly.m3u8'
 
-    //x.pipe is the stream out methods
-    x.cust_input=''
-    x.cust_detect=' '
-    x.stream_video_filters=[]
-    x.hwaccel=''
-    x.pipe=''
-    //main stream frames
-    //stream - timestamp
-    if(e.details.stream_timestamp&&e.details.stream_timestamp=="1"&&e.details.vcodec!=='copy'){
-        //font
-        if(e.details.stream_timestamp_font&&e.details.stream_timestamp_font!==''){x.stream_timestamp_font=e.details.stream_timestamp_font}else{x.stream_timestamp_font='/usr/share/fonts/truetype/freefont/FreeSans.ttf'}
-        //position x
-        if(e.details.stream_timestamp_x&&e.details.stream_timestamp_x!==''){x.stream_timestamp_x=e.details.stream_timestamp_x}else{x.stream_timestamp_x='(w-tw)/2'}
-        //position y
-        if(e.details.stream_timestamp_y&&e.details.stream_timestamp_y!==''){x.stream_timestamp_y=e.details.stream_timestamp_y}else{x.stream_timestamp_y='0'}
-        //text color
-        if(e.details.stream_timestamp_color&&e.details.stream_timestamp_color!==''){x.stream_timestamp_color=e.details.stream_timestamp_color}else{x.stream_timestamp_color='white'}
-        //box color
-        if(e.details.stream_timestamp_box_color&&e.details.stream_timestamp_box_color!==''){x.stream_timestamp_box_color=e.details.stream_timestamp_box_color}else{x.stream_timestamp_box_color='0x00000000@1'}
-        //text size
-        if(e.details.stream_timestamp_font_size&&e.details.stream_timestamp_font_size!==''){x.stream_timestamp_font_size=e.details.stream_timestamp_font_size}else{x.stream_timestamp_font_size='10'}
-
-        x.stream_video_filters.push('drawtext=fontfile='+x.stream_timestamp_font+':text=\'%{localtime}\':x='+x.stream_timestamp_x+':y='+x.stream_timestamp_y+':fontcolor='+x.stream_timestamp_color+':box=1:boxcolor='+x.stream_timestamp_box_color+':fontsize='+x.stream_timestamp_font_size);
-    }
-    //stream - watermark for -vf
-    if(e.details.stream_watermark&&e.details.stream_watermark=="1"&&e.details.stream_watermark_location&&e.details.stream_watermark_location!==''){
-        switch(e.details.stream_watermark_position){
-            case'tl'://top left
-                x.stream_watermark_position='10:10'
-            break;
-            case'tr'://top right
-                x.stream_watermark_position='main_w-overlay_w-10:10'
-            break;
-            case'bl'://bottom left
-                x.stream_watermark_position='10:main_h-overlay_h-10'
-            break;
-            default://bottom right
-                x.stream_watermark_position='(main_w-overlay_w-10)/2:(main_h-overlay_h-10)/2'
-            break;
-        }
-        x.stream_video_filters.push('movie='+e.details.stream_watermark_location+'[watermark],[in][watermark]overlay='+x.stream_watermark_position+'[out]');
-    }
-    //stream - rotation
-    if(e.details.rotate_stream&&e.details.rotate_stream!==""&&e.details.rotate_stream!=="no"&&e.details.stream_vcodec!=='copy'){
-        x.stream_video_filters.push('transpose='+e.details.rotate_stream);
-    }
-    if(e.details.svf&&e.details.svf!==''){
-        x.stream_video_filters.push(e.details.svf)
-    }
-    if(x.stream_video_filters.length>0){
-        x.stream_video_filters=' -vf '+x.stream_video_filters.join(',')
-    }else{
-        x.stream_video_filters=''
-    }
-    if(e.details.cust_stream&&e.details.cust_stream!==''){x.cust_stream=' '+e.details.cust_stream}else{x.cust_stream=''}
-    if(e.details.stream_fps&&e.details.stream_fps!==''){x.stream_fps=' -r '+e.details.stream_fps}else{x.stream_fps=''}
-    if(e.details.stream_vcodec !== 'copy' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64'){
-        x.cust_stream += x.stream_fps
-    }
-    switch(e.details.stream_type){
-        case'mjpeg':
-            if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
-            if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
-            x.pipe += ' -an -c:v mjpeg -f mpjpeg -boundary_tag shinobi'+x.cust_stream+x.stream_video_filters+' pipe:1';
-        break;
-        case'b64':case'':case undefined:case null://base64
-            if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
-            if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
-            x.pipe += ' -an -c:v mjpeg -f image2pipe'+x.cust_stream+x.stream_video_filters+' pipe:1';
-        break;
-    }
-    //detector frames
-    if(e.details.detector === '1'){
-        if(e.details.detector_fps && e.details.detector_fps !== ''){
-            x.detector_fps = e.details.detector_fps
-        }else{
-            x.detector_fps = '2'
-        }
-        if(e.details.detector_scale_x && e.details.detector_scale_x !== '' && e.details.detector_scale_y && e.details.detector_scale_y !== ''){
-            x.dratio=' -s '+e.details.detector_scale_x+'x'+e.details.detector_scale_y
-        }else{
-            x.dratio=' -s 320x240'
-        }
-
-        if(e.details.cust_detect&&e.details.cust_detect!==''){x.cust_detect+=e.details.cust_detect;}
-        if(e.details.detector_pam==='1'){
-            x.pipe += ' -an -c:v pam -pix_fmt gray -f image2pipe -r '+x.detector_fps+x.cust_detect+x.dratio+' pipe:3'
-            if(e.details.detector_use_detect_object === '1'){
-                if(e.details.detector_use_motion === '1'){
-                    if(e.details.detector_scale_x_object && e.details.detector_scale_x_object !== '' && e.details.detector_scale_y_object && e.details.detector_scale_y_object !== ''){
-                        x.dratio=' -s '+e.details.detector_scale_x_object+'x'+e.details.detector_scale_y_object
-                    }
-                    if(e.details.detector_fps_object && e.details.detector_fps_object !== ''){
-                        x.detector_fps = e.details.detector_fps_object
-                    }
-                }
-                //for object detection
-                x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
-                x.pipe += ' -f singlejpeg -vf fps='+x.detector_fps+x.cust_detect+x.dratio+' pipe:4';
-            }
-        }else{
-            x.pipe+=' -f singlejpeg -vf fps='+x.detector_fps+x.cust_detect+x.dratio+' pipe:3';
-        }
-    }
-    //snapshot frames
-    if(e.details.snap === '1'){
-        if(!e.details.snap_fps || e.details.snap_fps === ''){e.details.snap_fps = 1}
-        if(e.details.snap_vf && e.details.snap_vf !== ''){x.snap_vf=' -vf '+e.details.snap_vf}else{x.snap_vf=''}
-        if(e.details.snap_scale_x && e.details.snap_scale_x !== '' && e.details.snap_scale_y && e.details.snap_scale_y !== ''){x.snap_ratio = ' -s '+e.details.snap_scale_x+'x'+e.details.snap_scale_y}else{x.snap_ratio=''}
-        if(e.details.cust_snap && e.details.cust_snap !== ''){x.cust_snap = ' '+e.details.cust_snap}else{x.cust_snap=''}
-        x.pipe += ' -update 1 -r '+e.details.snap_fps+x.cust_snap+x.snap_ratio+x.snap_vf+' "'+e.sdir+'s.jpg" -y';
-    }
-    x.stdioPipes = [];
-    var times = config.pipeAddition;
-    if(e.details.stream_channels){
-        times+=e.details.stream_channels.length
-    }
-    for(var i=0; i < times; i++){
-        x.stdioPipes.push('pipe')
-    }
-    var commandString = x.input+x.pipe
-    if(commandString === x.input){
-        return false
-    }
-    s.group[e.ke].mon[e.mid].coProcessorCmd = commandString
-    return spawn(config.ffmpegDir,s.splitForFFPMEG((commandString).replace(/\s+/g,' ').trim()),{detached: true,stdio:x.stdioPipes})
-}
-s.coSpawnLauncher = function(e){
-    if(s.group[e.ke].mon[e.id].started === 1 && e.coProcessor === true){
-        s.coSpawnClose(e)
-        s.group[e.ke].mon[e.id].coSpawnProcessor = s.ffmpegCoProcessor(e)
-        if(s.group[e.ke].mon[e.id].coSpawnProcessor === false){
-            return
-        }
-        s.log(e,{type:lang['coProcessor Started'],msg:{msg:lang.coProcessorTextStarted,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
-        s.group[e.ke].mon[e.id].coSpawnProcessorExit = function(){
-            s.log(e,{type:lang['coProcess Unexpected Exit'],msg:{msg:lang['coProcess Crashed for Monitor']+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
-            setTimeout(function(){
-                s.coSpawnLauncher(e)
-            },2000)
-        }
-        s.group[e.ke].mon[e.id].coSpawnProcessor.on('end',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
-        s.group[e.ke].mon[e.id].coSpawnProcessor.on('exit',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
-        var checkLog = function(d,x){return d.indexOf(x)>-1;}
-        s.group[e.ke].mon[e.id].coSpawnProcessor.stderr.on('data',function(d){
-            d=d.toString();
-            switch(true){
-                case checkLog(d,'deprecated pixel format used'):
-                case checkLog(d,'[hls @'):
-                case checkLog(d,'Past duration'):
-                case checkLog(d,'Last message repeated'):
-                case checkLog(d,'pkt->duration = 0'):
-                case checkLog(d,'Non-monotonous DTS'):
-                case checkLog(d,'NULL @'):
-                    return
-                break;
-            }
-            s.log(e,{type:lang.coProcessor,msg:d});
-        })
-        if(e.frame_to_stream){
-            s.group[e.ke].mon[e.id].coSpawnProcessor.stdout.on('data',e.frame_to_stream)
-        }
-        if(e.details.detector === '1'){
-            if(e.details.detector_pam === '1'){
-                s.createPamDiffEngine(e)
-                s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].pipe(s.group[e.ke].mon[e.id].p2p).pipe(s.group[e.ke].mon[e.id].pamDiff)
-            }else{
-                s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].on('data',function(d){
-                    s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:d});
-                })
-            }
-        }
-    }
-}
-s.coSpawnClose = function(e){
-    if(s.group[e.ke].mon[e.id].coSpawnProcessor){
-        s.group[e.ke].mon[e.id].coSpawnProcessor.removeListener('end',s.group[e.ke].mon[e.id].coSpawnProcessorExit);
-        s.group[e.ke].mon[e.id].coSpawnProcessor.removeListener('exit',s.group[e.ke].mon[e.id].coSpawnProcessorExit);
-        s.group[e.ke].mon[e.id].coSpawnProcessor.stdin.pause()
-        s.group[e.ke].mon[e.id].coSpawnProcessor.kill()
-        delete(s.group[e.ke].mon[e.id].coSpawnProcessor)
-        s.log(e,{type:lang['coProcessor Stopped'],msg:{msg:lang.coProcessorTextStopped+' : '+e.id}});
-    }
-}
 s.ffmpeg = function(e){
-    e.coProcessor = false
     e.isStreamer = (e.type === 'dashcam'|| e.type === 'socket')
-    if(
-        e.details.accelerator === '1' &&
-        e.details.hwaccel !== 'vaapi' &&
-        e.details.hwaccel_vcodec !== 'auto' &&
-        e.isStreamer === false &&
-        (!e.details.input_maps || e.details.input_maps.length === 0) &&
-        (e.details.snap === '1' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64' || e.details.detector === '1')
-      ){
-        e.coProcessor = true
+    if(e.details.accelerator === '1' && e.details.hwaccel === 'cuvid' && e.details.hwaccel_vcodec === ('h264_cuvid' || 'hevc_cuvid' || 'mjpeg_cuvid' || 'mpeg4_cuvid')){
+        e.cudaEnabled = true
     }
     //set X for temporary values so we don't break our main monitor object.
     var x={tmp:''};
@@ -2177,12 +1984,15 @@ s.ffmpeg = function(e){
             x.stream_video_filters.push('scale_vaapi=w='+e.details.stream_scale_x+':h='+e.details.stream_scale_y)
         }
 	}
+    if(e.cudaEnabled && (e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64')){
+        x.stream_video_filters.push('hwdownload,format=nv12')
+    }
     //stream - video filter
-    if(e.details.svf&&e.details.svf!==''){
+    if(e.details.svf && e.details.svf !== ''){
         x.stream_video_filters.push(e.details.svf)
     }
     if(x.stream_video_filters.length>0){
-        x.stream_video_filters=' -vf '+x.stream_video_filters.join(',')
+        x.stream_video_filters=' -vf "'+x.stream_video_filters.join(',')+'"'
     }else{
         x.stream_video_filters=''
     }
@@ -2225,11 +2035,9 @@ s.ffmpeg = function(e){
             x.pipe+=x.preset_stream+x.stream_acodec+x.stream_vcodec+' -f hls'+x.cust_stream+' -hls_time '+x.hls_time+' -hls_list_size '+x.hls_list_size+' -start_number 0 -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'s.m3u8"';
         break;
         case'mjpeg':
-            if(e.coProcessor === false){
                 if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
                 if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
                 x.pipe+=' -an -c:v mjpeg -f mpjpeg -boundary_tag shinobi'+x.cust_stream+x.stream_video_filters+' pipe:1';
-            }
         break;
         case'h265':
             x.cust_stream+=' -movflags +frag_keyframe+empty_moov+default_base_moof -metadata title="Shinobi H.265 Stream" -reset_timestamps 1'
@@ -2242,11 +2050,9 @@ s.ffmpeg = function(e){
             x.pipe+=' -f hevc'+x.stream_acodec+x.stream_vcodec+x.cust_stream+' pipe:1';
         break;
         case'b64':case'':case undefined:case null://base64
-            if(e.coProcessor === false){
-                if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
-                if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
-                x.pipe+=' -an -c:v mjpeg -f image2pipe'+x.cust_stream+x.stream_video_filters+' pipe:1';
-            }
+            if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
+            if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
+            x.pipe+=' -an -c:v mjpeg -f image2pipe'+x.cust_stream+x.stream_video_filters+' pipe:1';
         break;
         default:
             x.pipe=''
@@ -2254,12 +2060,11 @@ s.ffmpeg = function(e){
     }
     if(e.details.stream_channels){
         e.details.stream_channels.forEach(function(v,n){
-            if(v.stream_type === 'mjpeg')e.coProcessor = true;
             x.pipe += s.createStreamChannel(e,n+config.pipeAddition,v)
         })
     }
     //detector - plugins, motion
-    if(e.details.detector==='1' && e.details.detector_send_frames==='1' && e.coProcessor === false){
+    if(e.details.detector === '1' && e.details.detector_send_frames === '1'){
         if(e.details.input_map_choices&&e.details.input_map_choices.detector){
             //add input feed map
             x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
@@ -2267,15 +2072,23 @@ s.ffmpeg = function(e){
         if(!e.details.detector_fps||e.details.detector_fps===''){e.details.detector_fps=2}
         if(e.details.detector_scale_x&&e.details.detector_scale_x!==''&&e.details.detector_scale_y&&e.details.detector_scale_y!==''){x.dratio=' -s '+e.details.detector_scale_x+'x'+e.details.detector_scale_y}else{x.dratio=' -s 320x240'}
         if(e.details.cust_detect&&e.details.cust_detect!==''){x.cust_detect+=e.details.cust_detect;}
+        x.detector_vf = ['fps='+e.details.detector_fps]
+        if(e.cudaEnabled){
+            x.detector_vf.push('hwdownload,format=nv12')
+        }
+        x.detector_vf = '-vf "'+x.detector_vf.join(',')+'"'
         if(e.details.detector_pam==='1'){
+            if(e.cudaEnabled){
+                x.pipe += ' -vf "hwdownload,format=nv12"'
+            }
             x.pipe+=' -an -c:v pam -pix_fmt gray -f image2pipe -r '+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:3'
             if(e.details.detector_use_detect_object === '1'){
                 //for object detection
                 x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
-                x.pipe += ' -f singlejpeg -vf fps='+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:4';
+                x.pipe += ' -f singlejpeg '+x.detector_vf+x.cust_detect+x.dratio+' pipe:4';
             }
         }else{
-            x.pipe+=' -f singlejpeg -vf fps='+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:3';
+            x.pipe+=' -f singlejpeg '+x.detector_vf+x.cust_detect+x.dratio+' pipe:3';
         }
     }
     //api - snapshot bin/ cgi.bin (JPEG Mode)
@@ -2284,13 +2097,21 @@ s.ffmpeg = function(e){
             //add input feed map
             x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.snap)
         }
-        if(e.coProcessor === false){
-            if(!e.details.snap_fps || e.details.snap_fps === ''){e.details.snap_fps = 1}
-            if(e.details.snap_vf && e.details.snap_vf !== ''){x.snap_vf=' -vf '+e.details.snap_vf}else{x.snap_vf=''}
-            if(e.details.snap_scale_x && e.details.snap_scale_x !== '' && e.details.snap_scale_y && e.details.snap_scale_y !== ''){x.snap_ratio = ' -s '+e.details.snap_scale_x+'x'+e.details.snap_scale_y}else{x.snap_ratio=''}
-            if(e.details.cust_snap && e.details.cust_snap !== ''){x.cust_snap = ' '+e.details.cust_snap}else{x.cust_snap=''}
-            x.pipe+=' -update 1 -r '+e.details.snap_fps+x.cust_snap+x.snap_ratio+x.snap_vf+' "'+e.sdir+'s.jpg" -y';
+        if(!e.details.snap_fps || e.details.snap_fps === ''){e.details.snap_fps = 1}
+        if(e.details.snap_vf && e.details.snap_vf !== '' || e.cudaEnabled){
+            var snapVf = e.details.snap_vf.split(',')
+            if(e.details.snap_vf === '')snapVf.shift()
+            if(e.cudaEnabled){
+                snapVf.push('hwdownload,format=nv12')
+            }
+            //-vf "thumbnail_cuda=2,hwdownload,format=nv12"
+            x.snap_vf=' -vf "'+snapVf.join(',')+'"'
+        }else{
+            x.snap_vf=''
         }
+        if(e.details.snap_scale_x && e.details.snap_scale_x !== '' && e.details.snap_scale_y && e.details.snap_scale_y !== ''){x.snap_ratio = ' -s '+e.details.snap_scale_x+'x'+e.details.snap_scale_y}else{x.snap_ratio=''}
+        if(e.details.cust_snap && e.details.cust_snap !== ''){x.cust_snap = ' '+e.details.cust_snap}else{x.cust_snap=''}
+        x.pipe+=' -update 1 -r '+e.details.snap_fps+x.cust_snap+x.snap_ratio+x.snap_vf+' "'+e.sdir+'s.jpg" -y';
     }
     //Traditional Recording Buffer
     if(e.details.detector=='1'&&e.details.detector_trigger=='1'&&e.details.detector_record_method==='sip'){
@@ -2300,17 +2121,17 @@ s.ffmpeg = function(e){
         }
         x.detector_buffer_filters=[]
         if(!e.details.detector_buffer_vcodec||e.details.detector_buffer_vcodec===''||e.details.detector_buffer_vcodec==='auto'){
-            if(e.details.accelerator === '1' && e.details.hwaccel_vcodec === 'cuvid' && e.details.hwaccel_vcodec === ('h264_cuvid' || 'hevc_cuvid' || 'mjpeg_cuvid' || 'mpeg4_cuvid')){
-                    e.details.detector_buffer_vcodec = 'h264_nvenc'
-            }else{
-                switch(e.type){
-                    case'h264':case'hls':case'mp4':
-                        e.details.detector_buffer_vcodec = 'copy'
-                    break;
-                    default:
+            switch(e.type){
+                case'h264':case'hls':case'mp4':
+                    e.details.detector_buffer_vcodec = 'copy'
+                break;
+                default:
+                    if(e.details.accelerator === '1' && e.cudaEnabled){
+                            e.details.detector_buffer_vcodec = 'h264_nvenc'
+                    }else{
                         e.details.detector_buffer_vcodec = 'libx264'
-                    break;
-                }
+                    }
+                break;
             }
         }
         if(!e.details.detector_buffer_acodec||e.details.detector_buffer_acodec===''||e.details.detector_buffer_acodec==='auto'){
@@ -2360,10 +2181,6 @@ s.ffmpeg = function(e){
         }
         x.pipe+=x.detector_buffer_fps+x.detector_buffer_acodec+' -c:v '+e.details.detector_buffer_vcodec+' -f hls -tune '+e.details.detector_buffer_tune+' -g '+e.details.detector_buffer_g+' -hls_time '+e.details.detector_buffer_hls_time+' -hls_list_size '+e.details.detector_buffer_hls_list_size+' -start_number '+e.details.detector_buffer_start_number+' -live_start_index '+e.details.detector_buffer_live_start_index+' -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'detectorStream.m3u8"'
     }
-    if(e.coProcessor === true){
-        // the coProcessor ffmpeg consumes this HLS stream (no audio, frames only)
-        x.pipe += ' -q:v 1 -an -c:v copy -f hls -tune zerolatency -g 1 -hls_time 2 -hls_list_size 3 -start_number 0 -live_start_index 3 -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'cpuOnly.m3u8"'
-    }
     //custom - output
     if(e.details.custom_output&&e.details.custom_output!==''){x.pipe+=' '+e.details.custom_output;}
     //custom - input flags
@@ -2401,7 +2218,7 @@ s.ffmpeg = function(e){
         case'dashcam':
             x.ffmpegCommandString += x.cust_input+x.hwaccel+' -i -';
         break;
-        case'socket':case'jpeg':case'pipe':
+        case'socket':case'jpeg':case'pipe'://case'webpage':
             x.ffmpegCommandString += ' -pattern_type glob -f image2pipe'+x.record_fps+' -vcodec mjpeg'+x.cust_input+x.hwaccel+' -i -';
         break;
         case'mjpeg':
@@ -3531,11 +3348,7 @@ s.camera=function(x,e,cn,tx){
                             if(s.group[e.ke].mon[e.id].started === 1){
                                 fs.stat(e.sdir+'s.jpg',function(err,snap){
                                     var notStreaming = function(){
-                                        if(e.coProcessor === true){
-                                            s.coSpawnLauncher(e)
-                                        }else{
-                                            launchMonitorProcesses()
-                                        }
+                                        launchMonitorProcesses()
                                         s.log(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
                                     }
                                     if(err){
@@ -3705,7 +3518,19 @@ s.camera=function(x,e,cn,tx){
                                 });
                           }
                           e.captureOne()
-                        }
+                      }
+                      // else if(e.type === 'webpage'){
+                      //     var capture_fps = parseFloat(e.details.sfps);
+                      //     if(isNaN(capture_fps)){capture_fps = 1}
+                      //   var browser = casper.create()
+                      //   page.goto(e.url)
+                      //     s.group[e.ke].mon[e.id].casper = browser
+                      //     s.group[e.ke].mon[e.id].casperCapture = setInterval(function(){
+                      //         var buffer = page.screenshot()
+                      //         console.log(buffer)
+                      //         // s.group[e.ke].mon[e.id].spawn.stdin.write(buffer);
+                      //     },1000/capture_fps)
+                      // }
                         if(!s.group[e.ke]||!s.group[e.ke].mon[e.id]){s.init(0,e)}
                         s.group[e.ke].mon[e.id].spawn.on('error',function(er){
                             s.log(e,{type:'Spawn Error',msg:er});errorFatal('Spawn Error')
@@ -3714,21 +3539,17 @@ s.camera=function(x,e,cn,tx){
                             s.ocvTx({f:'init_monitor',id:e.id,ke:e.ke})
                             //frames from motion detect
                             if(e.details.detector_pam==='1'){
-                               if(e.coProcessor === false){
-                                   s.createPamDiffEngine(e)
-                                   s.group[e.ke].mon[e.id].spawn.stdio[3].pipe(s.group[e.ke].mon[e.id].p2p).pipe(s.group[e.ke].mon[e.id].pamDiff)
-                                    if(e.details.detector_use_detect_object === '1'){
-                                        s.group[e.ke].mon[e.id].spawn.stdio[4].on('data',function(d){
-                                            s.group[e.ke].mon[e.id].lastJpegDetectorFrame = d
-                                        })
-                                    }
-                               }
-                            }else{
-                               if(e.coProcessor === false){
-                                    s.group[e.ke].mon[e.id].spawn.stdio[3].on('data',function(d){
-                                        s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:d});
+                               s.createPamDiffEngine(e)
+                               s.group[e.ke].mon[e.id].spawn.stdio[3].pipe(s.group[e.ke].mon[e.id].p2p).pipe(s.group[e.ke].mon[e.id].pamDiff)
+                                if(e.details.detector_use_detect_object === '1'){
+                                    s.group[e.ke].mon[e.id].spawn.stdio[4].on('data',function(d){
+                                        s.group[e.ke].mon[e.id].lastJpegDetectorFrame = d
                                     })
-                               }
+                                }
+                            }else{
+                                s.group[e.ke].mon[e.id].spawn.stdio[3].on('data',function(d){
+                                    s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:d});
+                                })
                             }
                         }
                         //frames to stream
@@ -3779,11 +3600,7 @@ s.camera=function(x,e,cn,tx){
                            break;
                        }
                         if(e.frame_to_stream){
-                            if(e.coProcessor === true && e.details.stream_type === ('b64'||'mjpeg')){
-
-                            }else{
-                                s.group[e.ke].mon[e.id].spawn.stdout.on('data',e.frame_to_stream)
-                            }
+                            s.group[e.ke].mon[e.id].spawn.stdout.on('data',e.frame_to_stream)
                         }
                         if(e.details.stream_channels&&e.details.stream_channels!==''){
                             var createStreamEmitter = function(channel,number){
@@ -3914,11 +3731,6 @@ s.camera=function(x,e,cn,tx){
                                 }
                                 s.log(e,{type:"FFMPEG STDERR",msg:d})
                             });
-                        }
-                        if(e.coProcessor === true){
-                            setTimeout(function(){
-                                s.coSpawnLauncher(e)
-                            },6000)
                         }
                       }else{
                           s.log(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
