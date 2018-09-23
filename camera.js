@@ -462,22 +462,37 @@ s.getFunctionParamNames = function(func) {
 s.mergeDetectorBufferChunks = function(monitor,callback){
     var pathDir = s.dir.streams+monitor.ke+'/'+monitor.id+'/'
     var mergedFile = s.formattedTime()+'.mp4'
+    var mergedFilepath = pathDir+mergedFile
     var streamDirItems = fs.readdirSync(pathDir)
     var items = []
     var copiedItems = []
     var createMerged = function(copiedItems){
-        var allts = s.dir.streams+items.join('_')
-        var cat = 'cat '+copiedItems.join(' ')+' > '+allts
-        console.log(cat)
-        exec(cat,function(){
-            var merger = spawn(config.ffmpegDir,s.splitForFFPMEG(('-re -i '+allts+' -acodec copy -vcodec copy '+s.dir.streams+mergedFile)))
-            merger.stderr.on('data',function(data){
-                s.log(monitor,{type:"Buffer Merge",msg:data.toString()})
-            })
-            merger.on('close',function(){
-                delete(merger)
-                callback(s.dir.streams+mergedFile,mergedFile)
-            })
+        var allts = pathDir+items.join('_')
+        fs.stat(allts,function(err,stats){
+            if(err){
+                //not exist
+                var cat = 'cat '+copiedItems.join(' ')+' > '+allts
+                exec(cat,function(){
+                    var merger = spawn(config.ffmpegDir,s.splitForFFPMEG(('-re -i '+allts+' -acodec copy -vcodec copy '+pathDir+mergedFile)))
+                    merger.stderr.on('data',function(data){
+                        s.log(monitor,{type:"Buffer Merge",msg:data.toString()})
+                    })
+                    merger.on('close',function(){
+                        s.file('delete',allts)
+                        copiedItems.forEach(function(copiedItem){
+                            s.file('delete',copiedItem)
+                        })
+                        setTimeout(function(){
+                            s.file('delete',mergedFilepath)
+                        },1000 * 60 * 3)
+                        delete(merger)
+                        callback(mergedFilepath,mergedFile)
+                    })
+                })
+            }else{
+                //file exist
+                callback(mergedFilepath,mergedFile)
+            }
         })
     }
     streamDirItems.forEach(function(filename){
@@ -486,7 +501,7 @@ s.mergeDetectorBufferChunks = function(monitor,callback){
         }
     })
     items.sort()
-    items = items.slice(items.length - 6,items.length)
+    items = items.slice(items.length - 5,items.length)
     items.forEach(function(filename){
         try{
             var tempFilename = filename.split('.')
@@ -504,8 +519,6 @@ s.mergeDetectorBufferChunks = function(monitor,callback){
 
         }
     })
-    // cat segment1_0_av.ts segment2_0_av.ts segment3_0_av.ts > all.ts
-    // ffmpeg -i all.ts -acodec copy -vcodec copy all.mp4
     return items
 }
 s.createPamDiffEngine = function(e){
