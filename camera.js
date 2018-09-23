@@ -459,19 +459,53 @@ s.getFunctionParamNames = function(func) {
      result = [];
   return result;
 }
-s.getDetectorStreams = function(monitor){
+s.mergeDetectorBufferChunks = function(monitor,callback){
     var pathDir = s.dir.streams+monitor.ke+'/'+monitor.id+'/'
+    var mergedFile = s.formattedTime()+'.mp4'
     var streamDirItems = fs.readdirSync(pathDir)
     var items = []
+    var copiedItems = []
+    var createMerged = function(copiedItems){
+        var allts = s.dir.streams+items.join('_')
+        var cat = 'cat '+copiedItems.join(' ')+' > '+allts
+        console.log(cat)
+        exec(cat,function(){
+            var merger = spawn(config.ffmpegDir,s.splitForFFPMEG(('-re -i '+allts+' -acodec copy -vcodec copy '+s.dir.streams+mergedFile)))
+            merger.stderr.on('data',function(data){
+                s.log(monitor,{type:"Buffer Merge",msg:data.toString()})
+            })
+            merger.on('close',function(){
+                delete(merger)
+                callback(s.dir.streams+mergedFile,mergedFile)
+            })
+        })
+    }
     streamDirItems.forEach(function(filename){
         if(filename.indexOf('detectorStream') > -1 && filename.indexOf('.m3u8') === -1){
-            try{
-                items.push(pathDir+filename)
-            }catch(err){
-                console.log(err)
-            }
+            items.push(filename)
         }
     })
+    items.sort()
+    items = items.slice(items.length - 6,items.length)
+    items.forEach(function(filename){
+        try{
+            var tempFilename = filename.split('.')
+            tempFilename[0] = tempFilename[0] + 'm'
+            tempFilename = tempFilename.join('.')
+            var tempWriteStream = fs.createWriteStream(pathDir+tempFilename)
+            tempWriteStream.on('finish', function(){
+                copiedItems.push(pathDir+tempFilename)
+                if(copiedItems.length === items.length){
+                    createMerged(copiedItems.sort())
+                }
+            })
+            fs.createReadStream(pathDir+filename).pipe(tempWriteStream)
+        }catch(err){
+
+        }
+    })
+    // cat segment1_0_av.ts segment2_0_av.ts segment3_0_av.ts > all.ts
+    // ffmpeg -i all.ts -acodec copy -vcodec copy all.mp4
     return items
 }
 s.createPamDiffEngine = function(e){
@@ -2574,6 +2608,8 @@ s.event = function(x,e,cn){
 
                     }).end();
                 }
+                var currentTime = new Date()
+                var currentTimestamp = s.timeObject(currentTime).format()
                 var screenshotName = 'Motion_'+(d.mon.name.replace(/[^\w\s]/gi,''))+'_'+d.id+'_'+d.ke+'_'+s.formattedTime()
                 var screenshotBuffer = null
                 var detectorStreamBuffers = null
@@ -2600,9 +2636,9 @@ s.event = function(x,e,cn){
                               icon_url: config.iconURL
                             },
                             title: lang.Event+' - '+screenshotName,
-                            description: lang.EventText1+' '+s.timeObject(new Date).format(),
+                            description: lang.EventText1+' '+currentTimestamp,
                             fields: [],
-                            timestamp: new Date(),
+                            timestamp: currentTime,
                             footer: {
                               icon_url: config.iconURL,
                               text: "Shinobi Systems"
@@ -2610,14 +2646,25 @@ s.event = function(x,e,cn){
                         },files,d.ke)
                     }
                     if(currentConfig.detector_discordbot_send_video === '1'){
-                        if(!detectorStreamBuffers){
-                            detectorStreamBuffers = s.getDetectorStreams(d)
-                        }
-                        detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
-                            files.push({
-                                attachment: filepath,
-                                name: 'Video Clip '+n+'.ts'
-                            })
+                        s.mergeDetectorBufferChunks(d,function(mergedFilepath,filename){
+                            s.discordMsg({
+                                author: {
+                                  name: s.group[d.ke].mon_conf[d.id].name,
+                                  icon_url: config.iconURL
+                                },
+                                title: filename,
+                                fields: [],
+                                timestamp: currentTime,
+                                footer: {
+                                  icon_url: config.iconURL,
+                                  text: "Shinobi Systems"
+                                }
+                            },[
+                                {
+                                    attachment: mergedFilepath,
+                                    name: filename
+                                }
+                            ],d.ke)
                         })
                     }
                     if(screenshotBuffer){
@@ -2660,7 +2707,7 @@ s.event = function(x,e,cn){
                             from: config.mail.from, // sender address
                             to: r.mail, // list of receivers
                             subject: lang.Event+' - '+screenshotName, // Subject line
-                            html: '<i>'+lang.EventText1+' '+s.timeObject(new Date).format()+'.</i>',
+                            html: '<i>'+lang.EventText1+' '+currentTimestamp+'.</i>',
                             attachments: files
                         }
                         var sendMail = function(){
@@ -2675,13 +2722,23 @@ s.event = function(x,e,cn){
                             })
                         }
                         if(currentConfig.detector_mail_send_video === '1'){
-                            if(!detectorStreamBuffers){
-                                detectorStreamBuffers = s.getDetectorStreams(d)
-                            }
-                            detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
-                                files.push({
-                                    filename: 'Video Clip '+n+'.ts',
-                                    content: fs.readFileSync(filepath)
+                            s.mergeDetectorBufferChunks(d,function(mergedFilepath,filename){
+                                nodemailer.sendMail({
+                                    from: config.mail.from,
+                                    to: r.mail,
+                                    subject: filename,
+                                    html: '',
+                                    attachments: [
+                                        {
+                                            filename: filename,
+                                            content: fs.readFileSync(mergedFilepath)
+                                        }
+                                    ]
+                                }, (error, info) => {
+                                    if (error) {
+                                        s.systemLog(lang.MailError,error)
+                                        return false;
+                                    }
                                 })
                             })
                         }
@@ -2718,7 +2775,7 @@ s.event = function(x,e,cn){
 
                     },detector_command_timeout);
                     var detector_command = currentConfig.detector_command
-                        .replace(/{{TIME}}/g,s.timeObject(new Date).format())
+                        .replace(/{{TIME}}/g,currentTimestamp)
                         .replace(/{{REGION_NAME}}/g,d.details.name)
                         .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
                         .replace(/{{MONITOR_ID}}/g,d.id)
