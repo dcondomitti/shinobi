@@ -459,6 +459,59 @@ s.getFunctionParamNames = function(func) {
      result = [];
   return result;
 }
+s.getRawSnapshotFromMonitor = function(monitor,options,callback){
+    if(!callback){
+        callback = options
+        var options = ''
+    }else{
+        options = ' '+options
+    }
+    var url
+    var runExtraction = function(){
+        var snapBuffer = []
+        var snapProcess = spawn(config.ffmpegDir,('-loglevel quiet -re -i '+url+options+' -frames:v 1 -f singlejpeg pipe:1').split(' '),{detached: true})
+        snapProcess.stdout.on('data',function(data){
+            snapBuffer.push(data)
+        });
+        snapProcess.on('close',function(data){
+            snapBuffer = Buffer.concat(snapBuffer)
+            callback(snapBuffer)
+        })
+    }
+    var checkExists = function(localStream,callback){
+        fs.stat(localStream,function(err){
+            if(err){
+                callback(false)
+            }else{
+                callback(true)
+            }
+        })
+    }
+    var localStream = s.dir.streams+monitor.ke+'/'+monitor.mid+'/'
+    checkExists(localStream+'s.jpg',function(success){
+        if(success === false){
+            checkExists(localStream+'detectorStream.m3u8',function(success){
+                if(success === false){
+                    checkExists(localStream+'s.m3u8',function(success){
+                        if(success === false){
+                            url = s.init('url',monitor)
+                        }else{
+                            url = localStream+'s.m3u8'
+                        }
+                        runExtraction()
+                    })
+                }else{
+                    url = localStream+'detectorStream.m3u8'
+                    runExtraction()
+                }
+            })
+        }else{
+            fs.readFile(localStream+'s.jpg',function(err,snapBuffer){
+                callback(snapBuffer)
+            })
+        }
+    })
+}
 s.mergeDetectorBufferChunks = function(monitor,callback){
     var pathDir = s.dir.streams+monitor.ke+'/'+monitor.id+'/'
     var mergedFile = s.formattedTime()+'.mp4'
@@ -2625,7 +2678,6 @@ s.event = function(x,e,cn){
                 var currentTimestamp = s.timeObject(currentTime).format()
                 var screenshotName = 'Motion_'+(d.mon.name.replace(/[^\w\s]/gi,''))+'_'+d.id+'_'+d.ke+'_'+s.formattedTime()
                 var screenshotBuffer = null
-                var detectorStreamBuffers = null
 
                 //discord bot
                 if(filter.discord && currentConfig.detector_discordbot === '1' && !s.group[d.ke].mon[d.id].detector_discordbot){
@@ -2680,24 +2732,16 @@ s.event = function(x,e,cn){
                             ],d.ke)
                         })
                     }
-                    if(screenshotBuffer){
+                    s.getRawSnapshotFromMonitor(e.mon,function(data){
+                        if((data[data.length-2] === 0xFF && data[data.length-1] === 0xD9)){
+                            screenshotBuffer = data
+                            files.push({
+                                attachment: screenshotBuffer,
+                                name: screenshotName+'.jpg'
+                            })
+                        }
                         sendAlert()
-                    }else if(currentConfig.snap === '1'){
-                        fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
-                            if(err){
-                                s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
-                            }else{
-                                screenshotBuffer = frame
-                                files.push({
-                                    attachment: screenshotBuffer,
-                                    name: screenshotName+'.jpg'
-                                })
-                            }
-                            sendAlert()
-                        })
-                    }else{
-                        sendAlert()
-                    }
+                    })
                 }
                 //mailer
                 if(filter.mail && config.mail && !s.group[d.ke].mon[d.id].detector_mail && currentConfig.detector_mail === '1'){
@@ -2756,22 +2800,20 @@ s.event = function(x,e,cn){
                             })
                         }
                         if(screenshotBuffer){
+                            files.push({
+                                filename: screenshotName+'.jpg',
+                                content: screenshotBuffer
+                            })
                             sendMail()
-                        }else if(currentConfig.snap === '1'){
-                            fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
-                                if(err){
-                                    s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
-                                }else{
-                                    screenshotBuffer = frame
-                                    files.push({
-                                        filename: screenshotName+'.jpg',
-                                        content: frame
-                                    })
-                                }
+                        }else{
+                            s.getRawSnapshotFromMonitor(e.mon,function(data){
+                                screenshotBuffer = data
+                                files.push({
+                                    filename: screenshotName+'.jpg',
+                                    content: data
+                                })
                                 sendMail()
                             })
-                        }else{
-                            sendMail()
                         }
                     });
                 }
@@ -3054,8 +3096,9 @@ s.camera=function(x,e,cn,tx){
         case'snapshot'://get snapshot from monitor URL
             if(config.doSnapshot===true){
                 if(e.mon.mode!=='stop'){
+                    var pathDir = s.dir.streams+e.ke+'/'+e.mid+'/'
                     if(e.mon.details.snap==='1'){
-                        fs.readFile(s.dir.streams+e.ke+'/'+e.mid+'/s.jpg',function(err,data){
+                        fs.readFile(pathDir+'s.jpg',function(err,data){
                             if(err){s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke);return};
                             s.tx({f:'monitor_snapshot',snapshot:data,snapshot_format:'ab',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
                         })
@@ -3064,17 +3107,19 @@ s.camera=function(x,e,cn,tx){
                         switch(e.mon.type){
                             case'mjpeg':case'h264':case'local':
                                 if(e.mon.type==='local'){e.url=e.mon.path;}
-                                var snapProcess = spawn(config.ffmpegDir,('-loglevel quiet -i '+e.url+' -s 400x400 -r 25 -ss 1.8 -frames:v 1 -f singlejpeg pipe:1').split(' '),{detached: true})
-                                snapProcess.stdout.on('data',function(data){
-                                   e.snapshot_sent=true; s.tx({f:'monitor_snapshot',snapshot:data.toString('base64'),snapshot_format:'b64',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
-                                    snapProcess.kill();
-                                });
-                                snapProcess.on('close',function(data){
-                                    if(!e.snapshot_sent){
-                                        s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
+                                 s.getRawSnapshotFromMonitor(e.mon,'-s 400x400',function(data){
+                                     if((data[data.length-2] === 0xFF && data[data.length-1] === 0xD9)){
+                                         s.tx({
+                                             f:'monitor_snapshot',
+                                             snapshot:data.toString('base64'),
+                                             snapshot_format:'b64',
+                                             mid:e.mid,
+                                             ke:e.ke
+                                         },'GRP_'+e.ke)
+                                     }else{
+                                         s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
                                     }
-                                    delete(e.snapshot_sent);
-                                })
+                                 })
                             break;
                             case'jpeg':
                                 request({url:e.url,method:'GET',encoding:null},function(err,data){
