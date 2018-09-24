@@ -621,8 +621,14 @@ switch($user.details.lang){
                 }
             break;
             case'url':
-                if(d.port==80){d.porty=''}else{d.porty=':'+d.port}
-                d.url=d.protocol+'://'+d.host+d.porty;return d.url;
+                var porty
+                if(d.port && d.port !== ''){
+                    porty = ':' + d.port
+                }else{
+                    porty = ''
+                }
+                d.url = d.protocol + '://' + d.host + porty
+                return d.url
             break;
             case'data-video':
                 if(!d){
