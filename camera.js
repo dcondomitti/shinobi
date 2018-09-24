@@ -3064,17 +3064,17 @@ s.camera=function(x,e,cn,tx){
                         switch(e.mon.type){
                             case'mjpeg':case'h264':case'local':
                                 if(e.mon.type==='local'){e.url=e.mon.path;}
-                                e.spawn=spawn(config.ffmpegDir,('-loglevel quiet -i '+e.url+' -s 400x400 -r 25 -ss 1.8 -frames:v 1 -f singlejpeg pipe:1').split(' '),{detached: true})
-                                e.spawn.stdout.on('data',function(data){
+                                var snapProcess = spawn(config.ffmpegDir,('-loglevel quiet -i '+e.url+' -s 400x400 -r 25 -ss 1.8 -frames:v 1 -f singlejpeg pipe:1').split(' '),{detached: true})
+                                snapProcess.stdout.on('data',function(data){
                                    e.snapshot_sent=true; s.tx({f:'monitor_snapshot',snapshot:data.toString('base64'),snapshot_format:'b64',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
-                                    e.spawn.kill();
+                                    snapProcess.kill();
                                 });
-                                e.spawn.on('close',function(data){
+                                snapProcess.on('close',function(data){
                                     if(!e.snapshot_sent){
                                         s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
                                     }
                                     delete(e.snapshot_sent);
-                                });
+                                })
                             break;
                             case'jpeg':
                                 request({url:e.url,method:'GET',encoding:null},function(err,data){
@@ -5288,7 +5288,8 @@ var tx;
     })
 });
 //Authenticator functions
-s.api={};
+s.api = {}
+s.failedLoginAttempts = {}
 //auth handler
 //params = parameters
 //cb = callback
@@ -5373,7 +5374,7 @@ s.auth = function(params,cb,res,req){
                     if(r&&r[0]){
                         r=r[0];
                         s.api[params.auth]={ip:r.ip,uid:r.uid,ke:r.ke,permissions:JSON.parse(r.details),details:{}};
-                        s.sqlQuery('SELECT details FROM Users WHERE uid=? AND ke=?',[r.uid,r.ke],function(err,rr){
+                        s.sqlQuery('SELECT mail,details FROM Users WHERE uid=? AND ke=?',[r.uid,r.ke],function(err,rr){
                             if(rr&&rr[0]){
                                 rr=rr[0];
                                 try{
@@ -5606,10 +5607,36 @@ s.deleteFactorAuth=function(r){
 }
 app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':screen'],function (req,res){
     req.ip=req.headers['cf-connecting-ip']||req.headers["CF-Connecting-IP"]||req.headers["'x-forwarded-for"]||req.connection.remoteAddress;
-    if(req.query.json=='true'){
+    if(req.query.json === 'true'){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
     }
+    // brute check
+    if(s.failedLoginAttempts[req.body.mail] && s.failedLoginAttempts[req.body.mail].failCount >= 5){
+        if(req.query.json=='true'){
+            res.end(s.s({ok:false}, null, 3))
+        }else{
+            res.render(config.renderPaths.index,{
+                failedLogin:true,
+                message:lang.failedLoginText1,
+                lang:lang,
+                config:config,
+                screen:req.params.screen,
+                originalURL:s.getOriginalUrl(req)
+            },function(err,html){
+                if(err){
+                    s.systemLog(err)
+                }
+                res.end(html);
+            });
+        }
+        return false
+    }
+    //
     req.renderFunction=function(focus,data){
+        if(s.failedLoginAttempts[req.body.mail]){
+            clearTimeout(s.failedLoginAttempts[req.body.mail].timeout)
+            delete(s.failedLoginAttempts[req.body.mail])
+        }
         if(req.query.json=='true'){
             delete(data.config)
             data.ok=true;
@@ -5627,11 +5654,35 @@ app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':
         }
     }
     req.failed=function(board){
+        // brute protector
+        if(!s.failedLoginAttempts[req.body.mail]){
+            s.failedLoginAttempts[req.body.mail] = {
+                failCount : 0,
+                ips : {}
+            }
+        }
+        ++s.failedLoginAttempts[req.body.mail].failCount
+        if(!s.failedLoginAttempts[req.body.mail].ips[req.ip]){
+            s.failedLoginAttempts[req.body.mail].ips[req.ip] = 0
+        }
+        ++s.failedLoginAttempts[req.body.mail].ips[req.ip]
+        clearTimeout(s.failedLoginAttempts[req.body.mail].timeout)
+        s.failedLoginAttempts[req.body.mail].timeout = setTimeout(function(){
+            delete(s.failedLoginAttempts[req.body.mail])
+        },1000 * 60 * 15)
+        // check if JSON
         if(req.query.json=='true'){
             res.setHeader('Content-Type', 'application/json');
             res.end(s.s({ok:false}, null, 3))
         }else{
-            res.render(config.renderPaths.index,{failedLogin:true,lang:lang,config:config,screen:req.params.screen,originalURL:s.getOriginalUrl(req)},function(err,html){
+            res.render(config.renderPaths.index,{
+                failedLogin:true,
+                message:lang.failedLoginText2,
+                lang:lang,
+                config:config,
+                screen:req.params.screen,
+                originalURL:s.getOriginalUrl(req)
+            },function(err,html){
                 if(err){
                     s.systemLog(err)
                 }
@@ -5934,6 +5985,17 @@ app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':
         }
     }
 });
+// Brute Protection Lock Reset by API
+app.get([config.webPaths.apiPrefix+':auth/resetBruteProtection/:ke'], function (req,res){
+    res.header("Access-Control-Allow-Origin",req.headers.origin);
+    s.auth(req.params,function(user){
+        if(s.failedLoginAttempts[user.mail]){
+            clearTimeout(s.failedLoginAttempts[user.mail].timeout)
+            delete(s.failedLoginAttempts[user.mail])
+        }
+        res.end(s.s({ok:true},null,3))
+    })
+})
 // Get HLS stream (m3u8)
 app.get([config.webPaths.apiPrefix+':auth/hls/:ke/:id/:file',config.webPaths.apiPrefix+':auth/hls/:ke/:id/:channel/:file'], function (req,res){
     res.header("Access-Control-Allow-Origin",req.headers.origin);

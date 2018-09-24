@@ -1,6 +1,9 @@
 {
    "Shinobi": "Shinobi",
    "superAdminTitle": "Shinobi : Super Admin",
+   "failedLoginText1": "You have failed to login too many times. You must wait 15 minutes before trying again.",
+   "failedLoginText2": "Please check your login credentials.",
+   "Time Left": "Time Left",
    "Login": "Login",
    "Authenticate": "Authenticate",
    "Dashboard": "Dashboard",
@@ -446,6 +449,7 @@
    "Log Level": "Log Level",
    "Save Log in SQL": "Save Log in SQL <small>This can fill up quickly.</small>",
    "JPEG": "JPEG",
+   "Web Page": "Web Page",
    "MJPEG": "MJPEG",
    "H.264 / H.265 / H.265+": "H.264 / H.265 / H.265+",
    "HLS (.m3u8)": "HLS (.m3u8)",
