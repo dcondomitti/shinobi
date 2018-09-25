@@ -324,7 +324,18 @@ s.checkCorrectPathEnding = function(x){
     }
     return x.replace('__DIR__',__dirname)
 }
-s.md5=function(x){return crypto.createHash('md5').update(x).digest("hex");}
+s.md5 = function(x){return crypto.createHash('md5').update(x).digest("hex")}
+s.createHash = s.md5
+switch(config.passwordType){
+    case'sha512':
+        if(config.passwordSalt){
+            s.createHash = function(x){return crypto.pbkdf2Sync(x, config.passwordSalt, 100000, 64, 'sha512').toString('hex')}
+        }
+    break;
+    case'sha256':
+        s.createHash = function(x){return crypto.createHash('sha256').update(x).digest("hex")}
+    break;
+}
 //send data to detector plugin
 s.ocvTx=function(data){
     if(!s.ocv){return}
@@ -4592,7 +4603,7 @@ var tx;
                                         d.form.details=JSON.stringify(d.form.details)
                                         ///
                                         d.set=[],d.ar=[];
-                                        if(d.form.pass&&d.form.pass!==''){d.form.pass=s.md5(d.form.pass);}else{delete(d.form.pass)};
+                                        if(d.form.pass&&d.form.pass!==''){d.form.pass=s.createHash(d.form.pass);}else{delete(d.form.pass)};
                                         delete(d.form.password_again);
                                         d.for=Object.keys(d.form);
                                         d.for.forEach(function(v){
@@ -5035,7 +5046,7 @@ var tx;
                                                     d.form.ke = d.form.ke.replace(/[`~!@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi, '')
                                                 }
                                                 //write user to db
-                                                s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[d.form.ke,d.form.uid,d.form.mail,s.md5(d.form.pass),d.form.details])
+                                                s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[d.form.ke,d.form.uid,d.form.mail,s.createHash(d.form.pass),d.form.details])
                                                 s.tx({f:'add_account',details:d.form.details,ke:d.form.ke,uid:d.form.uid,mail:d.form.mail},'$');
                                                 //init user
                                                 s.init('group',d.form)
@@ -5058,7 +5069,7 @@ var tx;
                                         var details = JSON.parse(r.details)
                                         if(d.form.pass&&d.form.pass!==''){
                                            if(d.form.pass===d.form.password_again){
-                                               d.form.pass=s.md5(d.form.pass);
+                                               d.form.pass=s.createHash(d.form.pass);
                                            }else{
                                                s.tx({f:'error',ff:'edit_account',msg:lang["Passwords Don't Match"]},cn.id)
                                                return
@@ -5398,7 +5409,7 @@ s.auth = function(params,cb,res,req){
             //no key in memory, query db to see if key exists
             //check if using username and password in plain text or md5
             if(params.username&&params.username!==''&&params.password&&params.password!==''){
-                s.sqlQuery('SELECT * FROM Users WHERE mail=? AND (pass=? OR pass=?)',[params.username,params.password,s.md5(params.password)],function(err,r){
+                s.sqlQuery('SELECT * FROM Users WHERE mail=? AND (pass=? OR pass=?)',[params.username,params.password,s.createHash(params.password)],function(err,r){
                     if(r&&r[0]){
                         r=r[0];
                         r.ip='0.0.0.0';
@@ -5455,10 +5466,10 @@ s.superAuth=function(x,callback){
     req={};
     req.super=require(location.super);
     req.super.forEach(function(v,n){
-        if(x.md5===true){
-            x.pass=s.md5(x.pass);
-        }
-        if(x.mail.toLowerCase()===v.mail.toLowerCase()&&x.pass===v.pass){
+        if(
+            x.mail.toLowerCase() === v.mail.toLowerCase() &&
+            (x.pass === v.pass || v.pass === s.createHash(x.pass) || v.pass === s.md5(x.pass))
+        ){
             req.found=1;
             if(x.users===true){
                 s.sqlQuery('SELECT * FROM Users WHERE details NOT LIKE ?',['%"sub"%'],function(err,r) {
@@ -5623,7 +5634,7 @@ app.post(config.webPaths.apiPrefix+':auth/register/:ke/:uid',function (req,res){
                                 req.resp.msg='New Account Created';req.resp.ok=true;
                                 req.gid=s.gid();
                                 req.body.details='{"sub":"1","allmonitors":"1"}';
-                                s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[req.params.ke,req.gid,req.body.mail,s.md5(req.body.pass),req.body.details])
+                                s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[req.params.ke,req.gid,req.body.mail,s.createHash(req.body.pass),req.body.details])
                                 s.tx({f:'add_sub_account',details:req.body.details,ke:req.params.ke,uid:req.gid,mail:req.body.mail},'ADM_'+req.params.ke);
                             }
                             res.end(s.s(req.resp,null,3));
@@ -5787,7 +5798,7 @@ app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':
     }
     if(req.body.mail&&req.body.pass){
         req.default=function(){
-            s.sqlQuery('SELECT * FROM Users WHERE mail=? AND pass=?',[req.body.mail,s.md5(req.body.pass)],function(err,r) {
+            s.sqlQuery('SELECT * FROM Users WHERE mail=? AND pass=?',[req.body.mail,s.createHash(req.body.pass)],function(err,r) {
                 req.resp={ok:false};
                 if(!err&&r&&r[0]){
                     r=r[0];r.auth=s.md5(s.gid());
@@ -5923,9 +5934,9 @@ app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':
                                 req.resp={
                                     ke:req.body.key,
                                     uid:user.uid,
-                                    auth:s.md5(s.gid()),
+                                    auth:s.createHash(s.gid()),
                                     mail:user.mail,
-                                    pass:s.md5(req.body.pass),
+                                    pass:s.createHash(req.body.pass),
                                     details:JSON.stringify({
                                         sub:'1',
                                         ldap:'1',
