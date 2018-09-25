@@ -48,12 +48,13 @@ var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var socketIOclient = require('socket.io-client');
 var crypto = require('crypto');
-var webdav = require("webdav");
+var webdav = require("webdav-fs");
 var jsonfile = require("jsonfile");
 var connectionTester = require('connection-tester');
 var events = require('events');
 var onvif = require('node-onvif');
-var onvifHawk = require('onvif-nvt');
+// var casper = require('casper');
+// var onvifHawk = require('onvif-nvt');
 var knex = require('knex');
 var Mp4Frag = require('mp4frag');
 var P2P = require('pipe2pam');
@@ -122,6 +123,7 @@ if(config.databaseLogs === undefined){config.databaseLogs=false}
 if(config.useUTC === undefined){config.useUTC=false}
 if(config.iconURL === undefined){config.iconURL = "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"}
 if(config.pipeAddition === undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
+if(config.hideCloudSaveUrls === undefined){config.hideCloudSaveUrls = true}
 //Child Nodes
 if(config.childNodes === undefined)config.childNodes = {};
     //enabled
@@ -310,14 +312,30 @@ s.checkRelativePath=function(x){
     }
     return x
 }
-s.checkCorrectPathEnding=function(x){
+s.addUserPassToUrl = function(url,user,pass){
+    var splitted = url.split('://')
+    splitted[1] = user + ':' + pass + '@' + splitted[1]
+    return splitted.join('://')
+}
+s.checkCorrectPathEnding = function(x){
     var length=x.length
     if(x.charAt(length-1)!=='/'){
         x=x+'/'
     }
     return x.replace('__DIR__',__dirname)
 }
-s.md5=function(x){return crypto.createHash('md5').update(x).digest("hex");}
+s.md5 = function(x){return crypto.createHash('md5').update(x).digest("hex")}
+s.createHash = s.md5
+switch(config.passwordType){
+    case'sha512':
+        if(config.passwordSalt){
+            s.createHash = function(x){return crypto.pbkdf2Sync(x, config.passwordSalt, 100000, 64, 'sha512').toString('hex')}
+        }
+    break;
+    case'sha256':
+        s.createHash = function(x){return crypto.createHash('sha256').update(x).digest("hex")}
+    break;
+}
 //send data to detector plugin
 s.ocvTx=function(data){
     if(!s.ocv){return}
@@ -452,17 +470,117 @@ s.getFunctionParamNames = function(func) {
      result = [];
   return result;
 }
-s.getDetectorStreams = function(monitor){
+s.getRawSnapshotFromMonitor = function(monitor,options,callback){
+    if(!callback){
+        callback = options
+        var options = ''
+    }else{
+        options = ' '+options
+    }
+    var url
+    var runExtraction = function(){
+        var snapBuffer = []
+        var snapProcess = spawn(config.ffmpegDir,('-loglevel quiet -re -i '+url+options+' -frames:v 1 -f singlejpeg pipe:1').split(' '),{detached: true})
+        snapProcess.stdout.on('data',function(data){
+            snapBuffer.push(data)
+        });
+        snapProcess.on('close',function(data){
+            snapBuffer = Buffer.concat(snapBuffer)
+            callback(snapBuffer)
+        })
+    }
+    var checkExists = function(localStream,callback){
+        fs.stat(localStream,function(err){
+            if(err){
+                callback(false)
+            }else{
+                callback(true)
+            }
+        })
+    }
+    var localStream = s.dir.streams+monitor.ke+'/'+monitor.mid+'/'
+    checkExists(localStream+'s.jpg',function(success){
+        if(success === false){
+            checkExists(localStream+'detectorStream.m3u8',function(success){
+                if(success === false){
+                    checkExists(localStream+'s.m3u8',function(success){
+                        if(success === false){
+                            url = s.init('url',monitor)
+                        }else{
+                            url = localStream+'s.m3u8'
+                        }
+                        runExtraction()
+                    })
+                }else{
+                    url = localStream+'detectorStream.m3u8'
+                    runExtraction()
+                }
+            })
+        }else{
+            fs.readFile(localStream+'s.jpg',function(err,snapBuffer){
+                callback(snapBuffer)
+            })
+        }
+    })
+}
+s.mergeDetectorBufferChunks = function(monitor,callback){
     var pathDir = s.dir.streams+monitor.ke+'/'+monitor.id+'/'
+    var mergedFile = s.formattedTime()+'.mp4'
+    var mergedFilepath = pathDir+mergedFile
     var streamDirItems = fs.readdirSync(pathDir)
     var items = []
+    var copiedItems = []
+    var createMerged = function(copiedItems){
+        var allts = pathDir+items.join('_')
+        fs.stat(allts,function(err,stats){
+            if(err){
+                //not exist
+                var cat = 'cat '+copiedItems.join(' ')+' > '+allts
+                exec(cat,function(){
+                    var merger = spawn(config.ffmpegDir,s.splitForFFPMEG(('-re -i '+allts+' -acodec copy -vcodec copy '+pathDir+mergedFile)))
+                    merger.stderr.on('data',function(data){
+                        s.log(monitor,{type:"Buffer Merge",msg:data.toString()})
+                    })
+                    merger.on('close',function(){
+                        s.file('delete',allts)
+                        copiedItems.forEach(function(copiedItem){
+                            s.file('delete',copiedItem)
+                        })
+                        setTimeout(function(){
+                            s.file('delete',mergedFilepath)
+                        },1000 * 60 * 3)
+                        delete(merger)
+                        callback(mergedFilepath,mergedFile)
+                    })
+                })
+            }else{
+                //file exist
+                callback(mergedFilepath,mergedFile)
+            }
+        })
+    }
     streamDirItems.forEach(function(filename){
         if(filename.indexOf('detectorStream') > -1 && filename.indexOf('.m3u8') === -1){
-            try{
-                items.push(pathDir+filename)
-            }catch(err){
-                console.log(err)
-            }
+            items.push(filename)
+        }
+    })
+    items.sort()
+    items = items.slice(items.length - 5,items.length)
+    items.forEach(function(filename){
+        try{
+            var tempFilename = filename.split('.')
+            tempFilename[0] = tempFilename[0] + 'm'
+            tempFilename = tempFilename.join('.')
+            var tempWriteStream = fs.createWriteStream(pathDir+tempFilename)
+            tempWriteStream.on('finish', function(){
+                copiedItems.push(pathDir+tempFilename)
+                if(copiedItems.length === items.length){
+                    createMerged(copiedItems.sort())
+                }
+            })
+            fs.createReadStream(pathDir+filename).pipe(tempWriteStream)
+        }catch(err){
+
         }
     })
     return items
@@ -522,9 +640,6 @@ s.createPamDiffEngine = function(e){
         }
         detectorObject.doObjectDetection = (s.ocv && e.details.detector_use_detect_object === '1')
         s.event('trigger',detectorObject)
-        if(detectorObject.doObjectDetection === true){
-            s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:s.group[e.ke].mon[e.id].lastJpegDetectorFrame});
-        }
     }
     var filterTheNoise = function(trigger){
         if(noiseFilterArray[trigger.name].length > 2){
@@ -644,10 +759,14 @@ s.kill = function(x,e,p){
             clearTimeout(s.group[e.ke].mon[e.id].record.capturing);
 //            if(s.group[e.ke].mon[e.id].record.request){s.group[e.ke].mon[e.id].record.request.abort();delete(s.group[e.ke].mon[e.id].record.request);}
         };
+        // if(s.group[e.ke].mon[e.id].casper){
+        //     s.group[e.ke].mon[e.id].casper.done()
+        //     delete(s.group[e.ke].mon[e.id].casper)
+        //     clearInterval(s.group[e.ke].mon[e.id].casperCapture)
+        // }
         if(s.group[e.ke].mon[e.id].childNode){
             s.cx({f:'kill',d:s.init('noReference',e)},s.group[e.ke].mon[e.id].childNodeId)
         }else{
-            s.coSpawnClose(e)
             if(!x||x===1){return};
             p=x.pid;
             if(s.group[e.ke].mon_conf[e.id].type===('dashcam'||'socket'||'jpeg'||'pipe')){
@@ -851,7 +970,7 @@ s.init=function(x,e,k,fn){
                                 ar.webdav_url,
                                 ar.webdav_user,
                                 ar.webdav_pass
-                            );
+                            )
                         }
                         //Amazon S3
                         if(!s.group[e.ke].aws &&
@@ -893,7 +1012,7 @@ s.init=function(x,e,k,fn){
                         //disk Used Emitter
                         if(!s.group[e.ke].diskUsedEmitter){
                             s.group[e.ke].diskUsedEmitter = new events.EventEmitter()
-                            s.group[e.ke].diskUsedEmitter.on('data',function(currentChange){
+                            s.group[e.ke].diskUsedEmitter.on('set',function(currentChange){
                                 //validate current values
                                 if(!s.group[e.ke].usedSpace){
                                     s.group[e.ke].usedSpace=0
@@ -908,8 +1027,7 @@ s.init=function(x,e,k,fn){
                                 //remove value just used from queue
                                 s.init('diskUsedEmit',e)
                             })
-                            s.group[e.ke].diskPurgedEmitter = new events.EventEmitter()
-                            s.group[e.ke].diskPurgedEmitter.on('data',function(currentPurge){
+                            s.group[e.ke].diskUsedEmitter.on('purge',function(currentPurge){
                                 s.init('diskUsedSet',e,currentPurge.filesizeMB)
                                 if(config.cron.deleteOverMax===true){
                                         //set queue processor
@@ -1000,7 +1118,7 @@ s.init=function(x,e,k,fn){
         break;
         case'diskUsedSet':
             //`k` will be used as the value to add or substract
-            s.group[e.ke].diskUsedEmitter.emit('data',k)
+            s.group[e.ke].diskUsedEmitter.emit('set',k)
         break;
         case'monitorStatus':
 //            s.discordMsg({
@@ -1151,6 +1269,11 @@ s.video=function(x,e,k){
                 }
             })
         break;
+        case'deleteFromCloud':
+            s.sqlQuery('DELETE FROM `Cloud Videos` WHERE `mid`=? AND `ke`=? AND `time`=?',[e.id,e.ke,new Date(e.time)],function(){
+                s.tx({f:'video_delete_cloud',mid:e.mid,ke:e.ke,time:e.time,end:e.end},'GRP_'+e.ke);
+            })
+        break;
 //        case'open':
 //            //on video open
 //            e.save=[e.id,e.ke,s.nameToTime(e.filename),e.ext];
@@ -1259,20 +1382,26 @@ s.video=function(x,e,k){
                 }else{
                     queryString = ''
                 }
-                v.filename = s.formattedTime(v.time)+'.'+v.ext;
-                v.href = '/'+k+'/videos/'+v.ke+'/'+v.mid+'/'+v.filename;
-                v.links = {
-                    deleteVideo : v.href+'/delete' + queryString,
-                    changeToUnread : v.href+'/status/1' + queryString,
-                    changeToRead : v.href+'/status/2' + queryString
+                if(!v.ext && v.href){
+                    v.ext = v.href.split('.')
+                    v.ext = v.ext[v.ext.length - 1]
                 }
-                v.href = v.href + queryString
+                v.filename = s.formattedTime(v.time)+'.'+v.ext;
+                if(!k.videoParam)k.videoParam = 'videos'
+                var href = '/'+k.auth+'/'+k.videoParam+'/'+v.ke+'/'+v.mid+'/'+v.filename;
+                v.actionUrl = href
+                v.links = {
+                    deleteVideo : href+'/delete' + queryString,
+                    changeToUnread : href+'/status/1' + queryString,
+                    changeToRead : href+'/status/2' + queryString
+                }
+                if(!v.href || k.hideRemote === true)v.href = href + queryString
                 v.details = details
             })
         break;
         case'diskUseUpdate'://sizePurgeQueue
             if(s.group[e.ke].init){
-                s.group[e.ke].diskPurgedEmitter.emit('data',k)
+                s.group[e.ke].diskUsedEmitter.emit('purge',k)
             }
         break;
         case'insertCompleted':
@@ -1355,36 +1484,84 @@ s.video=function(x,e,k){
                             end:k.endTime
                         },'GRP_'+e.ke,'video_view');
                     }
-                    //cloud auto savers
-                    //webdav
-    //                var webDAV = s.group[e.ke].webdav
-    //                if(webDAV&&s.group[e.ke].init.use_webdav!=='0'&&s.group[e.ke].init.webdav_save=="1"){
-    //                   fs.readFile(k.dir+k.filename,function(err,data){
-    //                       var webdavUploadDir = s.group[e.ke].init.webdav_dir+e.ke+'/'+e.mid+'/'
-    //                       fs.readFile(k.dir+k.filename,function(err,data){
-    //                           webDAV.putFileContents(webdavUploadDir+k.filename,"binary",data).catch(function(err) {
-    //                               if(err){
-    //                                   webDAV.createDirectory(webdavUploadDir).catch(function(err) {
-    //                                       s.log(e,{type:lang['Webdav Error'],msg:{msg:lang.WebdavErrorText+' <b>/'+webdavUploadDir+'</b>',info:err}})
-    //                                   })
-    //                                   webDAV.putFileContents(webdavUploadDir+k.filename,"binary",data).catch(function(err) {
-    //                                       s.log(e,{type:lang['Webdav Error'],msg:{msg:lang.WebdavErrorText+' <b>/'+webdavUploadDir+'</b>',info:err}})
-    //                                   })
-    //                                   s.log(e,{type:lang['Webdav Error'],msg:{msg:lang.WebdavErrorText+' <b>/'+webdavUploadDir+'</b>',info:err}})
-    //                               }
-    //                           });
-    //                        });
-    //                    });
-    //                }
-                    if(s.group[e.ke].webdav&&s.group[e.ke].init.use_webdav!=='0'&&s.group[e.ke].init.webdav_save=='1'){
-                       fs.readFile(k.dir+k.filename,function(err,data){
-                           s.group[e.ke].webdav.putFileContents(s.group[e.ke].init.webdav_dir+e.ke+'/'+e.mid+'/'+k.filename,"binary",data)
-                        .catch(function(err) {
-                               s.log(e,{type:lang['Webdav Error'],msg:{msg:lang.WebdavErrorText+' <b>/'+e.ke+'/'+e.id+'</b>',info:err},ffmpeg:s.group[e.ke].mon[e.id].ffmpeg})
-                            console.error(err);
-                           });
-                        });
-                    }
+                    //cloud auto savers - webdav
+                   var wfs = s.group[e.ke].webdav
+                   if(wfs && s.group[e.ke].init.use_webdav !== '0' && s.group[e.ke].init.webdav_save === "1"){
+                       var webdavUploadDir = s.group[e.ke].init.webdav_dir+e.ke+'/'+e.mid+'/'
+                       var startWebDavUpload = function(){
+                           s.group[e.ke].mon[e.id].webdavDirExist = true
+                           var wfsWriteStream =
+                           fs.createReadStream(k.dir + k.filename).pipe(wfs.createWriteStream(webdavUploadDir + k.filename))
+                           if(s.group[e.ke].init.webdav_log === '1'){
+                               var webdavRemoteUrl = s.addUserPassToUrl(s.checkCorrectPathEnding(s.group[e.ke].init.webdav_url),s.group[e.ke].init.webdav_user,s.group[e.ke].init.webdav_pass) + s.group[e.ke].init.webdav_dir + e.ke + '/'+e.mid+'/'+k.filename
+                               var save = [
+                                   e.mid,
+                                   e.ke,
+                                   k.startTime,
+                                   1,
+                                   s.s({
+                                       type : 'webdav'
+                                   }),
+                                   k.filesize,
+                                   k.endTime,
+                                   webdavRemoteUrl
+                               ]
+                               s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end,href) VALUES (?,?,?,?,?,?,?,?)',save)
+                           }
+                       }
+                       if(s.group[e.ke].mon[e.id].webdavDirExist !== true){
+                           //check if webdav dir exist
+                           var parentPoint = 0
+                           var webDavParentz = webdavUploadDir.split('/')
+                           var webDavParents = []
+                           webDavParentz.forEach(function(v){
+                               if(v && v !== '')webDavParents.push(v)
+                           })
+                           var stitchPieces = './'
+                           var lastParentCheck = function(){
+                               ++parentPoint
+                               if(parentPoint === webDavParents.length){
+                                   startWebDavUpload()
+                               }
+                               checkPathPiece(webDavParents[parentPoint])
+                           }
+                           var checkPathPiece = function(pathPiece){
+                               if(pathPiece && pathPiece !== ''){
+                                   stitchPieces += pathPiece + '/'
+                                   wfs.stat(stitchPieces, function(error, stats) {
+                                       if(error){
+                                           reply = {
+                                               status : error.status,
+                                               msg : lang.WebdavErrorTextTryCreatingDir,
+                                               dir : stitchPieces,
+                                           }
+                                           s.log(e,{type:lang['Webdav Error'],msg:reply})
+                                           wfs.mkdir(stitchPieces, function(error) {
+                                               if(error){
+                                                   reply = {
+                                                       status : error.status,
+                                                       msg : lang.WebdavErrorTextCreatingDir,
+                                                       dir : stitchPieces,
+                                                   }
+                                                   s.log(e,{type:lang['Webdav Error'],msg:reply})
+                                               }else{
+                                                   lastParentCheck()
+                                               }
+                                           })
+                                       }else{
+                                           lastParentCheck()
+                                       }
+                                   })
+                               }else{
+                                   ++parentPoint
+                               }
+                           }
+                           checkPathPiece(webDavParents[0])
+                       }else{
+                           startWebDavUpload()
+                       }
+                   }
+                    //cloud auto savers - amazon s3
                     if(s.group[e.ke].aws_s3 && s.group[e.ke].init.use_aws_s3 !== '0' && s.group[e.ke].init.aws_s3_save === '1'){
                         var fileStream = fs.createReadStream(k.dir+k.filename);
                         fileStream.on('error', function (err) {
@@ -1404,7 +1581,7 @@ s.video=function(x,e,k){
                                     e.mid,
                                     e.ke,
                                     k.startTime,
-                                    0,
+                                    1,
                                     '{}',
                                     k.filesize,
                                     k.endTime,
@@ -1700,209 +1877,11 @@ s.createStreamChannel = function(e,number,channel){
     }
     return x.pipe
 }
-s.ffmpegCoProcessor = function(e){
-    if(e.coProcessor === false)return;
-    var x = {}
-    //x.input is the input and connection
-    if(e.details.loglevel&&e.details.loglevel!==''){x.loglevel='-loglevel '+e.details.loglevel;}else{x.loglevel='-loglevel error'}
-    x.input = x.loglevel+' -re -i '+e.sdir+'cpuOnly.m3u8'
 
-    //x.pipe is the stream out methods
-    x.cust_input=''
-    x.cust_detect=' '
-    x.stream_video_filters=[]
-    x.hwaccel=''
-    x.pipe=''
-    //main stream frames
-    //stream - timestamp
-    if(e.details.stream_timestamp&&e.details.stream_timestamp=="1"&&e.details.vcodec!=='copy'){
-        //font
-        if(e.details.stream_timestamp_font&&e.details.stream_timestamp_font!==''){x.stream_timestamp_font=e.details.stream_timestamp_font}else{x.stream_timestamp_font='/usr/share/fonts/truetype/freefont/FreeSans.ttf'}
-        //position x
-        if(e.details.stream_timestamp_x&&e.details.stream_timestamp_x!==''){x.stream_timestamp_x=e.details.stream_timestamp_x}else{x.stream_timestamp_x='(w-tw)/2'}
-        //position y
-        if(e.details.stream_timestamp_y&&e.details.stream_timestamp_y!==''){x.stream_timestamp_y=e.details.stream_timestamp_y}else{x.stream_timestamp_y='0'}
-        //text color
-        if(e.details.stream_timestamp_color&&e.details.stream_timestamp_color!==''){x.stream_timestamp_color=e.details.stream_timestamp_color}else{x.stream_timestamp_color='white'}
-        //box color
-        if(e.details.stream_timestamp_box_color&&e.details.stream_timestamp_box_color!==''){x.stream_timestamp_box_color=e.details.stream_timestamp_box_color}else{x.stream_timestamp_box_color='0x00000000@1'}
-        //text size
-        if(e.details.stream_timestamp_font_size&&e.details.stream_timestamp_font_size!==''){x.stream_timestamp_font_size=e.details.stream_timestamp_font_size}else{x.stream_timestamp_font_size='10'}
-
-        x.stream_video_filters.push('drawtext=fontfile='+x.stream_timestamp_font+':text=\'%{localtime}\':x='+x.stream_timestamp_x+':y='+x.stream_timestamp_y+':fontcolor='+x.stream_timestamp_color+':box=1:boxcolor='+x.stream_timestamp_box_color+':fontsize='+x.stream_timestamp_font_size);
-    }
-    //stream - watermark for -vf
-    if(e.details.stream_watermark&&e.details.stream_watermark=="1"&&e.details.stream_watermark_location&&e.details.stream_watermark_location!==''){
-        switch(e.details.stream_watermark_position){
-            case'tl'://top left
-                x.stream_watermark_position='10:10'
-            break;
-            case'tr'://top right
-                x.stream_watermark_position='main_w-overlay_w-10:10'
-            break;
-            case'bl'://bottom left
-                x.stream_watermark_position='10:main_h-overlay_h-10'
-            break;
-            default://bottom right
-                x.stream_watermark_position='(main_w-overlay_w-10)/2:(main_h-overlay_h-10)/2'
-            break;
-        }
-        x.stream_video_filters.push('movie='+e.details.stream_watermark_location+'[watermark],[in][watermark]overlay='+x.stream_watermark_position+'[out]');
-    }
-    //stream - rotation
-    if(e.details.rotate_stream&&e.details.rotate_stream!==""&&e.details.rotate_stream!=="no"&&e.details.stream_vcodec!=='copy'){
-        x.stream_video_filters.push('transpose='+e.details.rotate_stream);
-    }
-    if(e.details.svf&&e.details.svf!==''){
-        x.stream_video_filters.push(e.details.svf)
-    }
-    if(x.stream_video_filters.length>0){
-        x.stream_video_filters=' -vf '+x.stream_video_filters.join(',')
-    }else{
-        x.stream_video_filters=''
-    }
-    if(e.details.cust_stream&&e.details.cust_stream!==''){x.cust_stream=' '+e.details.cust_stream}else{x.cust_stream=''}
-    if(e.details.stream_fps&&e.details.stream_fps!==''){x.stream_fps=' -r '+e.details.stream_fps}else{x.stream_fps=''}
-    if(e.details.stream_vcodec !== 'copy' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64'){
-        x.cust_stream += x.stream_fps
-    }
-    switch(e.details.stream_type){
-        case'mjpeg':
-            if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
-            if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
-            x.pipe += ' -an -c:v mjpeg -f mpjpeg -boundary_tag shinobi'+x.cust_stream+x.stream_video_filters+' pipe:1';
-        break;
-        case'b64':case'':case undefined:case null://base64
-            if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
-            if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
-            x.pipe += ' -an -c:v mjpeg -f image2pipe'+x.cust_stream+x.stream_video_filters+' pipe:1';
-        break;
-    }
-    //detector frames
-    if(e.details.detector === '1'){
-        if(e.details.detector_fps && e.details.detector_fps !== ''){
-            x.detector_fps = e.details.detector_fps
-        }else{
-            x.detector_fps = '2'
-        }
-        if(e.details.detector_scale_x && e.details.detector_scale_x !== '' && e.details.detector_scale_y && e.details.detector_scale_y !== ''){
-            x.dratio=' -s '+e.details.detector_scale_x+'x'+e.details.detector_scale_y
-        }else{
-            x.dratio=' -s 320x240'
-        }
-
-        if(e.details.cust_detect&&e.details.cust_detect!==''){x.cust_detect+=e.details.cust_detect;}
-        if(e.details.detector_pam==='1'){
-            x.pipe += ' -an -c:v pam -pix_fmt gray -f image2pipe -r '+x.detector_fps+x.cust_detect+x.dratio+' pipe:3'
-            if(e.details.detector_use_detect_object === '1'){
-                if(e.details.detector_use_motion === '1'){
-                    if(e.details.detector_scale_x_object && e.details.detector_scale_x_object !== '' && e.details.detector_scale_y_object && e.details.detector_scale_y_object !== ''){
-                        x.dratio=' -s '+e.details.detector_scale_x_object+'x'+e.details.detector_scale_y_object
-                    }
-                    if(e.details.detector_fps_object && e.details.detector_fps_object !== ''){
-                        x.detector_fps = e.details.detector_fps_object
-                    }
-                }
-                //for object detection
-                x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
-                x.pipe += ' -f singlejpeg -vf fps='+x.detector_fps+x.cust_detect+x.dratio+' pipe:4';
-            }
-        }else{
-            x.pipe+=' -f singlejpeg -vf fps='+x.detector_fps+x.cust_detect+x.dratio+' pipe:3';
-        }
-    }
-    //snapshot frames
-    if(e.details.snap === '1'){
-        if(!e.details.snap_fps || e.details.snap_fps === ''){e.details.snap_fps = 1}
-        if(e.details.snap_vf && e.details.snap_vf !== ''){x.snap_vf=' -vf '+e.details.snap_vf}else{x.snap_vf=''}
-        if(e.details.snap_scale_x && e.details.snap_scale_x !== '' && e.details.snap_scale_y && e.details.snap_scale_y !== ''){x.snap_ratio = ' -s '+e.details.snap_scale_x+'x'+e.details.snap_scale_y}else{x.snap_ratio=''}
-        if(e.details.cust_snap && e.details.cust_snap !== ''){x.cust_snap = ' '+e.details.cust_snap}else{x.cust_snap=''}
-        x.pipe += ' -update 1 -r '+e.details.snap_fps+x.cust_snap+x.snap_ratio+x.snap_vf+' "'+e.sdir+'s.jpg" -y';
-    }
-    x.stdioPipes = [];
-    var times = config.pipeAddition;
-    if(e.details.stream_channels){
-        times+=e.details.stream_channels.length
-    }
-    for(var i=0; i < times; i++){
-        x.stdioPipes.push('pipe')
-    }
-    var commandString = x.input+x.pipe
-    if(commandString === x.input){
-        return false
-    }
-    s.group[e.ke].mon[e.mid].coProcessorCmd = commandString
-    return spawn(config.ffmpegDir,s.splitForFFPMEG((commandString).replace(/\s+/g,' ').trim()),{detached: true,stdio:x.stdioPipes})
-}
-s.coSpawnLauncher = function(e){
-    if(s.group[e.ke].mon[e.id].started === 1 && e.coProcessor === true){
-        s.coSpawnClose(e)
-        s.group[e.ke].mon[e.id].coSpawnProcessor = s.ffmpegCoProcessor(e)
-        if(s.group[e.ke].mon[e.id].coSpawnProcessor === false){
-            return
-        }
-        s.log(e,{type:lang['coProcessor Started'],msg:{msg:lang.coProcessorTextStarted,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
-        s.group[e.ke].mon[e.id].coSpawnProcessorExit = function(){
-            s.log(e,{type:lang['coProcess Unexpected Exit'],msg:{msg:lang['coProcess Crashed for Monitor']+' : '+e.id,cmd:s.group[e.ke].mon[e.id].coProcessorCmd}});
-            setTimeout(function(){
-                s.coSpawnLauncher(e)
-            },2000)
-        }
-        s.group[e.ke].mon[e.id].coSpawnProcessor.on('end',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
-        s.group[e.ke].mon[e.id].coSpawnProcessor.on('exit',s.group[e.ke].mon[e.id].coSpawnProcessorExit)
-        var checkLog = function(d,x){return d.indexOf(x)>-1;}
-        s.group[e.ke].mon[e.id].coSpawnProcessor.stderr.on('data',function(d){
-            d=d.toString();
-            switch(true){
-                case checkLog(d,'deprecated pixel format used'):
-                case checkLog(d,'[hls @'):
-                case checkLog(d,'Past duration'):
-                case checkLog(d,'Last message repeated'):
-                case checkLog(d,'pkt->duration = 0'):
-                case checkLog(d,'Non-monotonous DTS'):
-                case checkLog(d,'NULL @'):
-                    return
-                break;
-            }
-            s.log(e,{type:lang.coProcessor,msg:d});
-        })
-        if(e.frame_to_stream){
-            s.group[e.ke].mon[e.id].coSpawnProcessor.stdout.on('data',e.frame_to_stream)
-        }
-        if(e.details.detector === '1'){
-            if(e.details.detector_pam === '1'){
-                s.createPamDiffEngine(e)
-                s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].pipe(s.group[e.ke].mon[e.id].p2p).pipe(s.group[e.ke].mon[e.id].pamDiff)
-            }else{
-                s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].on('data',function(d){
-                    s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:d});
-                })
-            }
-        }
-    }
-}
-s.coSpawnClose = function(e){
-    if(s.group[e.ke].mon[e.id].coSpawnProcessor){
-        s.group[e.ke].mon[e.id].coSpawnProcessor.removeListener('end',s.group[e.ke].mon[e.id].coSpawnProcessorExit);
-        s.group[e.ke].mon[e.id].coSpawnProcessor.removeListener('exit',s.group[e.ke].mon[e.id].coSpawnProcessorExit);
-        s.group[e.ke].mon[e.id].coSpawnProcessor.stdin.pause()
-        s.group[e.ke].mon[e.id].coSpawnProcessor.kill()
-        delete(s.group[e.ke].mon[e.id].coSpawnProcessor)
-        s.log(e,{type:lang['coProcessor Stopped'],msg:{msg:lang.coProcessorTextStopped+' : '+e.id}});
-    }
-}
 s.ffmpeg = function(e){
-    e.coProcessor = false
     e.isStreamer = (e.type === 'dashcam'|| e.type === 'socket')
-    if(
-        e.details.accelerator === '1' &&
-        e.details.hwaccel !== 'vaapi' &&
-        e.details.hwaccel_vcodec !== 'auto' &&
-        e.isStreamer === false &&
-        (!e.details.input_maps || e.details.input_maps.length === 0) &&
-        (e.details.snap === '1' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64' || e.details.detector === '1')
-      ){
-        e.coProcessor = true
+    if(e.details.accelerator === '1' && e.details.hwaccel === 'cuvid' && e.details.hwaccel_vcodec === ('h264_cuvid' || 'hevc_cuvid' || 'mjpeg_cuvid' || 'mpeg4_cuvid')){
+        e.cudaEnabled = true
     }
     //set X for temporary values so we don't break our main monitor object.
     var x={tmp:''};
@@ -2116,12 +2095,15 @@ s.ffmpeg = function(e){
             x.stream_video_filters.push('scale_vaapi=w='+e.details.stream_scale_x+':h='+e.details.stream_scale_y)
         }
 	}
+    if(e.cudaEnabled && (e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64')){
+        x.stream_video_filters.push('hwdownload,format=nv12')
+    }
     //stream - video filter
-    if(e.details.svf&&e.details.svf!==''){
+    if(e.details.svf && e.details.svf !== ''){
         x.stream_video_filters.push(e.details.svf)
     }
     if(x.stream_video_filters.length>0){
-        x.stream_video_filters=' -vf '+x.stream_video_filters.join(',')
+        x.stream_video_filters=' -vf "'+x.stream_video_filters.join(',')+'"'
     }else{
         x.stream_video_filters=''
     }
@@ -2164,11 +2146,9 @@ s.ffmpeg = function(e){
             x.pipe+=x.preset_stream+x.stream_acodec+x.stream_vcodec+' -f hls'+x.cust_stream+' -hls_time '+x.hls_time+' -hls_list_size '+x.hls_list_size+' -start_number 0 -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'s.m3u8"';
         break;
         case'mjpeg':
-            if(e.coProcessor === false){
                 if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
                 if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
                 x.pipe+=' -an -c:v mjpeg -f mpjpeg -boundary_tag shinobi'+x.cust_stream+x.stream_video_filters+' pipe:1';
-            }
         break;
         case'h265':
             x.cust_stream+=' -movflags +frag_keyframe+empty_moov+default_base_moof -metadata title="Shinobi H.265 Stream" -reset_timestamps 1'
@@ -2181,11 +2161,9 @@ s.ffmpeg = function(e){
             x.pipe+=' -f hevc'+x.stream_acodec+x.stream_vcodec+x.cust_stream+' pipe:1';
         break;
         case'b64':case'':case undefined:case null://base64
-            if(e.coProcessor === false){
-                if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
-                if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
-                x.pipe+=' -an -c:v mjpeg -f image2pipe'+x.cust_stream+x.stream_video_filters+' pipe:1';
-            }
+            if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
+            if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
+            x.pipe+=' -an -c:v mjpeg -f image2pipe'+x.cust_stream+x.stream_video_filters+' pipe:1';
         break;
         default:
             x.pipe=''
@@ -2193,12 +2171,11 @@ s.ffmpeg = function(e){
     }
     if(e.details.stream_channels){
         e.details.stream_channels.forEach(function(v,n){
-            if(v.stream_type === 'mjpeg')e.coProcessor = true;
             x.pipe += s.createStreamChannel(e,n+config.pipeAddition,v)
         })
     }
     //detector - plugins, motion
-    if(e.details.detector==='1' && e.details.detector_send_frames==='1' && e.coProcessor === false){
+    if(e.details.detector === '1' && e.details.detector_send_frames === '1'){
         if(e.details.input_map_choices&&e.details.input_map_choices.detector){
             //add input feed map
             x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
@@ -2206,15 +2183,23 @@ s.ffmpeg = function(e){
         if(!e.details.detector_fps||e.details.detector_fps===''){e.details.detector_fps=2}
         if(e.details.detector_scale_x&&e.details.detector_scale_x!==''&&e.details.detector_scale_y&&e.details.detector_scale_y!==''){x.dratio=' -s '+e.details.detector_scale_x+'x'+e.details.detector_scale_y}else{x.dratio=' -s 320x240'}
         if(e.details.cust_detect&&e.details.cust_detect!==''){x.cust_detect+=e.details.cust_detect;}
+        x.detector_vf = ['fps='+e.details.detector_fps]
+        if(e.cudaEnabled){
+            x.detector_vf.push('hwdownload,format=nv12')
+        }
+        x.detector_vf = '-vf "'+x.detector_vf.join(',')+'"'
         if(e.details.detector_pam==='1'){
+            if(e.cudaEnabled){
+                x.pipe += ' -vf "hwdownload,format=nv12"'
+            }
             x.pipe+=' -an -c:v pam -pix_fmt gray -f image2pipe -r '+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:3'
             if(e.details.detector_use_detect_object === '1'){
                 //for object detection
                 x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
-                x.pipe += ' -f singlejpeg -vf fps='+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:4';
+                x.pipe += ' -f singlejpeg '+x.detector_vf+x.cust_detect+x.dratio+' pipe:4';
             }
         }else{
-            x.pipe+=' -f singlejpeg -vf fps='+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:3';
+            x.pipe+=' -f singlejpeg '+x.detector_vf+x.cust_detect+x.dratio+' pipe:3';
         }
     }
     //api - snapshot bin/ cgi.bin (JPEG Mode)
@@ -2223,13 +2208,21 @@ s.ffmpeg = function(e){
             //add input feed map
             x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.snap)
         }
-        if(e.coProcessor === false){
-            if(!e.details.snap_fps || e.details.snap_fps === ''){e.details.snap_fps = 1}
-            if(e.details.snap_vf && e.details.snap_vf !== ''){x.snap_vf=' -vf '+e.details.snap_vf}else{x.snap_vf=''}
-            if(e.details.snap_scale_x && e.details.snap_scale_x !== '' && e.details.snap_scale_y && e.details.snap_scale_y !== ''){x.snap_ratio = ' -s '+e.details.snap_scale_x+'x'+e.details.snap_scale_y}else{x.snap_ratio=''}
-            if(e.details.cust_snap && e.details.cust_snap !== ''){x.cust_snap = ' '+e.details.cust_snap}else{x.cust_snap=''}
-            x.pipe+=' -update 1 -r '+e.details.snap_fps+x.cust_snap+x.snap_ratio+x.snap_vf+' "'+e.sdir+'s.jpg" -y';
+        if(!e.details.snap_fps || e.details.snap_fps === ''){e.details.snap_fps = 1}
+        if(e.details.snap_vf && e.details.snap_vf !== '' || e.cudaEnabled){
+            var snapVf = e.details.snap_vf.split(',')
+            if(e.details.snap_vf === '')snapVf.shift()
+            if(e.cudaEnabled){
+                snapVf.push('hwdownload,format=nv12')
+            }
+            //-vf "thumbnail_cuda=2,hwdownload,format=nv12"
+            x.snap_vf=' -vf "'+snapVf.join(',')+'"'
+        }else{
+            x.snap_vf=''
         }
+        if(e.details.snap_scale_x && e.details.snap_scale_x !== '' && e.details.snap_scale_y && e.details.snap_scale_y !== ''){x.snap_ratio = ' -s '+e.details.snap_scale_x+'x'+e.details.snap_scale_y}else{x.snap_ratio=''}
+        if(e.details.cust_snap && e.details.cust_snap !== ''){x.cust_snap = ' '+e.details.cust_snap}else{x.cust_snap=''}
+        x.pipe+=' -update 1 -r '+e.details.snap_fps+x.cust_snap+x.snap_ratio+x.snap_vf+' "'+e.sdir+'s.jpg" -y';
     }
     //Traditional Recording Buffer
     if(e.details.detector=='1'&&e.details.detector_trigger=='1'&&e.details.detector_record_method==='sip'){
@@ -2239,17 +2232,17 @@ s.ffmpeg = function(e){
         }
         x.detector_buffer_filters=[]
         if(!e.details.detector_buffer_vcodec||e.details.detector_buffer_vcodec===''||e.details.detector_buffer_vcodec==='auto'){
-            if(e.details.accelerator === '1' && e.details.hwaccel_vcodec === 'cuvid' && e.details.hwaccel_vcodec === ('h264_cuvid' || 'hevc_cuvid' || 'mjpeg_cuvid' || 'mpeg4_cuvid')){
-                    e.details.detector_buffer_vcodec = 'h264_nvenc'
-            }else{
-                switch(e.type){
-                    case'h264':case'hls':case'mp4':
-                        e.details.detector_buffer_vcodec = 'copy'
-                    break;
-                    default:
+            switch(e.type){
+                case'h264':case'hls':case'mp4':
+                    e.details.detector_buffer_vcodec = 'copy'
+                break;
+                default:
+                    if(e.details.accelerator === '1' && e.cudaEnabled){
+                            e.details.detector_buffer_vcodec = 'h264_nvenc'
+                    }else{
                         e.details.detector_buffer_vcodec = 'libx264'
-                    break;
-                }
+                    }
+                break;
             }
         }
         if(!e.details.detector_buffer_acodec||e.details.detector_buffer_acodec===''||e.details.detector_buffer_acodec==='auto'){
@@ -2299,10 +2292,6 @@ s.ffmpeg = function(e){
         }
         x.pipe+=x.detector_buffer_fps+x.detector_buffer_acodec+' -c:v '+e.details.detector_buffer_vcodec+' -f hls -tune '+e.details.detector_buffer_tune+' -g '+e.details.detector_buffer_g+' -hls_time '+e.details.detector_buffer_hls_time+' -hls_list_size '+e.details.detector_buffer_hls_list_size+' -start_number '+e.details.detector_buffer_start_number+' -live_start_index '+e.details.detector_buffer_live_start_index+' -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'detectorStream.m3u8"'
     }
-    if(e.coProcessor === true){
-        // the coProcessor ffmpeg consumes this HLS stream (no audio, frames only)
-        x.pipe += ' -q:v 1 -an -c:v copy -f hls -tune zerolatency -g 1 -hls_time 2 -hls_list_size 3 -start_number 0 -live_start_index 3 -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'cpuOnly.m3u8"'
-    }
     //custom - output
     if(e.details.custom_output&&e.details.custom_output!==''){x.pipe+=' '+e.details.custom_output;}
     //custom - input flags
@@ -2340,7 +2329,7 @@ s.ffmpeg = function(e){
         case'dashcam':
             x.ffmpegCommandString += x.cust_input+x.hwaccel+' -i -';
         break;
-        case'socket':case'jpeg':case'pipe':
+        case'socket':case'jpeg':case'pipe'://case'webpage':
             x.ffmpegCommandString += ' -pattern_type glob -f image2pipe'+x.record_fps+' -vcodec mjpeg'+x.cust_input+x.hwaccel+' -i -';
         break;
         case'mjpeg':
@@ -2408,7 +2397,8 @@ s.event = function(x,e,cn){
                 webhook : true,
                 command : true,
                 mail : true,
-                record : true
+                record : true,
+                indifference : false
             }
             if(s.group[d.ke].mon[d.id].open){
                 d.details.videoTime = s.group[d.ke].mon[d.id].open;
@@ -2471,7 +2461,6 @@ s.event = function(x,e,cn){
                                     }
                                 break;
                                 default:
-                                    var cmd = 'param '+condition.p2+' "'+condition.p3.replace(/"/g,'\\"')+'"'
                                     if(eval('param '+condition.p2+' "'+condition.p3.replace(/"/g,'\\"')+'"')){
                                         pass()
                                     }
@@ -2488,6 +2477,24 @@ s.event = function(x,e,cn){
                                     d.details.matrices.forEach(function(matrix,position){
                                         modifyFilters(matrix,position)
                                     })
+                                }
+                            break;
+                            case'time':
+                                var timeNow = new Date()
+                                var timeCondition = new Date()
+                                var doAtTime = condition.p3.split(':')
+                                var atHour = parseInt(doAtTime[0]) - 1
+                                var atHourNow = timeNow.getHours()
+                                var atMinuteNow = timeNow.getMinutes()
+                                var atSecondNow = timeNow.getSeconds()
+                                if(atHour){
+                                    var atMinute = parseInt(doAtTime[1]) - 1 || timeNow.getMinutes()
+                                    var atSecond = parseInt(doAtTime[2]) - 1 || timeNow.getSeconds()
+                                    var nowAddedInSeconds = atHourNow * 60 * 60 + atMinuteNow * 60 + atSecondNow
+                                    var conditionAddedInSeconds = atHour * 60 * 60 + atMinute * 60 + atSecond
+                                    if(eval('nowAddedInSeconds '+condition.p2+' conditionAddedInSeconds')){
+                                        conditionChain[place].ok = true
+                                    }
                                 }
                             break;
                             default:
@@ -2550,7 +2557,22 @@ s.event = function(x,e,cn){
                     return
                 }
             }
-            if(d.doObjectDetection !== true){
+            // check modified indifference
+            if(filter.indifference !== false && d.details.confidence < parseFloat(filter.indifference)){
+                // fails indifference check for modified indifference
+                return
+            }
+            //
+            if(d.doObjectDetection === true){
+                s.ocvTx({
+                    f : 'frame',
+                    mon : s.group[e.ke].mon_conf[e.id].details,
+                    ke : e.ke,
+                    id : e.id,
+                    time : s.formattedTime(),
+                    frame : s.group[e.ke].mon[e.id].lastJpegDetectorFrame
+                })
+            }else{
                 //save this detection result in SQL, only coords. not image.
                 if(filter.save && currentConfig.detector_save==='1'){
                     s.sqlQuery('INSERT INTO Events (ke,mid,details) VALUES (?,?,?)',[d.ke,d.id,detailString])
@@ -2573,6 +2595,10 @@ s.event = function(x,e,cn){
                         .replace(/{{MONITOR_ID}}/g,d.id)
                         .replace(/{{GROUP_KEY}}/g,d.ke)
                         .replace(/{{DETAILS}}/g,detailString)
+                    if(d.details.confidence){
+                        detector_webhook_url = detector_webhook_url
+                        .replace(/{{CONFIDENCE}}/g,d.details.confidence)
+                    }
                     request({url:detector_webhook_url,method:'GET',encoding:null},function(err,data){
                         if(err){
                             s.log(d,{type:lang["Event Webhook Error"],msg:{error:err,data:data}})
@@ -2663,9 +2689,10 @@ s.event = function(x,e,cn){
 
                     }).end();
                 }
+                var currentTime = new Date()
+                var currentTimestamp = s.timeObject(currentTime).format()
                 var screenshotName = 'Motion_'+(d.mon.name.replace(/[^\w\s]/gi,''))+'_'+d.id+'_'+d.ke+'_'+s.formattedTime()
                 var screenshotBuffer = null
-                var detectorStreamBuffers = null
 
                 //discord bot
                 if(filter.discord && currentConfig.detector_discordbot === '1' && !s.group[d.ke].mon[d.id].detector_discordbot){
@@ -2689,9 +2716,9 @@ s.event = function(x,e,cn){
                               icon_url: config.iconURL
                             },
                             title: lang.Event+' - '+screenshotName,
-                            description: lang.EventText1+' '+s.timeObject(new Date).format(),
+                            description: lang.EventText1+' '+currentTimestamp,
                             fields: [],
-                            timestamp: new Date(),
+                            timestamp: currentTime,
                             footer: {
                               icon_url: config.iconURL,
                               text: "Shinobi Systems"
@@ -2699,34 +2726,37 @@ s.event = function(x,e,cn){
                         },files,d.ke)
                     }
                     if(currentConfig.detector_discordbot_send_video === '1'){
-                        if(!detectorStreamBuffers){
-                            detectorStreamBuffers = s.getDetectorStreams(d)
-                        }
-                        detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
+                        s.mergeDetectorBufferChunks(d,function(mergedFilepath,filename){
+                            s.discordMsg({
+                                author: {
+                                  name: s.group[d.ke].mon_conf[d.id].name,
+                                  icon_url: config.iconURL
+                                },
+                                title: filename,
+                                fields: [],
+                                timestamp: currentTime,
+                                footer: {
+                                  icon_url: config.iconURL,
+                                  text: "Shinobi Systems"
+                                }
+                            },[
+                                {
+                                    attachment: mergedFilepath,
+                                    name: filename
+                                }
+                            ],d.ke)
+                        })
+                    }
+                    s.getRawSnapshotFromMonitor(e.mon,function(data){
+                        if((data[data.length-2] === 0xFF && data[data.length-1] === 0xD9)){
+                            screenshotBuffer = data
                             files.push({
-                                attachment: filepath,
-                                name: 'Video Clip '+n+'.ts'
+                                attachment: screenshotBuffer,
+                                name: screenshotName+'.jpg'
                             })
-                        })
-                    }
-                    if(screenshotBuffer){
+                        }
                         sendAlert()
-                    }else if(currentConfig.snap === '1'){
-                        fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
-                            if(err){
-                                s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
-                            }else{
-                                screenshotBuffer = frame
-                                files.push({
-                                    attachment: screenshotBuffer,
-                                    name: screenshotName+'.jpg'
-                                })
-                            }
-                            sendAlert()
-                        })
-                    }else{
-                        sendAlert()
-                    }
+                    })
                 }
                 //mailer
                 if(filter.mail && config.mail && !s.group[d.ke].mon[d.id].detector_mail && currentConfig.detector_mail === '1'){
@@ -2749,7 +2779,7 @@ s.event = function(x,e,cn){
                             from: config.mail.from, // sender address
                             to: r.mail, // list of receivers
                             subject: lang.Event+' - '+screenshotName, // Subject line
-                            html: '<i>'+lang.EventText1+' '+s.timeObject(new Date).format()+'.</i>',
+                            html: '<i>'+lang.EventText1+' '+currentTimestamp+'.</i>',
                             attachments: files
                         }
                         var sendMail = function(){
@@ -2764,33 +2794,41 @@ s.event = function(x,e,cn){
                             })
                         }
                         if(currentConfig.detector_mail_send_video === '1'){
-                            if(!detectorStreamBuffers){
-                                detectorStreamBuffers = s.getDetectorStreams(d)
-                            }
-                            detectorStreamBuffers.slice(detectorStreamBuffers.length - 2,detectorStreamBuffers.length).forEach(function(filepath,n){
-                                files.push({
-                                    filename: 'Video Clip '+n+'.ts',
-                                    content: fs.readFileSync(filepath)
+                            s.mergeDetectorBufferChunks(d,function(mergedFilepath,filename){
+                                nodemailer.sendMail({
+                                    from: config.mail.from,
+                                    to: r.mail,
+                                    subject: filename,
+                                    html: '',
+                                    attachments: [
+                                        {
+                                            filename: filename,
+                                            content: fs.readFileSync(mergedFilepath)
+                                        }
+                                    ]
+                                }, (error, info) => {
+                                    if (error) {
+                                        s.systemLog(lang.MailError,error)
+                                        return false;
+                                    }
                                 })
                             })
                         }
                         if(screenshotBuffer){
+                            files.push({
+                                filename: screenshotName+'.jpg',
+                                content: screenshotBuffer
+                            })
                             sendMail()
-                        }else if(currentConfig.snap === '1'){
-                            fs.readFile(s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg',function(err, frame){
-                                if(err){
-                                    s.systemLog(lang.EventText2+' '+d.ke+' '+d.id,err)
-                                }else{
-                                    screenshotBuffer = frame
-                                    files.push({
-                                        filename: screenshotName+'.jpg',
-                                        content: frame
-                                    })
-                                }
+                        }else{
+                            s.getRawSnapshotFromMonitor(e.mon,function(data){
+                                screenshotBuffer = data
+                                files.push({
+                                    filename: screenshotName+'.jpg',
+                                    content: data
+                                })
                                 sendMail()
                             })
-                        }else{
-                            sendMail()
                         }
                     });
                 }
@@ -2807,7 +2845,7 @@ s.event = function(x,e,cn){
 
                     },detector_command_timeout);
                     var detector_command = currentConfig.detector_command
-                        .replace(/{{TIME}}/g,s.timeObject(new Date).format())
+                        .replace(/{{TIME}}/g,currentTimestamp)
                         .replace(/{{REGION_NAME}}/g,d.details.name)
                         .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
                         .replace(/{{MONITOR_ID}}/g,d.id)
@@ -3073,8 +3111,9 @@ s.camera=function(x,e,cn,tx){
         case'snapshot'://get snapshot from monitor URL
             if(config.doSnapshot===true){
                 if(e.mon.mode!=='stop'){
+                    var pathDir = s.dir.streams+e.ke+'/'+e.mid+'/'
                     if(e.mon.details.snap==='1'){
-                        fs.readFile(s.dir.streams+e.ke+'/'+e.mid+'/s.jpg',function(err,data){
+                        fs.readFile(pathDir+'s.jpg',function(err,data){
                             if(err){s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke);return};
                             s.tx({f:'monitor_snapshot',snapshot:data,snapshot_format:'ab',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
                         })
@@ -3083,17 +3122,19 @@ s.camera=function(x,e,cn,tx){
                         switch(e.mon.type){
                             case'mjpeg':case'h264':case'local':
                                 if(e.mon.type==='local'){e.url=e.mon.path;}
-                                e.spawn=spawn(config.ffmpegDir,('-loglevel quiet -i '+e.url+' -s 400x400 -r 25 -ss 1.8 -frames:v 1 -f singlejpeg pipe:1').split(' '),{detached: true})
-                                e.spawn.stdout.on('data',function(data){
-                                   e.snapshot_sent=true; s.tx({f:'monitor_snapshot',snapshot:data.toString('base64'),snapshot_format:'b64',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
-                                    e.spawn.kill();
-                                });
-                                e.spawn.on('close',function(data){
-                                    if(!e.snapshot_sent){
-                                        s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
+                                 s.getRawSnapshotFromMonitor(e.mon,'-s 400x400',function(data){
+                                     if((data[data.length-2] === 0xFF && data[data.length-1] === 0xD9)){
+                                         s.tx({
+                                             f:'monitor_snapshot',
+                                             snapshot:data.toString('base64'),
+                                             snapshot_format:'b64',
+                                             mid:e.mid,
+                                             ke:e.ke
+                                         },'GRP_'+e.ke)
+                                     }else{
+                                         s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
                                     }
-                                    delete(e.snapshot_sent);
-                                });
+                                 })
                             break;
                             case'jpeg':
                                 request({url:e.url,method:'GET',encoding:null},function(err,data){
@@ -3274,66 +3315,66 @@ s.camera=function(x,e,cn,tx){
             }
             setStreamDir()
             //try to create HawkEye Onvif Object
-            if(e.details.is_onvif === '1'){
-                console.log('onvifHawk',e.hosty, e.porty.replace(':',''), e.username, e.password)
-                var doOnvifHawk = true
-                var errorCount = 0
-                var hawkFail = function(msg,callback){
-                    ++errorCount
-                    if(errorCount > 2){
-                        callback()
-                        s.log(e,msg);
-                    }
-                }
-                var createHawkOnvif = function(){
-                    if(doOnvifHawk === false){
-                        return false
-                    }
-                    if(!e.details.onvif_port || e.details.onvif_port === ''){
-                        e.details.onvif_port = 8000
-                    }
-                    onvifHawk.connect(e.hosty, e.details.onvif_port, e.username, e.password).then(function(results){
-                        var camera = results
-                        // if the camera supports events, the module will already be loaded.
-                        if (camera.events) {
-                            camera.events.soap.username = e.username
-                            camera.events.soap.password = e.password
-                            camera.events.on('messages', messages => {
-                                console.log('Messages Received:', (typeof messages))
-                            })
-                            camera.events.on('messages:error', error => {
-                                if(error.body.indexOf('anonymous') > -1){
-                                    hawkFail({type:lang.ONVIFEventsNotAvailable,msg:{msg:lang.ONVIFnotCompliantProfileT}},function(){
-                                        camera.events.stopPull()
-                                    })
-                                }
-                            })
-                            // start a pull event loop
-                            setTimeout(function(){
-                                camera.events.startPull()
-                            },3000)
-                            // call stopPull() to end the event loop
-                            // camera.events.stopPull()
-                            s.group[e.ke].mon[e.id].HawkEyeOnvifConnection = camera
-                        }
-                        if(s.group[e.ke].mon[e.id].HawkEyeOnvifConnection){
-                            console.log('Found')
-                        }else{
-                            console.log('Not Found')
-                        }
-                    }).catch(function(err){
-                        console.log('Error Connecting')
-                        console.log(err.code)
-                        hawkFail({type:lang.ONVIFEventsNotAvailable,msg:{msg:lang.ONVIFnotCompliantProfileT}},function(){
-                            doOnvifHawk = false
-                        })
-                        setTimeout(function(){
-                            createHawkOnvif()
-                        },3000)
-                    })
-                }
-                createHawkOnvif()
-            }
+            // if(e.details.is_onvif === '1'){
+            //     console.log('onvifHawk',e.hosty, e.porty.replace(':',''), e.username, e.password)
+            //     var doOnvifHawk = true
+            //     var errorCount = 0
+            //     var hawkFail = function(msg,callback){
+            //         ++errorCount
+            //         if(errorCount > 2){
+            //             callback()
+            //             s.log(e,msg);
+            //         }
+            //     }
+            //     var createHawkOnvif = function(){
+            //         if(doOnvifHawk === false){
+            //             return false
+            //         }
+            //         if(!e.details.onvif_port || e.details.onvif_port === ''){
+            //             e.details.onvif_port = 8000
+            //         }
+            //         onvifHawk.connect(e.hosty, e.details.onvif_port, e.username, e.password).then(function(results){
+            //             var camera = results
+            //             // if the camera supports events, the module will already be loaded.
+            //             if (camera.events) {
+            //                 camera.events.soap.username = e.username
+            //                 camera.events.soap.password = e.password
+            //                 camera.events.on('messages', messages => {
+            //                     console.log(messages.data.PullMessagesResponse.NotificationMessage.Message.Message.Data)
+            //                 })
+            //                 camera.events.on('messages:error', error => {
+            //                     if(error.body.indexOf('anonymous') > -1){
+            //                         hawkFail({type:lang.ONVIFEventsNotAvailable,msg:{msg:lang.ONVIFnotCompliantProfileT}},function(){
+            //                             camera.events.stopPull()
+            //                         })
+            //                     }
+            //                 })
+            //                 // start a pull event loop
+            //                 setTimeout(function(){
+            //                     camera.events.startPull()
+            //                 },3000)
+            //                 // call stopPull() to end the event loop
+            //                 // camera.events.stopPull()
+            //                 s.group[e.ke].mon[e.id].HawkEyeOnvifConnection = camera
+            //             }
+            //             if(s.group[e.ke].mon[e.id].HawkEyeOnvifConnection){
+            //                 console.log('Found')
+            //             }else{
+            //                 console.log('Not Found')
+            //             }
+            //         }).catch(function(err){
+            //             console.log('Error Connecting')
+            //             console.log(err.code)
+            //             hawkFail({type:lang.ONVIFEventsNotAvailable,msg:{msg:lang.ONVIFnotCompliantProfileT}},function(){
+            //                 doOnvifHawk = false
+            //             })
+            //             // setTimeout(function(){
+            //             //     createHawkOnvif()
+            //             // },3000)
+            //         })
+            //     }
+            //     createHawkOnvif()
+            // }
             //set up fatal error handler
             if(e.details.fatal_max===''){
                 e.details.fatal_max = 10
@@ -3437,11 +3478,7 @@ s.camera=function(x,e,cn,tx){
                             if(s.group[e.ke].mon[e.id].started === 1){
                                 fs.stat(e.sdir+'s.jpg',function(err,snap){
                                     var notStreaming = function(){
-                                        if(e.coProcessor === true){
-                                            s.coSpawnLauncher(e)
-                                        }else{
-                                            launchMonitorProcesses()
-                                        }
+                                        launchMonitorProcesses()
                                         s.log(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
                                     }
                                     if(err){
@@ -3540,9 +3577,10 @@ s.camera=function(x,e,cn,tx){
                         //start workers
                         if(e.type==='jpeg'){
                             if(!e.details.sfps||e.details.sfps===''){
-                                var capture_fps=parseFloat(e.details.sfps);
-                                if(isNaN(capture_fps)){capture_fps=1}
+                                e.details.sfps = 1
                             }
+                            var capture_fps = parseFloat(e.details.sfps);
+                            if(isNaN(capture_fps)){capture_fps = 1}
                             if(s.group[e.ke].mon[e.id].spawn){
                                 s.group[e.ke].mon[e.id].spawn.stdin.on('error',function(err){
                                     if(err&&e.details.loglevel!=='quiet'){
@@ -3610,7 +3648,19 @@ s.camera=function(x,e,cn,tx){
                                 });
                           }
                           e.captureOne()
-                        }
+                      }
+                      // else if(e.type === 'webpage'){
+                      //     var capture_fps = parseFloat(e.details.sfps);
+                      //     if(isNaN(capture_fps)){capture_fps = 1}
+                      //   var browser = casper.create()
+                      //   page.goto(e.url)
+                      //     s.group[e.ke].mon[e.id].casper = browser
+                      //     s.group[e.ke].mon[e.id].casperCapture = setInterval(function(){
+                      //         var buffer = page.screenshot()
+                      //         console.log(buffer)
+                      //         // s.group[e.ke].mon[e.id].spawn.stdin.write(buffer);
+                      //     },1000/capture_fps)
+                      // }
                         if(!s.group[e.ke]||!s.group[e.ke].mon[e.id]){s.init(0,e)}
                         s.group[e.ke].mon[e.id].spawn.on('error',function(er){
                             s.log(e,{type:'Spawn Error',msg:er});errorFatal('Spawn Error')
@@ -3619,21 +3669,17 @@ s.camera=function(x,e,cn,tx){
                             s.ocvTx({f:'init_monitor',id:e.id,ke:e.ke})
                             //frames from motion detect
                             if(e.details.detector_pam==='1'){
-                               if(e.coProcessor === false){
-                                   s.createPamDiffEngine(e)
-                                   s.group[e.ke].mon[e.id].spawn.stdio[3].pipe(s.group[e.ke].mon[e.id].p2p).pipe(s.group[e.ke].mon[e.id].pamDiff)
-                                    if(e.details.detector_use_detect_object === '1'){
-                                        s.group[e.ke].mon[e.id].spawn.stdio[4].on('data',function(d){
-                                            s.group[e.ke].mon[e.id].lastJpegDetectorFrame = d
-                                        })
-                                    }
-                               }
-                            }else{
-                               if(e.coProcessor === false){
-                                    s.group[e.ke].mon[e.id].spawn.stdio[3].on('data',function(d){
-                                        s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:d});
+                               s.createPamDiffEngine(e)
+                               s.group[e.ke].mon[e.id].spawn.stdio[3].pipe(s.group[e.ke].mon[e.id].p2p).pipe(s.group[e.ke].mon[e.id].pamDiff)
+                                if(e.details.detector_use_detect_object === '1'){
+                                    s.group[e.ke].mon[e.id].spawn.stdio[4].on('data',function(d){
+                                        s.group[e.ke].mon[e.id].lastJpegDetectorFrame = d
                                     })
-                               }
+                                }
+                            }else{
+                                s.group[e.ke].mon[e.id].spawn.stdio[3].on('data',function(d){
+                                    s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:d});
+                                })
                             }
                         }
                         //frames to stream
@@ -3684,11 +3730,7 @@ s.camera=function(x,e,cn,tx){
                            break;
                        }
                         if(e.frame_to_stream){
-                            if(e.coProcessor === true && e.details.stream_type === ('b64'||'mjpeg')){
-
-                            }else{
-                                s.group[e.ke].mon[e.id].spawn.stdout.on('data',e.frame_to_stream)
-                            }
+                            s.group[e.ke].mon[e.id].spawn.stdout.on('data',e.frame_to_stream)
                         }
                         if(e.details.stream_channels&&e.details.stream_channels!==''){
                             var createStreamEmitter = function(channel,number){
@@ -3820,17 +3862,12 @@ s.camera=function(x,e,cn,tx){
                                 s.log(e,{type:"FFMPEG STDERR",msg:d})
                             });
                         }
-                        if(e.coProcessor === true){
-                            setTimeout(function(){
-                                s.coSpawnLauncher(e)
-                            },6000)
-                        }
                       }else{
                           s.log(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
                           errorFatal("Ping Failed");return;
                     }
                 }
-                if(e.type!=='socket'&&e.type!=='dashcam'&&e.protocol!=='udp'&&e.type!=='local'||e.details.skip_ping === '1'){
+                if(e.type!=='socket'&&e.type!=='dashcam'&&e.protocol!=='udp'&&e.type!=='local' && e.details.skip_ping !== '1'){
                     connectionTester.test(e.hosty,e.port,2000,startVideoProcessor);
                 }else{
                     startVideoProcessor(null,{success:true})
@@ -4570,7 +4607,7 @@ var tx;
                                         d.form.details=JSON.stringify(d.form.details)
                                         ///
                                         d.set=[],d.ar=[];
-                                        if(d.form.pass&&d.form.pass!==''){d.form.pass=s.md5(d.form.pass);}else{delete(d.form.pass)};
+                                        if(d.form.pass&&d.form.pass!==''){d.form.pass=s.createHash(d.form.pass);}else{delete(d.form.pass)};
                                         delete(d.form.password_again);
                                         d.for=Object.keys(d.form);
                                         d.for.forEach(function(v){
@@ -4580,7 +4617,7 @@ var tx;
                                         s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE ke=? AND uid=?',d.ar,function(err,r){
                                             if(!d.d.sub){
                                                 s.group[d.ke].sizeLimit = parseFloat(newSize)
-                                                delete(s.group[d.ke].webdav)
+                                                s.group[d.ke].webdav = null
                                                 s.group[d.ke].aws = null
                                                 s.group[d.ke].aws_s3 = null
                                                 if(s.group[d.ke].discordBot && s.group[d.ke].discordBot.destroy){
@@ -4719,7 +4756,9 @@ var tx;
                                                     getVideos(callback)
                                                 },2000)
                                             }else{
-                                                s.video('linkBuild',r,cn.auth)
+                                                s.video('linkBuild',r,{
+                                                    auth : cn.auth
+                                                })
                                                 callback({total:r.length,limit:d.videoLimit,videos:r})
                                             }
                                         })
@@ -5011,7 +5050,7 @@ var tx;
                                                     d.form.ke = d.form.ke.replace(/[`~!@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi, '')
                                                 }
                                                 //write user to db
-                                                s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[d.form.ke,d.form.uid,d.form.mail,s.md5(d.form.pass),d.form.details])
+                                                s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[d.form.ke,d.form.uid,d.form.mail,s.createHash(d.form.pass),d.form.details])
                                                 s.tx({f:'add_account',details:d.form.details,ke:d.form.ke,uid:d.form.uid,mail:d.form.mail},'$');
                                                 //init user
                                                 s.init('group',d.form)
@@ -5034,7 +5073,7 @@ var tx;
                                         var details = JSON.parse(r.details)
                                         if(d.form.pass&&d.form.pass!==''){
                                            if(d.form.pass===d.form.password_again){
-                                               d.form.pass=s.md5(d.form.pass);
+                                               d.form.pass=s.createHash(d.form.pass);
                                            }else{
                                                s.tx({f:'error',ff:'edit_account',msg:lang["Passwords Don't Match"]},cn.id)
                                                return
@@ -5309,7 +5348,8 @@ var tx;
     })
 });
 //Authenticator functions
-s.api={};
+s.api = {}
+s.failedLoginAttempts = {}
 //auth handler
 //params = parameters
 //cb = callback
@@ -5373,7 +5413,7 @@ s.auth = function(params,cb,res,req){
             //no key in memory, query db to see if key exists
             //check if using username and password in plain text or md5
             if(params.username&&params.username!==''&&params.password&&params.password!==''){
-                s.sqlQuery('SELECT * FROM Users WHERE mail=? AND (pass=? OR pass=?)',[params.username,params.password,s.md5(params.password)],function(err,r){
+                s.sqlQuery('SELECT * FROM Users WHERE mail=? AND (pass=? OR pass=?)',[params.username,params.password,s.createHash(params.password)],function(err,r){
                     if(r&&r[0]){
                         r=r[0];
                         r.ip='0.0.0.0';
@@ -5394,7 +5434,7 @@ s.auth = function(params,cb,res,req){
                     if(r&&r[0]){
                         r=r[0];
                         s.api[params.auth]={ip:r.ip,uid:r.uid,ke:r.ke,permissions:JSON.parse(r.details),details:{}};
-                        s.sqlQuery('SELECT details FROM Users WHERE uid=? AND ke=?',[r.uid,r.ke],function(err,rr){
+                        s.sqlQuery('SELECT mail,details FROM Users WHERE uid=? AND ke=?',[r.uid,r.ke],function(err,rr){
                             if(rr&&rr[0]){
                                 rr=rr[0];
                                 try{
@@ -5430,10 +5470,10 @@ s.superAuth=function(x,callback){
     req={};
     req.super=require(location.super);
     req.super.forEach(function(v,n){
-        if(x.md5===true){
-            x.pass=s.md5(x.pass);
-        }
-        if(x.mail.toLowerCase()===v.mail.toLowerCase()&&x.pass===v.pass){
+        if(
+            x.mail.toLowerCase() === v.mail.toLowerCase() &&
+            (x.pass === v.pass || v.pass === s.createHash(x.pass) || v.pass === s.md5(x.pass))
+        ){
             req.found=1;
             if(x.users===true){
                 s.sqlQuery('SELECT * FROM Users WHERE details NOT LIKE ?',['%"sub"%'],function(err,r) {
@@ -5598,7 +5638,7 @@ app.post(config.webPaths.apiPrefix+':auth/register/:ke/:uid',function (req,res){
                                 req.resp.msg='New Account Created';req.resp.ok=true;
                                 req.gid=s.gid();
                                 req.body.details='{"sub":"1","allmonitors":"1"}';
-                                s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[req.params.ke,req.gid,req.body.mail,s.md5(req.body.pass),req.body.details])
+                                s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[req.params.ke,req.gid,req.body.mail,s.createHash(req.body.pass),req.body.details])
                                 s.tx({f:'add_sub_account',details:req.body.details,ke:req.params.ke,uid:req.gid,mail:req.body.mail},'ADM_'+req.params.ke);
                             }
                             res.end(s.s(req.resp,null,3));
@@ -5627,10 +5667,36 @@ s.deleteFactorAuth=function(r){
 }
 app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':screen'],function (req,res){
     req.ip=req.headers['cf-connecting-ip']||req.headers["CF-Connecting-IP"]||req.headers["'x-forwarded-for"]||req.connection.remoteAddress;
-    if(req.query.json=='true'){
+    if(req.query.json === 'true'){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
     }
+    // brute check
+    if(s.failedLoginAttempts[req.body.mail] && s.failedLoginAttempts[req.body.mail].failCount >= 5){
+        if(req.query.json=='true'){
+            res.end(s.s({ok:false}, null, 3))
+        }else{
+            res.render(config.renderPaths.index,{
+                failedLogin:true,
+                message:lang.failedLoginText1,
+                lang:lang,
+                config:config,
+                screen:req.params.screen,
+                originalURL:s.getOriginalUrl(req)
+            },function(err,html){
+                if(err){
+                    s.systemLog(err)
+                }
+                res.end(html);
+            });
+        }
+        return false
+    }
+    //
     req.renderFunction=function(focus,data){
+        if(s.failedLoginAttempts[req.body.mail]){
+            clearTimeout(s.failedLoginAttempts[req.body.mail].timeout)
+            delete(s.failedLoginAttempts[req.body.mail])
+        }
         if(req.query.json=='true'){
             delete(data.config)
             data.ok=true;
@@ -5648,11 +5714,35 @@ app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':
         }
     }
     req.failed=function(board){
+        // brute protector
+        if(!s.failedLoginAttempts[req.body.mail]){
+            s.failedLoginAttempts[req.body.mail] = {
+                failCount : 0,
+                ips : {}
+            }
+        }
+        ++s.failedLoginAttempts[req.body.mail].failCount
+        if(!s.failedLoginAttempts[req.body.mail].ips[req.ip]){
+            s.failedLoginAttempts[req.body.mail].ips[req.ip] = 0
+        }
+        ++s.failedLoginAttempts[req.body.mail].ips[req.ip]
+        clearTimeout(s.failedLoginAttempts[req.body.mail].timeout)
+        s.failedLoginAttempts[req.body.mail].timeout = setTimeout(function(){
+            delete(s.failedLoginAttempts[req.body.mail])
+        },1000 * 60 * 15)
+        // check if JSON
         if(req.query.json=='true'){
             res.setHeader('Content-Type', 'application/json');
             res.end(s.s({ok:false}, null, 3))
         }else{
-            res.render(config.renderPaths.index,{failedLogin:true,lang:lang,config:config,screen:req.params.screen,originalURL:s.getOriginalUrl(req)},function(err,html){
+            res.render(config.renderPaths.index,{
+                failedLogin:true,
+                message:lang.failedLoginText2,
+                lang:lang,
+                config:config,
+                screen:req.params.screen,
+                originalURL:s.getOriginalUrl(req)
+            },function(err,html){
                 if(err){
                     s.systemLog(err)
                 }
@@ -5712,7 +5802,7 @@ app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':
     }
     if(req.body.mail&&req.body.pass){
         req.default=function(){
-            s.sqlQuery('SELECT * FROM Users WHERE mail=? AND pass=?',[req.body.mail,s.md5(req.body.pass)],function(err,r) {
+            s.sqlQuery('SELECT * FROM Users WHERE mail=? AND pass=?',[req.body.mail,s.createHash(req.body.pass)],function(err,r) {
                 req.resp={ok:false};
                 if(!err&&r&&r[0]){
                     r=r[0];r.auth=s.md5(s.gid());
@@ -5848,9 +5938,9 @@ app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':
                                 req.resp={
                                     ke:req.body.key,
                                     uid:user.uid,
-                                    auth:s.md5(s.gid()),
+                                    auth:s.createHash(s.gid()),
                                     mail:user.mail,
-                                    pass:s.md5(req.body.pass),
+                                    pass:s.createHash(req.body.pass),
                                     details:JSON.stringify({
                                         sub:'1',
                                         ldap:'1',
@@ -5955,6 +6045,17 @@ app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':
         }
     }
 });
+// Brute Protection Lock Reset by API
+app.get([config.webPaths.apiPrefix+':auth/resetBruteProtection/:ke'], function (req,res){
+    res.header("Access-Control-Allow-Origin",req.headers.origin);
+    s.auth(req.params,function(user){
+        if(s.failedLoginAttempts[user.mail]){
+            clearTimeout(s.failedLoginAttempts[user.mail].timeout)
+            delete(s.failedLoginAttempts[user.mail])
+        }
+        res.end(s.s({ok:true},null,3))
+    })
+})
 // Get HLS stream (m3u8)
 app.get([config.webPaths.apiPrefix+':auth/hls/:ke/:id/:file',config.webPaths.apiPrefix+':auth/hls/:ke/:id/:channel/:file'], function (req,res){
     res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -6468,7 +6569,12 @@ app.get([config.webPaths.apiPrefix+':auth/monitor/:ke',config.webPaths.apiPrefix
     s.auth(req.params,req.fn,res,req);
 });
 // Get videos json
-app.get([config.webPaths.apiPrefix+':auth/videos/:ke',config.webPaths.apiPrefix+':auth/videos/:ke/:id'], function (req,res){
+app.get([
+    config.webPaths.apiPrefix+':auth/videos/:ke',
+    config.webPaths.apiPrefix+':auth/videos/:ke/:id',
+    config.webPaths.apiPrefix+':auth/cloudVideos/:ke',
+    config.webPaths.apiPrefix+':auth/cloudVideos/:ke/:id'
+], function (req,res){
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
     s.auth(req.params,function(user){
@@ -6480,8 +6586,16 @@ app.get([config.webPaths.apiPrefix+':auth/videos/:ke',config.webPaths.apiPrefix+
             res.end(s.s([]))
             return
         }
-        req.sql='SELECT * FROM Videos WHERE ke=?';req.ar=[req.params.ke];
-        req.count_sql='SELECT COUNT(*) FROM Videos WHERE ke=?';req.count_ar=[req.params.ke];
+        var origURL = req.originalUrl.split('/')
+        var videoParam = origURL[origURL.indexOf(req.params.auth) + 1]
+        var videoSet = 'Videos'
+        switch(videoParam){
+            case'cloudVideos':
+                videoSet = 'Cloud Videos'
+            break;
+        }
+        req.sql='SELECT * FROM `'+videoSet+'` WHERE ke=?';req.ar=[req.params.ke];
+        req.count_sql='SELECT COUNT(*) FROM `'+videoSet+'` WHERE ke=?';req.count_ar=[req.params.ke];
         if(req.query.archived=='1'){
             req.sql+=' AND details LIKE \'%"archived":"1"\''
             req.count_sql+=' AND details LIKE \'%"archived":"1"\''
@@ -6554,10 +6668,14 @@ app.get([config.webPaths.apiPrefix+':auth/videos/:ke',config.webPaths.apiPrefix+
                 return
             }
             s.sqlQuery(req.count_sql,req.count_ar,function(err,count){
-                s.video('linkBuild',r,req.params.auth)
+                s.video('linkBuild',r,{
+                    auth : req.params.auth,
+                    videoParam : videoParam,
+                    hideRemote : config.hideCloudSaveUrls
+                })
                 if(req.query.limit.indexOf(',')>-1){
                     req.skip=parseInt(req.query.limit.split(',')[0])
-                    req.query.limit=parseInt(req.query.limit.split(',')[0])
+                    req.query.limit=parseInt(req.query.limit.split(',')[1])
                 }else{
                     req.skip=0
                     req.query.limit=parseInt(req.query.limit)
@@ -7109,6 +7227,28 @@ app.get(config.webPaths.apiPrefix+':auth/zipVideos/:ke', function (req,res){
         failed({ok:false,msg:'"videos" query variable is missing from request.'})
     }
 });
+// Get cloud video file (proxy)
+app.get(config.webPaths.apiPrefix+':auth/cloudVideos/:ke/:id/:file', function (req,res){
+    s.auth(req.params,function(user){
+        if(user.permissions.watch_videos==="0"||user.details.sub&&user.details.allmonitors!=='1'&&user.details.monitors.indexOf(req.params.id)===-1){
+            res.end(user.lang['Not Permitted'])
+            return
+        }
+        var time = s.nameToTime(req.params.file)
+        if(req.query.isUTC === 'true'){
+            time = s.utcToLocal(time)
+        }
+        time = new Date(time)
+        s.sqlQuery('SELECT * FROM `Cloud Videos` WHERE ke=? AND mid=? AND `time`=? LIMIT 1',[req.params.ke,req.params.id,time],function(err,r){
+            if(r&&r[0]){
+                r = r[0]
+                req.pipe(request(r.href)).pipe(res)
+            }else{
+                res.end(user.lang['File Not Found in Database'])
+            }
+        })
+    },res,req);
+});
 // Get video file
 app.get(config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file', function (req,res){
     s.auth(req.params,function(user){
@@ -7121,7 +7261,7 @@ app.get(config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file', function (req,re
             time = s.utcToLocal(time)
         }
         time = new Date(time)
-        s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND `time`=?',[req.params.ke,req.params.id,time],function(err,r){
+        s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND `time`=? LIMIT 1',[req.params.ke,req.params.id,time],function(err,r){
             if(r&&r[0]){
                 req.dir=s.video('getDir',r[0])+req.params.file
                 if (fs.existsSync(req.dir)){
@@ -7203,7 +7343,12 @@ app.get(config.webPaths.apiPrefix+':auth/control/:ke/:id/:direction', function (
     },res,req);
 })
 //modify video file
-app.get([config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode',config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode/:f'], function (req,res){
+app.get([
+    config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode',
+    config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode/:f',
+    config.webPaths.apiPrefix+':auth/cloudVideos/:ke/:id/:file/:mode',
+    config.webPaths.apiPrefix+':auth/cloudVideos/:ke/:id/:file/:mode/:f'
+], function (req,res){
     req.ret={ok:false};
     res.setHeader('Content-Type', 'application/json');
     res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -7217,7 +7362,15 @@ app.get([config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode',config.web
             time = s.utcToLocal(time)
         }
         time = new Date(time)
-        req.sql='SELECT * FROM Videos WHERE ke=? AND mid=? AND `time`=?';
+        var origURL = req.originalUrl.split('/')
+        var videoParam = origURL[origURL.indexOf(req.params.auth) + 1]
+        var videoSet = 'Videos'
+        switch(videoParam){
+            case'cloudVideos':
+                videoSet = 'Cloud Videos'
+            break;
+        }
+        req.sql='SELECT * FROM `'+videoSet+'` WHERE ke=? AND mid=? AND `time`=?';
         req.ar=[req.params.ke,req.params.id,time];
         s.sqlQuery(req.sql,req.ar,function(err,r){
             if(r&&r[0]){
@@ -7229,18 +7382,30 @@ app.get([config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode',config.web
                     break;
                     case'status':
                         r.f = 'video_edit'
+                        switch(videoParam){
+                            case'cloudVideos':
+                                r.f += '_cloud'
+                            break;
+                        }
                         r.status = parseInt(req.params.f)
                         if(isNaN(req.params.f)||req.params.f===0){
                             req.ret.msg='Not a valid value.';
                         }else{
                             req.ret.ok=true;
-                            s.sqlQuery('UPDATE Videos SET status=? WHERE ke=? AND mid=? AND `time`=?',[req.params.f,req.params.ke,req.params.id,time])
+                            s.sqlQuery('UPDATE `'+videoSet+'` SET status=? WHERE ke=? AND mid=? AND `time`=?',[req.params.f,req.params.ke,req.params.id,time])
                             s.tx(r,'GRP_'+r.ke);
                         }
                     break;
                     case'delete':
                         req.ret.ok=true;
-                        s.video('delete',r)
+                        switch(videoParam){
+                            case'cloudVideos':
+                                s.video('deleteFromCloud',r)
+                            break;
+                            default:
+                                s.video('delete',r)
+                            break;
+                        }
                     break;
                     default:
                         req.ret.msg=user.lang.modifyVideoText1;
@@ -7536,6 +7701,9 @@ s.cpuUsage=function(e){
         case'linux':
             k.cmd='LANG=C top -b -n 2 | grep "^'+config.cpuUsageMarker+'" | awk \'{print $2}\' | tail -n1';
         break;
+        case'freebsd':
+            k.cmd='vmstat 1 2 | tail -1 | awk \'{print $17}\''
+        break;
     }
     if(config.customCpuCommand){
       exec(config.customCpuCommand,{encoding:'utf8',detached: true},function(err,d){
@@ -7563,6 +7731,9 @@ s.ramUsage=function(e){
         break;
         case'darwin':
             k.cmd = "vm_stat | awk '/^Pages free: /{f=substr($3,1,length($3)-1)} /^Pages active: /{a=substr($3,1,length($3-1))} /^Pages inactive: /{i=substr($3,1,length($3-1))} /^Pages speculative: /{s=substr($3,1,length($3-1))} /^Pages wired down: /{w=substr($4,1,length($4-1))} /^Pages occupied by compressor: /{c=substr($5,1,length($5-1)); print ((a+w)/(f+a+i+w+s+c))*100;}'"
+        break;
+	case'freebsd':
+	    k.cmd = "echo \"scale=4; $(vmstat -H | tail -1 | awk '{print $5}')*1024*100/$(sysctl hw.physmem | awk '{print $2}')\" | bc"
         break;
         default:
             k.cmd = "LANG=C free | grep Mem | awk '{print $4/$2 * 100.0}'";

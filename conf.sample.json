@@ -1,5 +1,6 @@
 {
   "port": 8080,
+  "passwordType": "sha256",
   "addStorage": [
       {"name":"second","path":"__DIR__/videos2"}
   ],

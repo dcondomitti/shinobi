@@ -134,7 +134,9 @@ else
 fi
 echo "============="
 echo "Shinobi - Install NPM Libraries"
-sudo npm install
+npm i npm -g
+npm install --unsafe-perm
+sudo npm audit fix --force
 echo "============="
 echo "Shinobi - Install PM2"
 sudo npm install pm2 -g
@@ -187,4 +189,4 @@ else
     echo "||=====   Install Completed   =====||"
     echo "|| Access the main Shinobi panel at http://$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1):8080 in your web browser."
     echo "+=================================+"
-fi 
+fi

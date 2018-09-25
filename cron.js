@@ -57,59 +57,70 @@ s.sqlDate = function(value){
     }else{
         value = value.toUpperCase()
         if (value.slice(-1) === 'S') {
-            value = value.slice(0, -1);  
+            value = value.slice(0, -1);
         }
         dateQueryFunction = "DATE_SUB(NOW(), INTERVAL "+value+")"
     }
     return dateQueryFunction
 }
-s.sqlQuery = function(query,values,onMoveOn,hideLog){
-    s.debugLog(query,values)
+s.mergeQueryValues = function(query,values){
     if(!values){values=[]}
     var valuesNotFunction = true;
     if(typeof values === 'function'){
-        var onMoveOn = values;
         var values = [];
         valuesNotFunction = false;
     }
-    if(!onMoveOn){onMoveOn=function(){}}
     if(values&&valuesNotFunction){
         var splitQuery = query.split('?')
         var newQuery = ''
         splitQuery.forEach(function(v,n){
             newQuery += v
-            if(values[n]){
-                if(isNaN(values[n])){
-                    newQuery += "'"+values[n]+"'"
+            var value = values[n]
+            if(value){
+                if(isNaN(value) || value instanceof Date){
+                    newQuery += "'"+value+"'"
                 }else{
-                    newQuery += values[n]
+                    newQuery += value
                 }
             }
         })
     }else{
         newQuery = query
     }
-    return s.databaseEngine.raw(newQuery)
-        .asCallback(function(err,r){
-            if(err&&config.databaseLogs){
-                s.systemLog('s.sqlQuery QUERY',query)
-                s.systemLog('s.sqlQuery ERROR',err)
+    return newQuery
+}
+s.stringToSqlTime = function(value){
+    newValue = new Date(value.replace('T',' '))
+    return newValue
+}
+s.sqlQuery = function(query,values,onMoveOn){
+    if(!values){values=[]}
+    if(typeof values === 'function'){
+        var onMoveOn = values;
+        var values = [];
+    }
+    if(!onMoveOn){onMoveOn=function(){}}
+    var mergedQuery = s.mergeQueryValues(query,values)
+    s.debugLog('s.sqlQuery QUERY',mergedQuery)
+    return s.databaseEngine
+    .raw(query,values)
+    .asCallback(function(err,r){
+        if(err){
+            console.log('s.sqlQuery QUERY ERRORED',query)
+            console.log('s.sqlQuery ERROR',err)
+        }
+        if(onMoveOn && typeof onMoveOn === 'function'){
+            switch(databaseOptions.client){
+                case'sqlite3':
+                    if(!r)r=[]
+                break;
+                default:
+                    if(r)r=r[0]
+                break;
             }
-            if(onMoveOn)
-                if(typeof onMoveOn === 'function'){
-                    switch(databaseOptions.client){
-                        case'sqlite3':
-                            if(!r)r=[]
-                        break;
-                        default:
-                            if(r)r=r[0]
-                        break;
-                    }
-                    onMoveOn(err,r)
-                }else{
-                    s.debugLog('onMoveOn',onMoveOn)
-                }
-        })
+            onMoveOn(err,r)
+        }
+    })
 }
 
 s.debugLog = function(arg1,arg2){
@@ -177,6 +188,20 @@ s.checkFilterRules=function(v,callback){
     }
     //delete old videos with filter
     if(config.cron.deleteOld===true){
+        var where = [{
+            "p1":"end",
+            "p2":"<",
+            "p3":s.sqlDate(v.d.days+" DAYS"),
+            "p3_type":"function",
+        }]
+        //exclude monitors with their own max days
+        v.monitorsWithMaxKeepDays.forEach(function(mid){
+            where.push({
+                "p1":"mid",
+                "p2":"!=",
+                "p3":mid,
+            })
+        })
         v.d.filters.deleteOldVideosByCron={
             "id":"deleteOldVideosByCron",
             "name":"deleteOldVideosByCron",
@@ -188,12 +213,7 @@ s.checkFilterRules=function(v,callback){
             "email":"0",
             "delete":"1",
             "execute":"",
-            "where":[{
-                "p1":"end",
-                "p2":"<",
-                "p3":s.sqlDate(v.d.days+" DAYS"),
-                "p3_type":"function",
-            }]
+            "where":where
         };
     }
     s.debugLog('Filters')
@@ -456,9 +476,11 @@ s.processUser = function(number,rows){
             if(!v.d.filters||v.d.filters==''){
                 v.d.filters={};
             }
+            v.monitorsWithMaxKeepDays = []
             rr.forEach(function(b,m){
                 b.details=JSON.parse(b.details);
                 if(b.details.max_keep_days&&b.details.max_keep_days!==''){
+                    v.monitorsWithMaxKeepDays.push(b.mid)
                     v.d.filters['deleteOldVideosByCron'+b.mid]={
                         "id":'deleteOldVideosByCron'+b.mid,
                         "name":'deleteOldVideosByCron'+b.mid,
@@ -471,7 +493,7 @@ s.processUser = function(number,rows){
                         "delete":"1",
                         "execute":"",
                         "where":[{
-                            "p1":"ke",
+                            "p1":"mid",
                             "p2":"=",
                             "p3":b.mid
                         },{

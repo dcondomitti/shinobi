@@ -43,7 +43,7 @@ echo "============="
 echo "Shinobi - Install NPM Libraries"
 npm i npm -g
 npm install --unsafe-perm
-npm audit fix --unsafe-perm
+sudo npm audit fix --force
 echo "============="
 echo "Shinobi - Install PM2"
 npm install pm2 -g
