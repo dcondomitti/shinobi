@@ -30,6 +30,7 @@ if [ "$nodejsinstall" = "y" ] || [ "$nodejsinstall" = "Y" ]; then
     chmod +x setup_8.x
     ./setup_8.x
     sudo apt install nodejs -y
+    sudo apt install npm -y
 fi
 sudo apt install make -y
 echo "============="
