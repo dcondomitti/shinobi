@@ -1,6 +1,6 @@
 var http = require('http');
 var https = require('https');
-module.exports = function(s,config,lang,definitions,io,app){
+module.exports = function(s,config,lang,io,app){
     var server = http.createServer(app);
     //SSL options
     if(config.ssl&&config.ssl.key&&config.ssl.cert){

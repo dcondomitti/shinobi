@@ -1,12 +1,24 @@
 var execSync = require('child_process').execSync;
-module.exports = function(s,config,staticFFmpeg){
+module.exports = function(s,config){
+    var staticFFmpeg = false;
+    try{
+        staticFFmpeg = require('ffmpeg-static').path;
+        if (!fs.existsSync(staticFFmpeg)) {
+            staticFFmpeg = false
+            console.log('"ffmpeg-static" from NPM has failed to provide a compatible library or has been corrupted.')
+            console.log('You may need to install FFmpeg manually or you can try running "npm uninstall ffmpeg-static && npm install ffmpeg-static".')
+        }
+    }catch(err){
+        staticFFmpeg = false;
+        console.log('No Static FFmpeg. Continuing.')
+    }
     //ffmpeg location
     if(!config.ffmpegDir){
         if(staticFFmpeg !== false){
             config.ffmpegDir = staticFFmpeg
         }else{
             if(s.isWin===true){
-                config.ffmpegDir = __dirname+'/ffmpeg/ffmpeg.exe'
+                config.ffmpegDir = s.currentDirectory+'/ffmpeg/ffmpeg.exe'
             }else{
                 config.ffmpegDir = 'ffmpeg'
             }

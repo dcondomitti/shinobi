@@ -19,7 +19,7 @@ module.exports = function(s,config){
     process.on('SIGINT',s.ffmpegKill.bind(null, {exit:true}));
     s.checkRelativePath=function(x){
         if(x.charAt(0)!=='/'){
-            x=__dirname+'/'+x
+            x=s.currentDirectory+'/'+x
         }
         return x
     }
@@ -33,7 +33,7 @@ module.exports = function(s,config){
         if(x.charAt(length-1)!=='/'){
             x=x+'/'
         }
-        return x.replace('__DIR__',__dirname)
+        return x.replace('__DIR__',s.currentDirectory)
     }
     s.md5 = function(x){return crypto.createHash('md5').update(x).digest("hex")}
     s.createHash = s.md5
@@ -255,130 +255,129 @@ module.exports = function(s,config){
                 if(!s.group[e.ke].init){
                     s.group[e.ke].init={};
                 }
-                if(!s.group[e.ke].webdav||!s.group[e.ke].sizeLimit){
-                    s.sqlQuery('SELECT * FROM Users WHERE ke=? AND details NOT LIKE ?',[e.ke,'%"sub"%'],function(ar,r){
-                        if(r&&r[0]){
-                            r=r[0];
-                            ar=JSON.parse(r.details);
-                            //owncloud/webdav
-                            if(ar.webdav_user&&
-                               ar.webdav_user!==''&&
-                               ar.webdav_pass&&
-                               ar.webdav_pass!==''&&
-                               ar.webdav_url&&
-                               ar.webdav_url!==''
-                              ){
-                                if(!ar.webdav_dir||ar.webdav_dir===''){
-                                    ar.webdav_dir='/'
-                                }
-                                ar.webdav_dir = s.checkCorrectPathEnding(ar.webdav_dir)
-                                s.group[e.ke].webdav = webdav(
-                                    ar.webdav_url,
-                                    ar.webdav_user,
-                                    ar.webdav_pass
-                                )
+                s.sqlQuery('SELECT * FROM Users WHERE ke=? AND details NOT LIKE ?',[e.ke,'%"sub"%'],function(ar,r){
+                    if(r&&r[0]){
+                        r=r[0];
+                        ar=JSON.parse(r.details);
+                        //owncloud/webdav
+                        if(!s.group[e.ke].webdav &&
+                           ar.webdav_user&&
+                           ar.webdav_user!==''&&
+                           ar.webdav_pass&&
+                           ar.webdav_pass!==''&&
+                           ar.webdav_url&&
+                           ar.webdav_url!==''
+                          ){
+                            if(!ar.webdav_dir||ar.webdav_dir===''){
+                                ar.webdav_dir='/'
                             }
-                            //Amazon S3
-                            if(!s.group[e.ke].aws &&
-                               !s.group[e.ke].aws_s3 &&
-                               ar.aws_s3 !== '0' &&
-                               ar.aws_accessKeyId !== ''&&
-                               ar.aws_secretAccessKey &&
-                               ar.aws_secretAccessKey !== ''&&
-                               ar.aws_region &&
-                               ar.aws_region !== ''&&
-                               ar.aws_s3_bucket !== ''
-                              ){
-                                if(!ar.aws_s3_dir || ar.aws_s3_dir === '/'){
-                                    ar.aws_s3_dir = ''
-                                }
-                                if(ar.aws_s3_dir !== ''){
-                                    ar.aws_s3_dir = s.checkCorrectPathEnding(ar.aws_s3_dir)
-                                }
-                                s.group[e.ke].aws = new require("aws-sdk")
-                                s.group[e.ke].aws.config = new s.group[e.ke].aws.Config({
-                                    accessKeyId: ar.aws_accessKeyId,
-                                    secretAccessKey: ar.aws_secretAccessKey,
-                                    region: ar.aws_region
-                                })
-                                s.group[e.ke].aws_s3 = new s.group[e.ke].aws.S3();
+                            ar.webdav_dir = s.checkCorrectPathEnding(ar.webdav_dir)
+                            s.group[e.ke].webdav = webdav(
+                                ar.webdav_url,
+                                ar.webdav_user,
+                                ar.webdav_pass
+                            )
+                        }
+                        //Amazon S3
+                        if(!s.group[e.ke].aws &&
+                           !s.group[e.ke].aws_s3 &&
+                           ar.aws_s3 !== '0' &&
+                           ar.aws_accessKeyId !== ''&&
+                           ar.aws_secretAccessKey &&
+                           ar.aws_secretAccessKey !== ''&&
+                           ar.aws_region &&
+                           ar.aws_region !== ''&&
+                           ar.aws_s3_bucket !== ''
+                          ){
+                            if(!ar.aws_s3_dir || ar.aws_s3_dir === '/'){
+                                ar.aws_s3_dir = ''
                             }
-                            //discordbot
-                            if(!s.group[e.ke].discordBot &&
-                               config.discordBot === true &&
-                               ar.discordbot === '1' &&
-                               ar.discordbot_token !== ''
-                              ){
-                                s.group[e.ke].discordBot = new Discord.Client()
-                                s.group[e.ke].discordBot.on('ready', () => {
-                                    console.log(`${r.mail} : Discord Bot Logged in as ${s.group[e.ke].discordBot.user.tag}!`)
-                                })
-                                s.group[e.ke].discordBot.login(ar.discordbot_token)
+                            if(ar.aws_s3_dir !== ''){
+                                ar.aws_s3_dir = s.checkCorrectPathEnding(ar.aws_s3_dir)
                             }
-                            //disk Used Emitter
-                            if(!s.group[e.ke].diskUsedEmitter){
-                                s.group[e.ke].diskUsedEmitter = new events.EventEmitter()
-                                s.group[e.ke].diskUsedEmitter.on('set',function(currentChange){
-                                    //validate current values
-                                    if(!s.group[e.ke].usedSpace){
-                                        s.group[e.ke].usedSpace=0
-                                    }else{
-                                        s.group[e.ke].usedSpace=parseFloat(s.group[e.ke].usedSpace)
-                                    }
-                                    if(s.group[e.ke].usedSpace<0||isNaN(s.group[e.ke].usedSpace)){
-                                        s.group[e.ke].usedSpace=0
-                                    }
-                                    //change global size value
-                                    s.group[e.ke].usedSpace=s.group[e.ke].usedSpace+currentChange
-                                    //remove value just used from queue
+                            s.group[e.ke].aws = new require("aws-sdk")
+                            s.group[e.ke].aws.config = new s.group[e.ke].aws.Config({
+                                accessKeyId: ar.aws_accessKeyId,
+                                secretAccessKey: ar.aws_secretAccessKey,
+                                region: ar.aws_region
+                            })
+                            s.group[e.ke].aws_s3 = new s.group[e.ke].aws.S3();
+                        }
+                        //discordbot
+                        if(!s.group[e.ke].discordBot &&
+                           config.discordBot === true &&
+                           ar.discordbot === '1' &&
+                           ar.discordbot_token !== ''
+                          ){
+                            s.group[e.ke].discordBot = new Discord.Client()
+                            s.group[e.ke].discordBot.on('ready', () => {
+                                console.log(`${r.mail} : Discord Bot Logged in as ${s.group[e.ke].discordBot.user.tag}!`)
+                            })
+                            s.group[e.ke].discordBot.login(ar.discordbot_token)
+                        }
+                        //disk Used Emitter
+                        if(!s.group[e.ke].diskUsedEmitter){
+                            s.group[e.ke].diskUsedEmitter = new events.EventEmitter()
+                            s.group[e.ke].diskUsedEmitter.on('set',function(currentChange){
+                                //validate current values
+                                if(!s.group[e.ke].usedSpace){
+                                    s.group[e.ke].usedSpace=0
+                                }else{
+                                    s.group[e.ke].usedSpace=parseFloat(s.group[e.ke].usedSpace)
+                                }
+                                if(s.group[e.ke].usedSpace<0||isNaN(s.group[e.ke].usedSpace)){
+                                    s.group[e.ke].usedSpace=0
+                                }
+                                //change global size value
+                                s.group[e.ke].usedSpace=s.group[e.ke].usedSpace+currentChange
+                                //remove value just used from queue
+                                s.init('diskUsedEmit',e)
+                            })
+                            s.group[e.ke].diskUsedEmitter.on('purge',function(currentPurge){
+                                s.init('diskUsedSet',e,currentPurge.filesizeMB)
+                                if(config.cron.deleteOverMax===true){
+                                        //set queue processor
+                                        var finish=function(){
+                                            s.init('diskUsedEmit',e)
+                                        }
+                                        var deleteVideos = function(){
+                                            //run purge command
+                                            if(s.group[e.ke].usedSpace>(s.group[e.ke].sizeLimit*config.cron.deleteOverMaxOffset)){
+                                                    s.sqlQuery('SELECT * FROM Videos WHERE status != 0 AND details NOT LIKE \'%"archived":"1"%\' AND ke=? ORDER BY `time` ASC LIMIT 2',[e.ke],function(err,evs){
+                                                        k.del=[];k.ar=[e.ke];
+                                                        if(!evs)return console.log(err)
+                                                        evs.forEach(function(ev){
+                                                            ev.dir=s.video('getDir',ev)+s.formattedTime(ev.time)+'.'+ev.ext;
+                                                            k.del.push('(mid=? AND `time`=?)');
+                                                            k.ar.push(ev.mid),k.ar.push(ev.time);
+                                                            s.file('delete',ev.dir);
+                                                            s.init('diskUsedSet',e,-(ev.size/1000000))
+                                                            s.tx({f:'video_delete',ff:'over_max',filename:s.formattedTime(ev.time)+'.'+ev.ext,mid:ev.mid,ke:ev.ke,time:ev.time,end:s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+e.ke);
+                                                        });
+                                                        if(k.del.length>0){
+                                                            k.qu=k.del.join(' OR ');
+                                                            s.sqlQuery('DELETE FROM Videos WHERE ke =? AND ('+k.qu+')',k.ar,function(){
+                                                                deleteVideos()
+                                                            })
+                                                        }else{
+                                                            finish()
+                                                        }
+                                                    })
+                                            }else{
+                                                finish()
+                                            }
+                                        }
+                                        deleteVideos()
+                                }else{
                                     s.init('diskUsedEmit',e)
-                                })
-                                s.group[e.ke].diskUsedEmitter.on('purge',function(currentPurge){
-                                    s.init('diskUsedSet',e,currentPurge.filesizeMB)
-                                    if(config.cron.deleteOverMax===true){
-                                            //set queue processor
-                                            var finish=function(){
-                                                s.init('diskUsedEmit',e)
-                                            }
-                                            var deleteVideos = function(){
-                                                //run purge command
-                                                if(s.group[e.ke].usedSpace>(s.group[e.ke].sizeLimit*config.cron.deleteOverMaxOffset)){
-                                                        s.sqlQuery('SELECT * FROM Videos WHERE status != 0 AND details NOT LIKE \'%"archived":"1"%\' AND ke=? ORDER BY `time` ASC LIMIT 2',[e.ke],function(err,evs){
-                                                            k.del=[];k.ar=[e.ke];
-                                                            if(!evs)return console.log(err)
-                                                            evs.forEach(function(ev){
-                                                                ev.dir=s.video('getDir',ev)+s.formattedTime(ev.time)+'.'+ev.ext;
-                                                                k.del.push('(mid=? AND `time`=?)');
-                                                                k.ar.push(ev.mid),k.ar.push(ev.time);
-                                                                s.file('delete',ev.dir);
-                                                                s.init('diskUsedSet',e,-(ev.size/1000000))
-                                                                s.tx({f:'video_delete',ff:'over_max',filename:s.formattedTime(ev.time)+'.'+ev.ext,mid:ev.mid,ke:ev.ke,time:ev.time,end:s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+e.ke);
-                                                            });
-                                                            if(k.del.length>0){
-                                                                k.qu=k.del.join(' OR ');
-                                                                s.sqlQuery('DELETE FROM Videos WHERE ke =? AND ('+k.qu+')',k.ar,function(){
-                                                                    deleteVideos()
-                                                                })
-                                                            }else{
-                                                                finish()
-                                                            }
-                                                        })
-                                                }else{
-                                                    finish()
-                                                }
-                                            }
-                                            deleteVideos()
-                                    }else{
-                                        s.init('diskUsedEmit',e)
-                                    }
-                                })
-                            }
-                            Object.keys(ar).forEach(function(v){
-                                s.group[e.ke].init[v]=ar[v]
+                                }
                             })
                         }
-                    });
-                }
+                        Object.keys(ar).forEach(function(v){
+                            s.group[e.ke].init[v]=ar[v]
+                        })
+                    }
+                });
             break;
             case'sync':
                 e.cn=Object.keys(s.childNodes);

@@ -516,7 +516,7 @@ module.exports = function(s,config,io){
                             return;
                         }
                         if(d.key===config.updateKey){
-                            exec('chmod +x '+__dirname+'/UPDATE.sh&&'+__dirname+'/UPDATE.sh',{detached: true})
+                            exec('chmod +x '+s.currentDirectory+'/UPDATE.sh&&'+s.currentDirectory+'/UPDATE.sh',{detached: true})
                         }else{
                             tx({error:lang.updateKeyText2});
                         }
@@ -1018,7 +1018,7 @@ module.exports = function(s,config,io){
                                         by:cn.mail,
                                         ip:cn.ip
                                     })
-                                    var updateProcess = spawn('sh',(__dirname+'/UPDATE.sh').split(' '),{detached: true})
+                                    var updateProcess = spawn('sh',(s.currentDirectory+'/UPDATE.sh').split(' '),{detached: true})
                                     updateProcess.stderr.on('data',function(data){
                                         s.systemLog('Update Info',data.toString())
                                     })
@@ -1031,11 +1031,11 @@ module.exports = function(s,config,io){
                                     if(d.check('system')){
                                         s.systemLog('Shinobi ordered to restart',{by:cn.mail,ip:cn.ip})
                                         s.ffmpegKill()
-                                        exec('pm2 restart '+__dirname+'/camera.js')
+                                        exec('pm2 restart '+s.currentDirectory+'/camera.js')
                                     }
                                     if(d.check('cron')){
                                         s.systemLog('Shinobi CRON ordered to restart',{by:cn.mail,ip:cn.ip})
-                                        exec('pm2 restart '+__dirname+'/cron.js')
+                                        exec('pm2 restart '+s.currentDirectory+'/cron.js')
                                     }
                                     if(d.check('logs')){
                                         s.systemLog('Flush PM2 Logs',{by:cn.mail,ip:cn.ip})
@@ -1043,8 +1043,8 @@ module.exports = function(s,config,io){
                                     }
                                 break;
                                 case'configure':
-                                    s.systemLog('conf.json Modified',{by:cn.mail,ip:cn.ip,old:jsonfile.readFileSync(location.config)})
-                                    jsonfile.writeFile(location.config,d.data,{spaces: 2},function(){
+                                    s.systemLog('conf.json Modified',{by:cn.mail,ip:cn.ip,old:jsonfile.readFileSync(s.location.config)})
+                                    jsonfile.writeFile(s.location.config,d.data,{spaces: 2},function(){
                                         s.tx({f:'save_configuration'},cn.id)
                                     })
                                 break;

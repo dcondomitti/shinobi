@@ -12,6 +12,9 @@ var proxy = httpProxy.createProxyServer({})
 var ejs = require('ejs');
 var CircularJSON = require('circular-json');
 module.exports = function(s,config,lang,app){
+    if(config.productType==='Pro'){
+        var LdapAuth = require('ldapauth-fork');
+    }
     //get page URL
     if(!config.baseURL){
         config.baseURL = ""
@@ -55,13 +58,13 @@ module.exports = function(s,config,lang,app){
 
     ////Pages
     app.enable('trust proxy');
-    app.use('/libs',express.static(__dirname + '/web/libs'));
+    app.use('/libs',express.static(s.currentDirectory + '/web/libs'));
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({extended: true}));
-    app.set('views', __dirname + '/web');
+    app.set('views', s.currentDirectory + '/web');
     app.set('view engine','ejs');
     //add template handler
-    if(config.renderPaths.handler!==undefined){require(__dirname+'/web/'+config.renderPaths.handler+'.js').addHandlers(s,app,io)}
+    if(config.renderPaths.handler!==undefined){require(s.currentDirectory+'/web/'+config.renderPaths.handler+'.js').addHandlers(s,app,io)}
 
     //logout
     app.get(config.webPaths.apiPrefix+':auth/logout/:ke/:id', function (req,res){
@@ -113,7 +116,7 @@ module.exports = function(s,config,lang,app){
             }
             if(req.params.key===config.updateKey){
                 req.ret.ok=true;
-                exec('chmod +x '+__dirname+'/UPDATE.sh&&'+__dirname+'/UPDATE.sh',{detached: true})
+                exec('chmod +x '+s.currentDirectory+'/UPDATE.sh&&'+s.currentDirectory+'/UPDATE.sh',{detached: true})
             }else{
                 req.ret.msg=user.lang.updateKeyText2;
             }
@@ -304,11 +307,11 @@ module.exports = function(s,config,lang,app){
                         })
                     }else{
                         //not admin user
-                        req.renderFunction(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:__dirname});
+                        req.renderFunction(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.currentDirectory});
                     }
                 break;
                 default:
-                    req.renderFunction(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:__dirname});
+                    req.renderFunction(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.currentDirectory});
                 break;
             }
             s.log({ke:r.ke,mid:'$USER'},{type:r.lang['New Authentication Token'],msg:{for:req.body.function,mail:r.mail,id:r.uid,ip:req.ip}})
@@ -506,7 +509,7 @@ module.exports = function(s,config,lang,app){
                 })
             }else{
                 if(req.body.function==='super'){
-                    if(!fs.existsSync(location.super)){
+                    if(!fs.existsSync(s.location.super)){
                         res.end(lang.superAdminText)
                         return
                     }
@@ -516,7 +519,7 @@ module.exports = function(s,config,lang,app){
                                 r=[]
                             }
                             data.Logs=r;
-                            fs.readFile(location.config,'utf8',function(err,file){
+                            fs.readFile(s.location.config,'utf8',function(err,file){
                                 data.plainConfig=JSON.parse(file)
                                 req.renderFunction(config.renderPaths.super,data);
                             })

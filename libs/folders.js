@@ -3,7 +3,7 @@ module.exports = function(s,config,location){
     //directories
     s.group={};
     if(!config.windowsTempDir&&s.isWin===true){config.windowsTempDir='C:/Windows/Temp'}
-    if(!config.defaultMjpeg){config.defaultMjpeg=__dirname+'/web/libs/img/bg.jpg'}
+    if(!config.defaultMjpeg){config.defaultMjpeg=s.currentDirectory+'/web/libs/img/bg.jpg'}
     //default stream folder check
     if(!config.streamDir){
         if(s.isWin===false){
@@ -12,20 +12,20 @@ module.exports = function(s,config,location){
             config.streamDir=config.windowsTempDir
         }
         if(!fs.existsSync(config.streamDir)){
-            config.streamDir=__dirname+'/streams/'
+            config.streamDir=s.currentDirectory+'/streams/'
         }else{
             config.streamDir+='/streams/'
         }
     }
-    if(!config.videosDir){config.videosDir=__dirname+'/videos/'}
-    if(!config.binDir){config.binDir=__dirname+'/fileBin/'}
+    if(!config.videosDir){config.videosDir=s.currentDirectory+'/videos/'}
+    if(!config.binDir){config.binDir=s.currentDirectory+'/fileBin/'}
     if(!config.addStorage){config.addStorage=[]}
     s.dir={
         videos:s.checkCorrectPathEnding(config.videosDir),
         streams:s.checkCorrectPathEnding(config.streamDir),
         fileBin:s.checkCorrectPathEnding(config.binDir),
         addStorage:config.addStorage,
-        languages:location.languages+'/'
+        languages:s.location.languages+'/'
     };
     //streams dir
     if(!fs.existsSync(s.dir.streams)){

@@ -1,5 +1,5 @@
 var Discord = require("discord.js")
-module.exports = function(s,config,lang,definitions){
+module.exports = function(s,config,lang){
     //discord bot
     if(config.discordBot === true){
         try{

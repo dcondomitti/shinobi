@@ -120,7 +120,7 @@ module.exports = function(s,config,lang){
     //super user authentication handler
     s.superAuth=function(x,callback){
         req={};
-        req.super=require(location.super);
+        req.super=require(s.location.super);
         req.super.forEach(function(v,n){
             if(
                 x.mail.toLowerCase() === v.mail.toLowerCase() &&
