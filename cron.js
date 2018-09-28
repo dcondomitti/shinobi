@@ -371,7 +371,7 @@ s.deleteOldEvents=function(v,callback){
 s.deleteOldFileBins=function(v,callback){
     if(!v.d.fileBin_days||v.d.fileBin_days==''){v.d.fileBin_days=10}else{v.d.fileBin_days=parseFloat(v.d.fileBin_days)};
     if(config.cron.deleteFileBins===true&&v.d.fileBin_days!==0){
-        var fileBinQuery = " FROM Files WHERE ke=? AND `date` < "+s.sqlDate('? DAYS');
+        var fileBinQuery = " FROM Files WHERE ke=? AND `time` < "+s.sqlDate('? DAYS');
         s.sqlQuery("SELECT *"+fileBinQuery,[v.ke,v.d.fileBin_days],function(err,files){
             if(files&&files[0]){
                 //delete the files

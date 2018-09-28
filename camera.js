@@ -149,6 +149,14 @@ if(config.childNodes.mode !== 'child'){
     s.sqlQuery('CREATE TABLE IF NOT EXISTS `Cloud Videos` (`mid` varchar(50) NOT NULL,`ke` varchar(50) DEFAULT NULL,`href` text NOT NULL,`size` float DEFAULT NULL,`time` timestamp NULL DEFAULT NULL,`end` timestamp NULL DEFAULT NULL,`status` int(1) DEFAULT \'0\' COMMENT \'0:Complete,1:Read,2:Archive\',`details` text) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;',[],function(err){
         if(err)console.log(err)
     })
+    //create Files table
+    s.sqlQuery('CREATE TABLE IF NOT EXISTS `Files` (`ke` varchar(50) NOT NULL,`mid` varchar(50) NOT NULL,`name` tinytext NOT NULL,`size` float NOT NULL DEFAULT \'0\',`details` text NOT NULL,`status` int(1) NOT NULL DEFAULT \'0\') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;',[],function(err){
+        if(err)console.log(err)
+    })
+    //add time to Files table
+    s.sqlQuery('ALTER TABLE `Files`	ADD COLUMN `time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `status`;',[],function(err){
+        if(err)console.log(err)
+    })
     //master node - startup functions
     setInterval(function(){
         s.cpuUsage(function(cpu){
