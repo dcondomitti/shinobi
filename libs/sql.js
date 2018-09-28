@@ -43,7 +43,7 @@ module.exports = function(s,config){
         newValue = new Date(value.replace('T',' '))
         return newValue
     }
-    s.sqlQuery = function(query,values,onMoveOn){
+    s.sqlQuery = function(query,values,onMoveOn,hideLog){
         if(!values){values=[]}
         if(typeof values === 'function'){
             var onMoveOn = values;
@@ -55,7 +55,7 @@ module.exports = function(s,config){
         return s.databaseEngine
         .raw(query,values)
         .asCallback(function(err,r){
-            if(err){
+            if(err && !hideLog){
                 console.log('s.sqlQuery QUERY ERRORED',query)
                 console.log('s.sqlQuery ERROR',err)
             }
