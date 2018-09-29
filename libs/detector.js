@@ -55,7 +55,7 @@ module.exports = function(s,config){
                 imgWidth:width
             }
             detectorObject.doObjectDetection = (s.ocv && e.details.detector_use_detect_object === '1')
-            s.event('trigger',detectorObject)
+            s.triggerEvent(detectorObject)
         }
         var filterTheNoise = function(trigger){
             if(noiseFilterArray[trigger.name].length > 2){

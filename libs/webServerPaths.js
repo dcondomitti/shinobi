@@ -1836,9 +1836,8 @@ module.exports = function(s,config,lang,app){
                 res.end(user.lang['No Group with this key exists']);
                 return;
             }
-            s.event('trigger',d,function(){
-                res.end(user.lang['Trigger Successful'])
-            });
+            s.triggerEvent(d)
+            res.end(user.lang['Trigger Successful'])
         },res,req);
     })
     //hookTester trigger

@@ -18,7 +18,7 @@ module.exports = function(s,config,lang,io){
         io.sockets.emit('ping',{beat:1});
     }
     s.beat();
-    s.cpuUsage = function(e){
+    s.cpuUsage = function(callback){
         k={}
         switch(s.platform){
             case'win32':
@@ -39,20 +39,20 @@ module.exports = function(s,config,lang,io){
               if(s.isWin===true) {
                   d = d.replace(/(\r\n|\n|\r)/gm, "").replace(/%/g, "")
               }
-              e(d)
+              callback(d)
           });
         } else if(k.cmd){
              exec(k.cmd,{encoding:'utf8',detached: true},function(err,d){
                  if(s.isWin===true){
                      d=d.replace(/(\r\n|\n|\r)/gm,"").replace(/%/g,"")
                  }
-                 e(d)
+                 callback(d)
              });
         } else{
-            e(0)
+            callback(0)
         }
     }
-    s.ramUsage = function(e){
+    s.ramUsage = function(callback){
         k={}
         switch(s.platform){
             case'win32':
@@ -73,10 +73,10 @@ module.exports = function(s,config,lang,io){
                  if(s.isWin===true){
                      d=(parseInt(d.split('=')[1])/(s.totalmem/1000))*100
                  }
-                 e(d)
+                 callback(d)
              });
         }else{
-            e(0)
+            callback(0)
         }
     }
 }

@@ -4,7 +4,7 @@ module.exports = function(s,config,lang){
     s.pluginEventController=function(d){
         switch(d.f){
             case'trigger':
-                s.event('trigger',d)
+                s.triggerEvent(d)
             break;
             case's.tx':
                 s.tx(d.data,d.to)
