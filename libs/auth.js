@@ -27,7 +27,7 @@ module.exports = function(s,config,lang){
             var failed=function(){
                 if(!req.ret){req.ret={ok:false}}
                 req.ret.msg=lang['Not Authorized'];
-                res.end(s.s(req.ret, null, 3));
+                res.end(s.s(req.ret));
             }
         }else{
             //socket.io use of auth function

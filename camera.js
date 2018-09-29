@@ -17,32 +17,30 @@ process.on('SIGINT', function() {
     process.exit();
 });
 var os = require('os');
-var express = require('express');
-var app = express();
-var io = new (require('socket.io'))();
+var io = new (require('socket.io'))()
 
-s={
+s = {
     factorAuth : {},
     totalmem : os.totalmem(),
     platform : os.platform(),
-    s : JSON.stringify,
+    s : function(obj){return JSON.stringify(obj,null,3)},
     isWin : (process.platform === 'win32'),
     utcOffset : require('moment')().utcOffset(),
     currentDirectory : __dirname
-};
+}
 var loadLib = function(lib){
     return require(__dirname+'/libs/'+lib+'.js')
 }
 var config = loadLib('config')(s)
 var lang = loadLib('language')(s,config)
+loadLib('basic')(s,config)
+var app = loadLib('webServer')(s,config,lang,io)
 loadLib('sql')(s,config)
 loadLib('user')(s,config)
 loadLib('notification')(s,config,lang)
-loadLib('basic')(s,config)
 loadLib('socketio')(s,config,io)
 loadLib('monitor')(s,config,lang)
 loadLib('detector')(s,config)
-loadLib('webServer')(s,config,lang,io,app)
 loadLib('ffmpegLocation')(s,config)
 loadLib('folders')(s,config)
 loadLib('videos')(s,config)

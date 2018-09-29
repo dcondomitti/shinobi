@@ -1,7 +1,9 @@
 var fs = require('fs');
 var http = require('http');
 var https = require('https');
-module.exports = function(s,config,lang,io,app){
+var express = require('express');
+var app = express()
+module.exports = function(s,config,lang,io){
     var server = http.createServer(app);
     //SSL options
     if(config.ssl&&config.ssl.key&&config.ssl.cert){
@@ -29,4 +31,5 @@ module.exports = function(s,config,lang,io,app){
         console.log(lang.Shinobi+' - PORT : '+config.port);
     });
     io.attach(server);
+    return app
 }
