@@ -32,17 +32,17 @@ module.exports = function(s,config,lang,io){
         setTimeout(function(){
             //get current disk used for each isolated account (admin user) on startup
             s.sqlQuery('SELECT * FROM Users WHERE details NOT LIKE ?',['%"sub"%'],function(err,r){
-                if(r&&r[0]){
+                if(r && r[0]){
                     var count = r.length
                     var countFinished = 0
                     r.forEach(function(v,n){
-                        v.size=0;
-                        v.limit=JSON.parse(v.details).size
+                        v.size = 0
+                        v.limit = JSON.parse(v.details).size
                         s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND status!=?',[v.ke,0],function(err,rr){
                             ++countFinished
                             if(r&&r[0]){
                                 rr.forEach(function(b){
-                                    v.size+=b.size
+                                    v.size += b.size
                                 })
                             }
                             s.systemLog(v.mail+' : '+lang.startUpText0+' : '+rr.length,v.size)
@@ -57,10 +57,10 @@ module.exports = function(s,config,lang,io){
                                     if(r&&r[0]){
                                         r.forEach(function(v){
                                             s.initiateMonitorObject(v);
-                                            r.ar={};
-                                            r.ar.id = v.mid;
+                                            r.ar = {}
+                                            r.ar.id = v.mid
                                             Object.keys(v).forEach(function(b){
-                                                r.ar[b]=v[b];
+                                                r.ar[b] = v[b]
                                             })
                                             v.details=JSON.parse(v.details)
                                             s.group[v.ke].mon_conf[v.mid] = v

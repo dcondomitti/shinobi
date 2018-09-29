@@ -1316,8 +1316,8 @@ module.exports = function(s,config,io){
                          case's.tx':
                              s.tx(d.data,d.to)
                          break;
-                         case's.video':
-                             s.video(d.data,d.file)
+                         case's.deleteVideo':
+                             s.deleteVideo(d.file)
                          break;
                          case'start':case'end':
                              d.mid='_cron';s.log(d,{type:'cron',msg:d.msg})

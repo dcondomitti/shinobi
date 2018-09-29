@@ -161,7 +161,7 @@ io = require('socket.io-client')('ws://'+config.ip+':'+config.port);//connect to
 s.cx=function(x){x.cronKey=config.cron.key;return io.emit('cron',x)}
 //emulate master socket emitter
 s.tx=function(x,y){s.cx({f:'s.tx',data:x,to:y})}
-s.video=function(x,y){s.cx({f:'s.video',data:x,file:y})}
+s.deleteVideo=function(x){s.cx({f:'s.deleteVideo',file:x})}
 //Cron Job
 s.cx({f:'init',time:moment()})
 s.getVideoDirectory=function(e){
@@ -321,7 +321,7 @@ s.deleteRowsWithNoVideo=function(v,callback){
                     }
                     fileExists = fs.existsSync(dir+filename)
                     if(fileExists !== true){
-                        s.video('delete',ev)
+                        s.deleteVideo(ev)
                         s.tx({f:'video_delete',filename:filename+'.'+ev.ext,mid:ev.mid,ke:ev.ke,time:ev.time,end:s.moment(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+ev.ke);
                     }
                 });
