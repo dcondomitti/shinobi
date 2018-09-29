@@ -26,7 +26,7 @@ s = {
     s : function(obj){return JSON.stringify(obj,null,3)},
     isWin : (process.platform === 'win32'),
     utcOffset : require('moment')().utcOffset(),
-    currentDirectory : __dirname
+    mainDirectory : __dirname
 }
 var loadLib = function(lib){
     return require(__dirname+'/libs/'+lib+'.js')

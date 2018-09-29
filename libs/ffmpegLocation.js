@@ -18,7 +18,7 @@ module.exports = function(s,config){
             config.ffmpegDir = staticFFmpeg
         }else{
             if(s.isWin===true){
-                config.ffmpegDir = s.currentDirectory+'/ffmpeg/ffmpeg.exe'
+                config.ffmpegDir = s.mainDirectory+'/ffmpeg/ffmpeg.exe'
             }else{
                 config.ffmpegDir = 'ffmpeg'
             }

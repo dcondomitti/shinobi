@@ -58,13 +58,13 @@ module.exports = function(s,config,lang,app){
 
     ////Pages
     app.enable('trust proxy');
-    app.use('/libs',express.static(s.currentDirectory + '/web/libs'));
+    app.use('/libs',express.static(s.mainDirectory + '/web/libs'));
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({extended: true}));
-    app.set('views', s.currentDirectory + '/web');
+    app.set('views', s.mainDirectory + '/web');
     app.set('view engine','ejs');
     //add template handler
-    if(config.renderPaths.handler!==undefined){require(s.currentDirectory+'/web/'+config.renderPaths.handler+'.js').addHandlers(s,app,io)}
+    if(config.renderPaths.handler!==undefined){require(s.mainDirectory+'/web/'+config.renderPaths.handler+'.js').addHandlers(s,app,io)}
 
     //logout
     app.get(config.webPaths.apiPrefix+':auth/logout/:ke/:id', function (req,res){
@@ -116,7 +116,7 @@ module.exports = function(s,config,lang,app){
             }
             if(req.params.key===config.updateKey){
                 req.ret.ok=true;
-                exec('chmod +x '+s.currentDirectory+'/UPDATE.sh&&'+s.currentDirectory+'/UPDATE.sh',{detached: true})
+                exec('chmod +x '+s.mainDirectory+'/UPDATE.sh&&'+s.mainDirectory+'/UPDATE.sh',{detached: true})
             }else{
                 req.ret.msg=user.lang.updateKeyText2;
             }
@@ -307,11 +307,11 @@ module.exports = function(s,config,lang,app){
                         })
                     }else{
                         //not admin user
-                        req.renderFunction(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.currentDirectory});
+                        req.renderFunction(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.mainDirectory});
                     }
                 break;
                 default:
-                    req.renderFunction(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.currentDirectory});
+                    req.renderFunction(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.mainDirectory});
                 break;
             }
             s.log({ke:r.ke,mid:'$USER'},{type:r.lang['New Authentication Token'],msg:{for:req.body.function,mail:r.mail,id:r.uid,ip:req.ip}})
@@ -462,7 +462,7 @@ module.exports = function(s,config,lang,app){
                                             sub:'1',
                                             ldap:'1',
                                             allmonitors:'1',
-    					filter: {}
+                                            filter: {}
                                         })
                                     }
                                     user.post=[]

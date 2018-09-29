@@ -1,8 +1,8 @@
 module.exports = function(s){
     s.location = {
-        super : s.currentDirectory+'/super.json',
-        config : s.currentDirectory+'/conf.json',
-        languages : s.currentDirectory+'/languages'
+        super : s.mainDirectory+'/super.json',
+        config : s.mainDirectory+'/conf.json',
+        languages : s.mainDirectory+'/languages'
     }
     var config = require(s.location.config);
     if(!config.productType){

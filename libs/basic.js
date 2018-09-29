@@ -18,7 +18,7 @@ module.exports = function(s,config){
     process.on('SIGINT',s.ffmpegKill.bind(null, {exit:true}));
     s.checkRelativePath=function(x){
         if(x.charAt(0)!=='/'){
-            x=s.currentDirectory+'/'+x
+            x=s.mainDirectory+'/'+x
         }
         return x
     }
@@ -32,7 +32,7 @@ module.exports = function(s,config){
         if(x.charAt(length-1)!=='/'){
             x=x+'/'
         }
-        return x.replace('__DIR__',s.currentDirectory)
+        return x.replace('__DIR__',s.mainDirectory)
     }
     s.md5 = function(x){return crypto.createHash('md5').update(x).digest("hex")}
     s.createHash = s.md5

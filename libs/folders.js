@@ -3,7 +3,7 @@ module.exports = function(s,config){
     //directories
     s.group={};
     if(!config.windowsTempDir&&s.isWin===true){config.windowsTempDir='C:/Windows/Temp'}
-    if(!config.defaultMjpeg){config.defaultMjpeg=s.currentDirectory+'/web/libs/img/bg.jpg'}
+    if(!config.defaultMjpeg){config.defaultMjpeg=s.mainDirectory+'/web/libs/img/bg.jpg'}
     //default stream folder check
     if(!config.streamDir){
         if(s.isWin===false){
@@ -12,13 +12,13 @@ module.exports = function(s,config){
             config.streamDir=config.windowsTempDir
         }
         if(!fs.existsSync(config.streamDir)){
-            config.streamDir=s.currentDirectory+'/streams/'
+            config.streamDir=s.mainDirectory+'/streams/'
         }else{
             config.streamDir+='/streams/'
         }
     }
-    if(!config.videosDir){config.videosDir=s.currentDirectory+'/videos/'}
-    if(!config.binDir){config.binDir=s.currentDirectory+'/fileBin/'}
+    if(!config.videosDir){config.videosDir=s.mainDirectory+'/videos/'}
+    if(!config.binDir){config.binDir=s.mainDirectory+'/fileBin/'}
     if(!config.addStorage){config.addStorage=[]}
     s.dir={
         videos:s.checkCorrectPathEnding(config.videosDir),

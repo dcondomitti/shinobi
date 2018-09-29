@@ -516,7 +516,7 @@ module.exports = function(s,config,io){
                             return;
                         }
                         if(d.key===config.updateKey){
-                            exec('chmod +x '+s.currentDirectory+'/UPDATE.sh&&'+s.currentDirectory+'/UPDATE.sh',{detached: true})
+                            exec('chmod +x '+s.mainDirectory+'/UPDATE.sh&&'+s.mainDirectory+'/UPDATE.sh',{detached: true})
                         }else{
                             tx({error:lang.updateKeyText2});
                         }
@@ -1018,7 +1018,7 @@ module.exports = function(s,config,io){
                                         by:cn.mail,
                                         ip:cn.ip
                                     })
-                                    var updateProcess = spawn('sh',(s.currentDirectory+'/UPDATE.sh').split(' '),{detached: true})
+                                    var updateProcess = spawn('sh',(s.mainDirectory+'/UPDATE.sh').split(' '),{detached: true})
                                     updateProcess.stderr.on('data',function(data){
                                         s.systemLog('Update Info',data.toString())
                                     })
@@ -1031,11 +1031,11 @@ module.exports = function(s,config,io){
                                     if(d.check('system')){
                                         s.systemLog('Shinobi ordered to restart',{by:cn.mail,ip:cn.ip})
                                         s.ffmpegKill()
-                                        exec('pm2 restart '+s.currentDirectory+'/camera.js')
+                                        exec('pm2 restart '+s.mainDirectory+'/camera.js')
                                     }
                                     if(d.check('cron')){
                                         s.systemLog('Shinobi CRON ordered to restart',{by:cn.mail,ip:cn.ip})
-                                        exec('pm2 restart '+s.currentDirectory+'/cron.js')
+                                        exec('pm2 restart '+s.mainDirectory+'/cron.js')
                                     }
                                     if(d.check('logs')){
                                         s.systemLog('Flush PM2 Logs',{by:cn.mail,ip:cn.ip})

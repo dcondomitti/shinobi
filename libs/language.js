@@ -9,7 +9,7 @@ module.exports = function(s,config){
         console.log('There was an error loading your language file.')
         var lang = require(s.location.languages+'/en_CA.json');
     }
-    s.location.definitions = s.currentDirectory+'/definitions'
+    s.location.definitions = s.mainDirectory+'/definitions'
     try{
         var definitions = require(s.location.definitions+'/'+config.language+'.json');
     }catch(er){
