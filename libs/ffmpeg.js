@@ -7,7 +7,6 @@ module.exports = function(s,config,callback){
         //ffmpeg version
         try{
             s.ffmpegVersion = execSync(config.ffmpegDir+" -version").toString().split('Copyright')[0].replace('ffmpeg version','').trim()
-            console.log('FFMPEG version : '+s.ffmpegVersion)
             if(s.ffmpegVersion.indexOf(': 2.')>-1){
                 s.systemLog('FFMPEG is too old : '+s.ffmpegVersion+', Needed : 3.2+',err)
                 throw (new Error())

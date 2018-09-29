@@ -87,7 +87,6 @@ module.exports = function(s,config){
     }else{
         s.timeObject = moment
     }
-    console.log('config.useUTC',config.useUTC)
     s.ipRange=function(start_ip, end_ip) {
       var start_long = s.toLong(start_ip);
       var end_long = s.toLong(end_ip);
@@ -118,15 +117,14 @@ module.exports = function(s,config){
         ipl += parseInt(octet);
       });
       return(ipl >>> 0);
-    };
-
+    }
     //fromLong taken from NPM package 'ip'
     s.fromLong=function(ipl) {
       return ((ipl >>> 24) + '.' +
           (ipl >> 16 & 255) + '.' +
           (ipl >> 8 & 255) + '.' +
           (ipl & 255) );
-    };
+    }
     s.getFunctionParamNames = function(func) {
       var fnStr = func.toString().replace(/((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg, '');
       var result = fnStr.slice(fnStr.indexOf('(')+1, fnStr.indexOf(')')).match(/([^\s,]+)/g);

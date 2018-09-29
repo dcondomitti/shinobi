@@ -4,7 +4,7 @@ var spawn = require('child_process').spawn;
 var exec = require('child_process').exec;
 var request = require('request');
 var webdav = require("webdav-fs");
-module.exports = function(s,config,lang,io){
+module.exports = function(s,config){
     s.purgeDiskForGroup = function(e,video){
         if(s.group[e.ke].diskUsedEmitter){
             s.group[e.ke].diskUsedEmitter.emit('purge',video)

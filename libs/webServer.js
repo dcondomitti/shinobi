@@ -22,13 +22,13 @@ module.exports = function(s,config,lang,io){
         }
         var serverHTTPS = https.createServer(config.ssl,app);
         serverHTTPS.listen(config.ssl.port,config.bindip,function(){
-            console.log('SSL '+lang.Shinobi+' - SSL PORT : '+config.ssl.port);
+            console.log('SSL '+lang.Shinobi+' : SSL Web Server Listening on '+config.ssl.port);
         });
         io.attach(serverHTTPS);
     }
     //start HTTP
     server.listen(config.port,config.bindip,function(){
-        console.log(lang.Shinobi+' - PORT : '+config.port);
+        console.log(lang.Shinobi+' : Web Server Listening on '+config.port);
     });
     io.attach(server);
     return app

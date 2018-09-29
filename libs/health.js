@@ -79,4 +79,12 @@ module.exports = function(s,config,lang,io){
             callback(0)
         }
     }
+    //master node - startup functions
+    setInterval(function(){
+        s.cpuUsage(function(cpu){
+            s.ramUsage(function(ram){
+                s.tx({f:'os',cpu:cpu,ram:ram},'CPU');
+            })
+        })
+    },10000);
 }

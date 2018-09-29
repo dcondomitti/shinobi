@@ -19,7 +19,7 @@ s = {
     //Pretty Print JSON
     s : function(obj){return JSON.stringify(obj,null,3)},
     //Check if Windows
-    isWin : (process.platform === 'win32'),
+    isWin : (process.platform === 'win32' || process.platform === 'win64'),
     //UTC Offset
     utcOffset : require('moment')().utcOffset(),
     //directory path for this file

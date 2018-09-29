@@ -46,6 +46,8 @@ module.exports = function(s,config,lang){
         })
     }
     s.uploadVideoToWebDav = function(e,k){
+        //e = video object
+        //k = temporary values
         if(!k)k={};
         //cloud saver - webdav
        var wfs = s.group[e.ke].webdav
@@ -126,6 +128,8 @@ module.exports = function(s,config,lang){
        }
     }
     s.uploadVideoToAmazonS3 = function(e,k){
+        //e = video object
+        //k = temporary values
         if(!k)k={};
         //cloud saver - amazon s3
         if(s.group[e.ke].aws_s3 && s.group[e.ke].init.use_aws_s3 !== '0' && s.group[e.ke].init.aws_s3_save === '1'){
@@ -159,6 +163,8 @@ module.exports = function(s,config,lang){
         }
     }
     s.insertCompletedVideo = function(e,k){
+        //e = video object
+        //k = temporary values
         if(!k)k={};
         e.dir = s.getVideoDirectory(e)
         k.dir = e.dir.toString()
@@ -264,6 +270,7 @@ module.exports = function(s,config,lang){
         }
     }
     s.deleteVideo = function(e){
+        //e = video object
         e.dir = s.getVideoDirectory(e)
         if(!e.filename && e.time){
             e.filename = s.formattedTime(e.time)
@@ -302,6 +309,7 @@ module.exports = function(s,config,lang){
         })
     }
     s.deleteVideoFromCloud = function(e){
+        //e = video object
         s.sqlQuery('DELETE FROM `Cloud Videos` WHERE `mid`=? AND `ke`=? AND `time`=?',[e.id,e.ke,new Date(e.time)],function(){
             s.tx({f:'video_delete_cloud',mid:e.mid,ke:e.ke,time:e.time,end:e.end},'GRP_'+e.ke);
         })
