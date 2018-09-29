@@ -440,8 +440,8 @@ module.exports = function(s,config,io){
                     }
                     tx({f:'users_online',users:s.group[d.ke].users})
                     s.tx({f:'user_status_change',ke:d.ke,uid:cn.uid,status:1,user:s.group[d.ke].users[d.auth]},'GRP_'+d.ke)
-                    s.init('diskUsedEmit',d)
-                    s.init('apps',d)
+                    s.sendDiskUsedAmountToClients(d)
+                    s.loadGroupApps(d)
                     s.sqlQuery('SELECT * FROM API WHERE ke=? AND uid=?',[d.ke,d.uid],function(err,rrr) {
                         tx({
                             f:'init_success',
@@ -645,7 +645,7 @@ module.exports = function(s,config,io){
                                                         s.group[d.ke].discordBot.destroy()
                                                         delete(s.group[d.ke].discordBot)
                                                     }
-                                                    s.init('apps',d)
+                                                    s.loadGroupApps(d)
                                                 }
                                                 tx({f:'user_settings_change',uid:d.uid,ke:d.ke,form:d.form});
                                             });
@@ -823,7 +823,7 @@ module.exports = function(s,config,io){
                             break;
                             case'watch_on':
                                 if(!d.ke){d.ke=cn.ke}
-                                s.init(0,{mid:d.id,ke:d.ke});
+                                s.initiateMonitorObject({mid:d.id,ke:d.ke});
                                 if(!s.group[d.ke]||!s.group[d.ke].mon[d.id]||s.group[d.ke].mon[d.id].started===0){return false}
                                 s.camera(d.ff,d,cn,tx)
                                 cn.join('MON_'+d.id);
@@ -843,7 +843,7 @@ module.exports = function(s,config,io){
                             case'start':case'stop':
                         s.sqlQuery('SELECT * FROM Monitors WHERE ke=? AND mid=?',[cn.ke,d.id],function(err,r) {
                             if(r&&r[0]){r=r[0]
-                                s.camera(d.ff,{type:r.type,url:s.init('url',r),id:d.id,mode:d.ff,ke:cn.ke});
+                                s.camera(d.ff,{type:r.type,url:s.buildMonitorUrl(r),id:d.id,mode:d.ff,ke:cn.ke});
                             }
                         })
                             break;
@@ -1074,7 +1074,7 @@ module.exports = function(s,config,io){
                                                     s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[d.form.ke,d.form.uid,d.form.mail,s.createHash(d.form.pass),d.form.details])
                                                     s.tx({f:'add_account',details:d.form.details,ke:d.form.ke,uid:d.form.uid,mail:d.form.mail},'$');
                                                     //init user
-                                                    s.init('group',d.form)
+                                                    s.loadGroup(d.form)
                                                 }
                                             })
                                         }else{
@@ -1122,7 +1122,7 @@ module.exports = function(s,config,io){
                                                 }
                                                 s.tx({f:'edit_account',form:d.form,ke:d.account.ke,uid:d.account.uid},'$');
                                                 delete(s.group[d.account.ke].init);
-                                                s.init('apps',d.account)
+                                                s.loadGroupApps(d.account)
                                             })
                                         }
                                     })

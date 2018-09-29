@@ -7,6 +7,12 @@ module.exports = function(s,config,lang,io){
             exec('echo 3 > /proc/sys/vm/drop_caches',{detached: true})
         },60000*20);
     }
+    s.sendDiskUsedAmountToClients = function(e){
+        //send the amount used disk space to connected users
+        if(s.group[e.ke]&&s.group[e.ke].init){
+            s.tx({f:'diskUsed',size:s.group[e.ke].usedSpace,limit:s.group[e.ke].sizeLimit},'GRP_'+e.ke);
+        }
+    }
     s.beat=function(){
         setTimeout(s.beat, 8000);
         io.sockets.emit('ping',{beat:1});

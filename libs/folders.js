@@ -1,5 +1,5 @@
 var fs = require('fs');
-module.exports = function(s,config,location){
+module.exports = function(s,config){
     //directories
     s.group={};
     if(!config.windowsTempDir&&s.isWin===true){config.windowsTempDir='C:/Windows/Temp'}

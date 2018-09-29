@@ -20,33 +20,6 @@ module.exports = function(s,config){
         if(!k)k={};
         if(x!=='getDir'){e.dir=s.video('getDir',e)}
         switch(x){
-            case'fix':
-                e.sdir=s.dir.streams+e.ke+'/'+e.id+'/';
-                if(!e.filename&&e.time){e.filename=s.formattedTime(e.time)}
-                if(e.filename.indexOf('.')===-1){
-                    e.filename=e.filename+'.'+e.ext
-                }
-                s.tx({f:'video_fix_start',mid:e.mid,ke:e.ke,filename:e.filename},'GRP_'+e.ke)
-                s.group[e.ke].mon[e.id].fixingVideos[e.filename]={}
-                switch(e.ext){
-                    case'mp4':
-                        e.fixFlags='-vcodec libx264 -acodec aac -strict -2';
-                    break;
-                    case'webm':
-                        e.fixFlags='-vcodec libvpx -acodec libvorbis';
-                    break;
-                }
-                e.spawn=spawn(config.ffmpegDir,('-i '+e.dir+e.filename+' '+e.fixFlags+' '+e.sdir+e.filename).split(' '),{detached: true})
-                e.spawn.stdout.on('data',function(data){
-                    s.tx({f:'video_fix_data',mid:e.mid,ke:e.ke,filename:e.filename},'GRP_'+e.ke)
-                });
-                e.spawn.on('close',function(data){
-                    exec('mv '+e.dir+e.filename+' '+e.sdir+e.filename,{detached: true}).on('exit',function(){
-                        s.tx({f:'video_fix_success',mid:e.mid,ke:e.ke,filename:e.filename},'GRP_'+e.ke)
-                        delete(s.group[e.ke].mon[e.id].fixingVideos[e.filename]);
-                    })
-                });
-            break;
             case'delete':
                 if(!e.filename && e.time){
                     e.filename = s.formattedTime(e.time)
@@ -74,7 +47,7 @@ module.exports = function(s,config){
                                 if(err){
                                     s.systemLog('File Delete Error : '+e.ke+' : '+' : '+e.mid,err)
                                 }
-                                s.init('diskUsedSet',e,-(r.size/1000000))
+                                s.setDiskUsedForClient(e,-(r.size/1000000))
                             })
                             s.tx({f:'video_delete',filename:filename,mid:e.mid,ke:e.ke,time:s.nameToTime(filename),end:s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+e.ke);
                             s.file('delete',dir+filename)
@@ -90,97 +63,6 @@ module.exports = function(s,config){
                     s.tx({f:'video_delete_cloud',mid:e.mid,ke:e.ke,time:e.time,end:e.end},'GRP_'+e.ke);
                 })
             break;
-    //        case'open':
-    //            //on video open
-    //            e.save=[e.id,e.ke,s.nameToTime(e.filename),e.ext];
-    //            if(!e.status){e.save.push(0)}else{e.save.push(e.status)}
-    //            k.details={}
-    //            if(e.details&&e.details.dir&&e.details.dir!==''){
-    //                k.details.dir=e.details.dir
-    //            }
-    //            e.save.push(s.s(k.details))
-    //            s.sqlQuery('INSERT INTO Videos (mid,ke,time,ext,status,details) VALUES (?,?,?,?,?,?)',e.save)
-    //            s.tx({f:'video_build_start',filename:e.filename+'.'+e.ext,mid:e.id,ke:e.ke,time:s.nameToTime(e.filename),end:s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+e.ke);
-    //        break;
-    //        case'close':
-    //            //video function : close
-    //            if(s.group[e.ke]&&s.group[e.ke].mon[e.id]){
-    //                if(s.group[e.ke].mon[e.id].open&&!e.filename){
-    //                    e.filename=s.group[e.ke].mon[e.id].open;
-    //                    e.ext=s.group[e.ke].mon[e.id].open_ext
-    //                }
-    //                if(s.group[e.ke].mon[e.id].childNode){
-    //                    s.cx({f:'close',d:s.init('noReference',e)},s.group[e.ke].mon[e.id].childNodeId);
-    //                }else{
-    //                    k.file = e.filename+'.'+e.ext
-    //                    k.dir = e.dir.toString()
-    //                    //get file directory
-    //                    k.fileExists = fs.existsSync(k.dir+k.file)
-    //                    if(k.fileExists!==true){
-    //                        k.dir=s.dir.videos+'/'+e.ke+'/'+e.id+'/'
-    //                        k.fileExists=fs.existsSync(k.dir+k.file)
-    //                        if(k.fileExists!==true){
-    //                            s.dir.addStorage.forEach(function(v){
-    //                                if(k.fileExists!==true){
-    //                                    k.dir=s.checkCorrectPathEnding(v.path)+e.ke+'/'+e.id+'/'
-    //                                    k.fileExists=fs.existsSync(k.dir+k.file)
-    //                                }
-    //                            })
-    //                        }
-    //                    }
-    //                    if(k.fileExists===true){
-    //                        //close video row
-    //                        k.stat = fs.statSync(k.dir+k.file)
-    //                        e.filesize = k.stat.size
-    //                        e.filesizeMB = parseFloat((e.filesize/1000000).toFixed(2))
-    //                        e.end_time = s.formattedTime(k.stat.mtime,'YYYY-MM-DD HH:mm:ss')
-    //                        var save = [
-    //                            e.filesize,
-    //                            1,
-    //                            e.end_time,
-    //                            e.id,
-    //                            e.ke,
-    //                            s.nameToTime(e.filename)
-    //                        ]
-    //                        if(!e.status){
-    //                            save.push(0)
-    //                        }else{
-    //                            save.push(e.status)
-    //                        }
-    //                        s.sqlQuery('UPDATE Videos SET `size`=?,`status`=?,`end`=? WHERE `mid`=? AND `ke`=? AND `time`=? AND `status`=?',save)
-    //                        //send event for completed recording
-    //                        s.txWithSubPermissions({
-    //                            f:'video_build_success',
-    //                            hrefNoAuth:'/videos/'+e.ke+'/'+e.mid+'/'+k.file,
-    //                            filename:k.file,
-    //                            mid:e.id,
-    //                            ke:e.ke,
-    //                            time:s.timeObject(s.nameToTime(e.filename)).format(),
-    //                            size:e.filesize,
-    //                            end:s.timeObject(e.end_time).format()
-    //                        },'GRP_'+e.ke,'video_view');
-    //                        //send new diskUsage values
-    //                        s.video('diskUseUpdate',e,k)
-    //                    }else{
-    //                        s.video('delete',e);
-    //                        s.log(e,{type:lang['File Not Exist'],msg:lang.FileNotExistText,ffmpeg:s.group[e.ke].mon[e.id].ffmpeg})
-    //                        if(e.mode && config.restart.onVideoNotExist === true){
-    //                            delete(s.group[e.ke].mon[e.id].open);
-    //                            s.log(e,{
-    //                                type : lang['Camera is not recording'],
-    //                                msg : {
-    //                                    msg : lang.CameraNotRecordingText
-    //                                }
-    //                            });
-    //                            if(s.group[e.ke].mon[e.id].started===1){
-    //                                s.camera('restart',e)
-    //                            }
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //            delete(s.group[e.ke].mon[e.id].open);
-    //        break;
             case'linkBuild':
                 //e = video rows
                 //k = auth key
@@ -266,7 +148,7 @@ module.exports = function(s,config){
                                     ke:e.ke,
                                     chunk:data,
                                     filename:k.filename,
-                                    d:s.init('noReference',e),
+                                    d:s.cleanMonitorObject(e),
                                     filesize:e.filesize,
                                     time:s.timeObject(k.startTime).format(),
                                     end:s.timeObject(k.endTime).format()
@@ -280,7 +162,7 @@ module.exports = function(s,config){
                                     mid:e.id,
                                     ke:e.ke,
                                     filename:k.filename,
-                                    d:s.init('noReference',e),
+                                    d:s.cleanMonitorObject(e),
                                     filesize:k.filesize,
                                     time:s.timeObject(k.startTime).format(),
                                     end:s.timeObject(k.endTime).format()

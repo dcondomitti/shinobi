@@ -95,11 +95,11 @@ module.exports = function(s,config,lang){
                     var activeCameraKeys = Object.keys(s.childNodes[cn.ip].activeCameras)
                     activeCameraKeys.forEach(function(key){
                         var monitor = s.childNodes[cn.ip].activeCameras[key]
-                        s.camera('stop',s.init('noReference',monitor))
+                        s.camera('stop',s.cleanMonitorObject(monitor))
                         delete(s.group[monitor.ke].mon[monitor.mid].childNode)
                         delete(s.group[monitor.ke].mon[monitor.mid].childNodeId)
                         setTimeout(function(){
-                            s.camera(monitor.mode,s.init('noReference',monitor))
+                            s.camera(monitor.mode,s.cleanMonitorObject(monitor))
                         },1300)
                     })
                     delete(s.childNodes[cn.ip]);
@@ -151,11 +151,11 @@ module.exports = function(s,config,lang){
                     s.other_helpers=d.child_helpers;
                 break;
                 case'kill':
-                    s.init(0,d.d);
+                    s.initiateMonitorObject(d.d);
                     s.kill(s.group[d.d.ke].mon[d.d.id].spawn,d.d)
                 break;
                 case'sync':
-                    s.init(0,d.sync);
+                    s.initiateMonitorObject(d.sync);
                     Object.keys(d.sync).forEach(function(v){
                         s.group[d.sync.ke].mon[d.sync.mid][v]=d.sync[v];
                     });

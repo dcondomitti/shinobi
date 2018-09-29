@@ -28,7 +28,7 @@ module.exports = function(s,config,lang){
                     if(err){
                         s.log({ke:groupKey,mid:'$USER'},{type:lang.DiscordErrorText,msg:err})
                         s.group[groupKey].discordBot = null
-                        s.init('apps',{ke:groupKey})
+                        s.loadGroupApps({ke:groupKey})
                     }
                 })
             }

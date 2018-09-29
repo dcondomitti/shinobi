@@ -1441,8 +1441,8 @@ module.exports = function(s,config,lang,app){
                                 if(req.finish===1){
                                     req.monitor.details=JSON.parse(req.monitor.details)
                                     req.ret.ok=true;
-                                    s.init(0,{mid:req.monitor.mid,ke:req.monitor.ke});
-                                    s.group[req.monitor.ke].mon_conf[req.monitor.mid]=s.init('noReference',req.monitor);
+                                    s.initiateMonitorObject({mid:req.monitor.mid,ke:req.monitor.ke});
+                                    s.group[req.monitor.ke].mon_conf[req.monitor.mid]=s.cleanMonitorObject(req.monitor);
                                     if(req.monitor.mode==='stop'){
                                         s.camera('stop',req.monitor);
                                     }else{
@@ -1541,9 +1541,9 @@ module.exports = function(s,config,lang,app){
                             s.group[r.ke].mon_conf[r.mid]=r;
                             s.tx({f:'monitor_edit',mid:r.mid,ke:r.ke,mon:r},'GRP_'+r.ke);
                             s.tx({f:'monitor_edit',mid:r.mid,ke:r.ke,mon:r},'STR_'+r.ke);
-                            s.camera('stop',s.init('noReference',r));
+                            s.camera('stop',s.cleanMonitorObject(r));
                             if(req.params.f!=='stop'){
-                                s.camera(req.params.f,s.init('noReference',r));
+                                s.camera(req.params.f,s.cleanMonitorObject(r));
                             }
                             req.ret.msg=user.lang['Monitor mode changed']+' : '+req.params.f;
                         }else{
@@ -1574,9 +1574,9 @@ module.exports = function(s,config,lang,app){
                                 r.neglectTriggerTimer=1;
                                 r.mode=s.group[r.ke].mon[r.mid].currentState.mode;
                                 r.fps=s.group[r.ke].mon[r.mid].currentState.fps;
-                                s.camera('stop',s.init('noReference',r),function(){
+                                s.camera('stop',s.cleanMonitorObject(r),function(){
                                     if(s.group[r.ke].mon[r.mid].currentState.mode!=='stop'){
-                                        s.camera(s.group[r.ke].mon[r.mid].currentState.mode,s.init('noReference',r));
+                                        s.camera(s.group[r.ke].mon[r.mid].currentState.mode,s.cleanMonitorObject(r));
                                     }
                                     s.group[r.ke].mon_conf[r.mid]=r;
                                 });
@@ -2015,7 +2015,6 @@ module.exports = function(s,config,lang,app){
                 }else{
                     Emitter = s.group[req.params.ke].mon[req.params.id].emitterChannel[parseInt(req.params.feed)+config.pipeAddition]
                 }
-                s.init('streamIn',req.params)
                 var contentWriter
                 var date = new Date();
                 res.writeHead(200, {
@@ -2184,7 +2183,7 @@ module.exports = function(s,config,lang,app){
                 var controlURL
                 var monitorConfig = s.group[req.params.ke].mon_conf[req.params.id]
                 if(!monitorConfig.details.control_base_url||monitorConfig.details.control_base_url===''){
-                    controlURL = s.init('url_no_path',monitorConfig)
+                    controlURL = s.buildMonitorUrl(monitorConfig, true)
                 }else{
                     controlURL = monitorConfig.details.control_base_url
                 }

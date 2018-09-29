@@ -7,6 +7,48 @@ var onvif = require('node-onvif');
 var request = require('request');
 var connectionTester = require('connection-tester');
 module.exports = function(s,config,lang){
+    s.initiateMonitorObject = function(e){
+        if(!s.group[e.ke]){s.group[e.ke]={}};
+        if(!s.group[e.ke].mon){s.group[e.ke].mon={}}
+        if(!s.group[e.ke].mon[e.mid]){s.group[e.ke].mon[e.mid]={}}
+        if(!s.group[e.ke].mon[e.mid].streamIn){s.group[e.ke].mon[e.mid].streamIn={}};
+        if(!s.group[e.ke].mon[e.mid].emitterChannel){s.group[e.ke].mon[e.mid].emitterChannel={}};
+        if(!s.group[e.ke].mon[e.mid].mp4frag){s.group[e.ke].mon[e.mid].mp4frag={}};
+        if(!s.group[e.ke].mon[e.mid].firstStreamChunk){s.group[e.ke].mon[e.mid].firstStreamChunk={}};
+        if(!s.group[e.ke].mon[e.mid].contentWriter){s.group[e.ke].mon[e.mid].contentWriter={}};
+        if(!s.group[e.ke].mon[e.mid].childNodeStreamWriters){s.group[e.ke].mon[e.mid].childNodeStreamWriters={}};
+        if(!s.group[e.ke].mon[e.mid].eventBasedRecording){s.group[e.ke].mon[e.mid].eventBasedRecording={}};
+        if(!s.group[e.ke].mon[e.mid].watch){s.group[e.ke].mon[e.mid].watch={}};
+        if(!s.group[e.ke].mon[e.mid].fixingVideos){s.group[e.ke].mon[e.mid].fixingVideos={}};
+        if(!s.group[e.ke].mon[e.mid].record){s.group[e.ke].mon[e.mid].record={yes:e.record}};
+        if(!s.group[e.ke].mon[e.mid].started){s.group[e.ke].mon[e.mid].started=0};
+        if(s.group[e.ke].mon[e.mid].delete){clearTimeout(s.group[e.ke].mon[e.mid].delete)}
+        if(!s.group[e.ke].mon_conf){s.group[e.ke].mon_conf={}}
+    }
+    s.sendMonitorStatus = function(e){
+        s.group[e.ke].mon[e.id].monitorStatus = e.status
+        s.tx(Object.assign(e,{f:'monitor_status'}),'GRP_'+e.ke)
+    }
+    s.buildMonitorUrl = function(e,noPath){
+        var authd = ''
+        var url
+        if(e.details.muser&&e.details.muser!==''&&e.host.indexOf('@')===-1) {
+            e.username = e.details.muser
+            e.password = e.details.mpass
+            authd = e.details.muser+':'+e.details.mpass+'@'
+        }
+        if(e.port==80&&e.details.port_force!=='1'){e.porty=''}else{e.porty=':'+e.port}
+        url = e.protocol+'://'+authd+e.host+e.porty
+        if(noPath !== true)url += e.path
+        return url
+    }
+    s.cleanMonitorObject = function(e){
+        x={keys:Object.keys(e),ar:{}};
+        x.keys.forEach(function(v){
+            if(v!=='last_frame'&&v!=='record'&&v!=='spawn'&&v!=='running'&&(v!=='time'&&typeof e[v]!=='function')){x.ar[v]=e[v];}
+        });
+        return x.ar;
+    }
     s.getRawSnapshotFromMonitor = function(monitor,options,callback){
         if(!callback){
             callback = options
@@ -42,7 +84,7 @@ module.exports = function(s,config,lang){
                     if(success === false){
                         checkExists(localStream+'s.m3u8',function(success){
                             if(success === false){
-                                url = s.init('url',monitor)
+                                url = s.buildMonitorUrl(monitor)
                             }else{
                                 url = localStream+'s.m3u8'
                             }
@@ -164,7 +206,7 @@ module.exports = function(s,config,lang){
             //     clearInterval(s.group[e.ke].mon[e.id].casperCapture)
             // }
             if(s.group[e.ke].mon[e.id].childNode){
-                s.cx({f:'kill',d:s.init('noReference',e)},s.group[e.ke].mon[e.id].childNodeId)
+                s.cx({f:'kill',d:s.cleanMonitorObject(e)},s.group[e.ke].mon[e.id].childNodeId)
             }else{
                 if(!x||x===1){return};
                 p=x.pid;
@@ -904,7 +946,7 @@ module.exports = function(s,config,lang){
     }
     s.camera=function(x,e,cn,tx){
         if(x!=='motion'){
-            var ee=s.init('noReference',e);
+            var ee=s.cleanMonitorObject(e);
             if(!e){e={}};if(cn&&cn.ke&&!e.ke){e.ke=cn.ke};
             if(!e.mode){e.mode=x;}
             if(!e.id&&e.mid){e.id=e.mid}
@@ -936,7 +978,7 @@ module.exports = function(s,config,lang){
                 }
             }
         });
-        s.init(0,{ke:e.ke,mid:e.id})
+        s.initiateMonitorObject({ke:e.ke,mid:e.id})
         switch(x){
             case'buildOptionsFromUrl':
                 var monitorConfig = cn
@@ -975,9 +1017,9 @@ module.exports = function(s,config,lang){
                 var monitorConfig = s.group[e.ke].mon_conf[e.id];
                 if(monitorConfig.details.control!=="1"){s.log(e,{type:lang['Control Error'],msg:lang.ControlErrorText1});return}
                 if(!monitorConfig.details.control_base_url||monitorConfig.details.control_base_url===''){
-                    e.base=s.init('url_no_path',monitorConfig);
+                    e.base = s.buildMonitorUrl(monitorConfig, true);
                 }else{
-                    e.base=monitorConfig.details.control_base_url;
+                    e.base = monitorConfig.details.control_base_url;
                 }
                 if(!monitorConfig.details.control_url_stop_timeout || monitorConfig.details.control_url_stop_timeout === ''){
                     monitorConfig.details.control_url_stop_timeout = 1000
@@ -1155,7 +1197,7 @@ module.exports = function(s,config,lang){
                                 s.tx({f:'monitor_snapshot',snapshot:data,snapshot_format:'ab',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
                             })
                         }else{
-                            e.url=s.init('url',e.mon);
+                            e.url=s.buildMonitorUrl(e.mon);
                             switch(e.mon.type){
                                 case'mjpeg':case'h264':case'local':
                                     if(e.mon.type==='local'){e.url=e.mon.path;}
@@ -1205,7 +1247,7 @@ module.exports = function(s,config,lang){
     //                s.sqlQuery('SELECT * FROM Monitors WHERE ke=? AND mid=?',[e.ke,e.id],function(err,r) {
     //                    if(r&&r[0]){
     //                        r=r[0];
-    //                        r.url=s.init('url',r);
+    //                        r.url=s.buildMonitorUrl(r);
     //                        s.group[e.ke].mon.type=r.type;
     //                    }
     //                })
@@ -1225,7 +1267,7 @@ module.exports = function(s,config,lang){
                 s.tx({viewers:e.ob,ke:e.ke,id:e.id},'MON_'+e.id);
             break;
             case'restart'://restart monitor
-                s.init('monitorStatus',{id:e.id,ke:e.ke,status:'Restarting'});
+                s.sendMonitorStatus({id:e.id,ke:e.ke,status:'Restarting'});
                 s.camera('stop',e)
                 setTimeout(function(){
                     s.camera(e.mode,e)
@@ -1284,18 +1326,18 @@ module.exports = function(s,config,lang){
                 if(x==='idle'){
                     var wantedStatus = lang.Idle
                 }
-                s.init('monitorStatus',{id:e.id,ke:e.ke,status:wantedStatus});
+                s.sendMonitorStatus({id:e.id,ke:e.ke,status:wantedStatus});
             break;
             case'start':case'record'://watch or record monitor url
-                s.init(0,{ke:e.ke,mid:e.id})
-                if(!s.group[e.ke].mon_conf[e.id]){s.group[e.ke].mon_conf[e.id]=s.init('noReference',e);}
-                e.url = s.init('url',e);
+                s.initiateMonitorObject({ke:e.ke,mid:e.id})
+                if(!s.group[e.ke].mon_conf[e.id]){s.group[e.ke].mon_conf[e.id]=s.cleanMonitorObject(e);}
+                e.url = s.buildMonitorUrl(e);
                 if(s.group[e.ke].mon[e.id].started===1){
                     //stop action, monitor already started or recording
                     return
                 }
                 //lock this function
-                s.init('monitorStatus',{id:e.id,ke:e.ke,status:lang.Starting});
+                s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Starting});
                 s.group[e.ke].mon[e.id].started = 1;
                 //create host string without username and password
                 e.hosty = e.host.split('@');
@@ -1433,7 +1475,7 @@ module.exports = function(s,config,lang){
                     }else{
                         s.kill(s.group[e.ke].mon[e.id].spawn,e);
                     }
-                    s.init('monitorStatus',{id:e.id,ke:e.ke,status:lang.Died});
+                    s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Died});
                 }
                 var errorFatalCount = 0;
                 //cutoff time and recording check interval
@@ -1494,7 +1536,7 @@ module.exports = function(s,config,lang){
                         s.group[e.ke].mon[e.id].checker=setTimeout(function(){
                             if(s.group[e.ke].mon[e.id].started === 1 && s.group[e.ke].mon_conf[e.id].mode === 'record'){
                                 launchMonitorProcesses();
-                                s.init('monitorStatus',{id:e.id,ke:e.ke,status:lang.Restarting});
+                                s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Restarting});
                                 s.log(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
                             }
                         },60000 * cutoff * 1.1);
@@ -1593,7 +1635,7 @@ module.exports = function(s,config,lang){
                                     },e.ke)
                                 },30000)
                             }
-                            s.init('monitorStatus',{id:e.id,ke:e.ke,status:wantedStatus});
+                            s.sendMonitorStatus({id:e.id,ke:e.ke,status:wantedStatus});
                             //on unexpected exit restart
                             s.group[e.ke].mon[e.id].spawn_exit=function(){
                                 if(s.group[e.ke].mon[e.id].started===1){
@@ -1698,7 +1740,7 @@ module.exports = function(s,config,lang){
                           //         // s.group[e.ke].mon[e.id].spawn.stdin.write(buffer);
                           //     },1000/capture_fps)
                           // }
-                            if(!s.group[e.ke]||!s.group[e.ke].mon[e.id]){s.init(0,e)}
+                            if(!s.group[e.ke]||!s.group[e.ke].mon[e.id]){s.initiateMonitorObject(e)}
                             s.group[e.ke].mon[e.id].spawn.on('error',function(er){
                                 s.log(e,{type:'Spawn Error',msg:er});errorFatal('Spawn Error')
                             });
@@ -1947,7 +1989,7 @@ module.exports = function(s,config,lang){
                         childNodeList.forEach(function(ip){
                             if(e.ch_stop===0&&s.childNodes[ip].cpu<80){
                                 e.ch_stop=1;
-                                s.childNodes[ip].activeCameras[e.ke+e.id] = s.init('noReference',s.group[e.ke].mon_conf[e.id]);
+                                s.childNodes[ip].activeCameras[e.ke+e.id] = s.cleanMonitorObject(s.group[e.ke].mon_conf[e.id]);
                                 s.group[e.ke].mon[e.id].childNode = ip;
                                 s.group[e.ke].mon[e.id].childNodeId = s.childNodes[ip].cnid;
                                 s.cx({f:'sync',sync:s.group[e.ke].mon_conf[e.id],ke:e.ke,mid:e.id},s.group[e.ke].mon[e.id].childNodeId);
