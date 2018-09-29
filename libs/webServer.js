@@ -1,3 +1,4 @@
+var fs = require('fs');
 var http = require('http');
 var https = require('https');
 module.exports = function(s,config,lang,io,app){
