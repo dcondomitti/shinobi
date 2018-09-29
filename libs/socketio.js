@@ -777,7 +777,7 @@ module.exports = function(s,config,io){
                                                         getVideos(callback)
                                                     },2000)
                                                 }else{
-                                                    s.video('linkBuild',r,{
+                                                    s.buildVideoLinks(r,{
                                                         auth : cn.auth
                                                     })
                                                     callback({total:r.length,limit:d.videoLimit,videos:r})

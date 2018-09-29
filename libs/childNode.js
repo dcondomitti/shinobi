@@ -57,7 +57,7 @@ module.exports = function(s,config,lang){
                             break;
                             case'created_file_chunk':
                                 if(!s.group[d.ke].mon[d.mid].childNodeStreamWriters[d.filename]){
-                                    d.dir = s.video('getDir',s.group[d.ke].mon_conf[d.mid])
+                                    d.dir = s.getVideoDirectory(s.group[d.ke].mon_conf[d.mid])
                                     s.group[d.ke].mon[d.mid].childNodeStreamWriters[d.filename] = fs.createWriteStream(d.dir+d.filename)
                                 }
                                 s.group[d.ke].mon[d.mid].childNodeStreamWriters[d.filename].write(d.chunk)
@@ -164,7 +164,7 @@ module.exports = function(s,config,lang){
                     s.file('delete',s.dir.videos+d.ke+'/'+d.mid+'/'+d.file)
                 break;
                 case'insertCompleted'://close video
-                    s.video('insertCompleted',d.d,d.k)
+                    s.insertCompletedVideo(d.d,d.k)
                 break;
                 case'cameraStop'://start camera
                     s.camera('stop',d.d)

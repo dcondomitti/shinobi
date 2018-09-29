@@ -5,9 +5,16 @@ var exec = require('child_process').exec;
 var request = require('request');
 var webdav = require("webdav-fs");
 module.exports = function(s,config,lang,io){
-    s.setDiskUsedForClient = function(e,bytes){
-        //`k` will be used as the value to add or substract
-        s.group[e.ke].diskUsedEmitter.emit('set',bytes)
+    s.purgeDiskForGroup = function(e,video){
+        if(s.group[e.ke].diskUsedEmitter){
+            s.group[e.ke].diskUsedEmitter.emit('purge',video)
+        }
+    }
+    s.setDiskUsedForGroup = function(e,bytes){
+        //`bytes` will be used as the value to add or substract
+        if(s.group[e.ke].diskUsedEmitter){
+            s.group[e.ke].diskUsedEmitter.emit('set',bytes)
+        }
     }
     s.sendDiskUsedAmountToClients = function(e){
         //send the amount used disk space to connected users
@@ -125,7 +132,7 @@ module.exports = function(s,config,lang,io){
                         s.sendDiskUsedAmountToClients(e)
                     })
                     s.group[e.ke].diskUsedEmitter.on('purge',function(currentPurge){
-                        s.setDiskUsedForClient(e,currentPurge.filesizeMB)
+                        s.setDiskUsedForGroup(e,currentPurge.filesizeMB)
                         if(config.cron.deleteOverMax===true){
                                 //set queue processor
                                 var finish=function(){
@@ -138,11 +145,11 @@ module.exports = function(s,config,lang,io){
                                                 k.del=[];k.ar=[e.ke];
                                                 if(!evs)return console.log(err)
                                                 evs.forEach(function(ev){
-                                                    ev.dir=s.video('getDir',ev)+s.formattedTime(ev.time)+'.'+ev.ext;
+                                                    ev.dir=s.getVideoDirectory(ev)+s.formattedTime(ev.time)+'.'+ev.ext;
                                                     k.del.push('(mid=? AND `time`=?)');
                                                     k.ar.push(ev.mid),k.ar.push(ev.time);
                                                     s.file('delete',ev.dir);
-                                                    s.setDiskUsedForClient(e,-(ev.size/1000000))
+                                                    s.setDiskUsedForGroup(e,-(ev.size/1000000))
                                                     s.tx({f:'video_delete',ff:'over_max',filename:s.formattedTime(ev.time)+'.'+ev.ext,mid:ev.mid,ke:ev.ke,time:ev.time,end:s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+e.ke);
                                                 });
                                                 if(k.del.length>0){

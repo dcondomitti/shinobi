@@ -12,8 +12,6 @@ var os = require('os');
 var io = new (require('socket.io'))()
 // s = Shinobi
 s = {
-    //for 2-Factor Authenticated login
-    factorAuth : {},
     //Total Memory
     totalmem : os.totalmem(),
     //Check Platform

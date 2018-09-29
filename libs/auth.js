@@ -1,20 +1,8 @@
 module.exports = function(s,config,lang){
     //Authenticator functions
     s.api = {}
+    s.factorAuth = {}
     s.failedLoginAttempts = {}
-    //auth handler
-    //params = parameters
-    //cb = callback
-    //res = response, only needed for express (http server)
-    //request = request, only needed for express (http server)
-    s.checkChildProxy = function(params,cb,res,req){
-        if(s.group[params.ke] && s.group[params.ke].mon[params.id] && s.group[params.ke].mon[params.id].childNode){
-            var url = 'http://' + s.group[params.ke].mon[params.id].childNode// + req.originalUrl
-            proxy.web(req, res, { target: url })
-        }else{
-            cb()
-        }
-    }
     //auth handler
     //params = parameters
     //cb = callback
@@ -31,7 +19,7 @@ module.exports = function(s,config,lang){
             }
         }else{
             //socket.io use of auth function
-            var failed=function(){
+            var failed = function(){
                 //maybe log
             }
         }
@@ -118,7 +106,7 @@ module.exports = function(s,config,lang){
         }
     }
     //super user authentication handler
-    s.superAuth=function(x,callback){
+    s.superAuth = function(x,callback){
         req={};
         req.super=require(s.location.super);
         req.super.forEach(function(v,n){

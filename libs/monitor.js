@@ -1176,7 +1176,7 @@ module.exports = function(s,config,lang){
     //                                        case checkLog(d,'timed out'):
     //                                        case checkLog(d,'Invalid data found when processing input'):
     //                                        case checkLog(d,'reset by peer'):
-    //                                           if(e.frames===0&&x==='record'){s.video('delete',e)};
+    //                                           if(e.frames===0&&x==='record'){s.deleteVideo(e)};
     //                                            setTimeout(function(){
     //                                                if(!s.group[e.ke].mon[e.id].spawn){launchMonitorProcesses()}
     //                                            },2000)
@@ -1189,7 +1189,7 @@ module.exports = function(s,config,lang){
                                         break;
                                         case /T[0-9][0-9]-[0-9][0-9]-[0-9][0-9]./.test(d):
                                             var filename = d.split('.')[0]+'.'+e.ext
-                                            s.video('insertCompleted',e,{
+                                            s.insertCompletedVideo(e,{
                                                 file : filename
                                             })
                                             s.log(e,{type:lang['Video Finished'],msg:{filename:d}})
@@ -1204,7 +1204,7 @@ module.exports = function(s,config,lang){
                                                 if(e.details.loglevel!=='quiet'){
                                                     s.log(e,{type:lang['Delete Motionless Video'],msg:filename});
                                                 }
-                                                s.video('delete',{
+                                                s.deleteVideo({
                                                     filename : filename,
                                                     ke : e.ke,
                                                     id : e.id

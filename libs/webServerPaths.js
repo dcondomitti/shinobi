@@ -55,7 +55,19 @@ module.exports = function(s,config,lang,app){
         if(config.renderPaths.grid === undefined){config.renderPaths.grid='pages/grid'}
         //slick.js (cycle) page
         if(config.renderPaths.cycle === undefined){config.renderPaths.cycle='pages/cycle'}
-
+    //child node proxy check
+    //params = parameters
+    //cb = callback
+    //res = response, only needed for express (http server)
+    //request = request, only needed for express (http server)
+    s.checkChildProxy = function(params,cb,res,req){
+        if(s.group[params.ke] && s.group[params.ke].mon[params.id] && s.group[params.ke].mon[params.id].childNode){
+            var url = 'http://' + s.group[params.ke].mon[params.id].childNode// + req.originalUrl
+            proxy.web(req, res, { target: url })
+        }else{
+            cb()
+        }
+    }
     ////Pages
     app.enable('trust proxy');
     app.use('/libs',express.static(s.mainDirectory + '/web/libs'));
@@ -1185,7 +1197,7 @@ module.exports = function(s,config,lang,app){
                     return
                 }
                 s.sqlQuery(req.count_sql,req.count_ar,function(err,count){
-                    s.video('linkBuild',r,{
+                    s.buildVideoLinks(r,{
                         auth : req.params.auth,
                         videoParam : videoParam,
                         hideRemote : config.hideCloudSaveUrls
@@ -1704,7 +1716,7 @@ module.exports = function(s,config,lang,app){
                         r.forEach(function(video){
                             timeFormatted = s.formattedTime(video.time)
                             video.filename = timeFormatted+'.'+video.ext
-                            var dir = s.video('getDir',video)+video.filename
+                            var dir = s.getVideoDirectory(video)+video.filename
                             var tempVideoFile = timeFormatted+' - '+video.mid+'.'+video.ext
                             fs.writeFileSync(fileBinDir+tempVideoFile, fs.readFileSync(dir))
                             tempFiles.push(fileBinDir+tempVideoFile)
@@ -1780,7 +1792,7 @@ module.exports = function(s,config,lang,app){
             time = new Date(time)
             s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND `time`=? LIMIT 1',[req.params.ke,req.params.id,time],function(err,r){
                 if(r&&r[0]){
-                    req.dir=s.video('getDir',r[0])+req.params.file
+                    req.dir=s.getVideoDirectory(r[0])+req.params.file
                     if (fs.existsSync(req.dir)){
                         req.ext=req.params.file.split('.')[1];
                         var total = fs.statSync(req.dir).size;
@@ -1916,10 +1928,10 @@ module.exports = function(s,config,lang,app){
                             req.ret.ok=true;
                             switch(videoParam){
                                 case'cloudVideos':
-                                    s.video('deleteFromCloud',r)
+                                    s.deleteVideoFromCloud(r)
                                 break;
                                 default:
-                                    s.video('delete',r)
+                                    s.deleteVideo(r)
                                 break;
                             }
                         break;
