@@ -1,7 +1,7 @@
 var fs = require('fs');
 var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
-module.exports = function(s,config){
+module.exports = function(s,config,lang){
     s.getVideoDirectory = function(e){
         if(e.mid&&!e.id){e.id=e.mid};
         if(e.details&&(e.details instanceof Object)===false){
@@ -44,6 +44,119 @@ module.exports = function(s,config){
             if(!v.href || options.hideRemote === true)v.href = href + queryString
             v.details = details
         })
+    }
+    s.uploadVideoToWebDav = function(e,k){
+        if(!k)k={};
+        //cloud saver - webdav
+       var wfs = s.group[e.ke].webdav
+       if(wfs && s.group[e.ke].init.use_webdav !== '0' && s.group[e.ke].init.webdav_save === "1"){
+           var webdavUploadDir = s.group[e.ke].init.webdav_dir+e.ke+'/'+e.mid+'/'
+           var startWebDavUpload = function(){
+               s.group[e.ke].mon[e.id].webdavDirExist = true
+               var wfsWriteStream =
+               fs.createReadStream(k.dir + k.filename).pipe(wfs.createWriteStream(webdavUploadDir + k.filename))
+               if(s.group[e.ke].init.webdav_log === '1'){
+                   var webdavRemoteUrl = s.addUserPassToUrl(s.checkCorrectPathEnding(s.group[e.ke].init.webdav_url),s.group[e.ke].init.webdav_user,s.group[e.ke].init.webdav_pass) + s.group[e.ke].init.webdav_dir + e.ke + '/'+e.mid+'/'+k.filename
+                   var save = [
+                       e.mid,
+                       e.ke,
+                       k.startTime,
+                       1,
+                       s.s({
+                           type : 'webdav'
+                       }),
+                       k.filesize,
+                       k.endTime,
+                       webdavRemoteUrl
+                   ]
+                   s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end,href) VALUES (?,?,?,?,?,?,?,?)',save)
+               }
+           }
+           if(s.group[e.ke].mon[e.id].webdavDirExist !== true){
+               //check if webdav dir exist
+               var parentPoint = 0
+               var webDavParentz = webdavUploadDir.split('/')
+               var webDavParents = []
+               webDavParentz.forEach(function(v){
+                   if(v && v !== '')webDavParents.push(v)
+               })
+               var stitchPieces = './'
+               var lastParentCheck = function(){
+                   ++parentPoint
+                   if(parentPoint === webDavParents.length){
+                       startWebDavUpload()
+                   }
+                   checkPathPiece(webDavParents[parentPoint])
+               }
+               var checkPathPiece = function(pathPiece){
+                   if(pathPiece && pathPiece !== ''){
+                       stitchPieces += pathPiece + '/'
+                       wfs.stat(stitchPieces, function(error, stats) {
+                           if(error){
+                               reply = {
+                                   status : error.status,
+                                   msg : lang.WebdavErrorTextTryCreatingDir,
+                                   dir : stitchPieces,
+                               }
+                               s.log(e,{type:lang['Webdav Error'],msg:reply})
+                               wfs.mkdir(stitchPieces, function(error) {
+                                   if(error){
+                                       reply = {
+                                           status : error.status,
+                                           msg : lang.WebdavErrorTextCreatingDir,
+                                           dir : stitchPieces,
+                                       }
+                                       s.log(e,{type:lang['Webdav Error'],msg:reply})
+                                   }else{
+                                       lastParentCheck()
+                                   }
+                               })
+                           }else{
+                               lastParentCheck()
+                           }
+                       })
+                   }else{
+                       ++parentPoint
+                   }
+               }
+               checkPathPiece(webDavParents[0])
+           }else{
+               startWebDavUpload()
+           }
+       }
+    }
+    s.uploadVideoToAmazonS3 = function(e,k){
+        if(!k)k={};
+        //cloud saver - amazon s3
+        if(s.group[e.ke].aws_s3 && s.group[e.ke].init.use_aws_s3 !== '0' && s.group[e.ke].init.aws_s3_save === '1'){
+            var fileStream = fs.createReadStream(k.dir+k.filename);
+            fileStream.on('error', function (err) {
+                console.error(err)
+            })
+            s.group[e.ke].aws_s3.upload({
+                Bucket: s.group[e.ke].init.aws_s3_bucket,
+                Key: s.group[e.ke].init.aws_s3_dir+e.ke+'/'+e.mid+'/'+k.filename,
+                Body:fileStream,
+                ACL:'public-read'
+            },function(err,data){
+                if(err){
+                    s.log(e,{type:lang['Amazon S3 Upload Error'],msg:err})
+                }
+                if(s.group[e.ke].init.aws_s3_log === '1' && data && data.Location){
+                    var save = [
+                        e.mid,
+                        e.ke,
+                        k.startTime,
+                        1,
+                        '{}',
+                        k.filesize,
+                        k.endTime,
+                        data.Location
+                    ]
+                    s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end,href) VALUES (?,?,?,?,?,?,?,?)',save)
+                }
+            })
+        }
     }
     s.insertCompletedVideo = function(e,k){
         if(!k)k={};
@@ -112,7 +225,7 @@ module.exports = function(s,config){
                             time:s.timeObject(k.startTime).format(),
                             end:s.timeObject(k.endTime).format()
                         })
-                    });
+                    })
                 }else{
                     var href = '/videos/'+e.ke+'/'+e.mid+'/'+k.filename
                     if(config.useUTC === true)href += '?isUTC=true';
@@ -127,113 +240,8 @@ module.exports = function(s,config){
                         end:k.endTime
                     },'GRP_'+e.ke,'video_view');
                 }
-                //cloud auto savers - webdav
-               var wfs = s.group[e.ke].webdav
-               if(wfs && s.group[e.ke].init.use_webdav !== '0' && s.group[e.ke].init.webdav_save === "1"){
-                   var webdavUploadDir = s.group[e.ke].init.webdav_dir+e.ke+'/'+e.mid+'/'
-                   var startWebDavUpload = function(){
-                       s.group[e.ke].mon[e.id].webdavDirExist = true
-                       var wfsWriteStream =
-                       fs.createReadStream(k.dir + k.filename).pipe(wfs.createWriteStream(webdavUploadDir + k.filename))
-                       if(s.group[e.ke].init.webdav_log === '1'){
-                           var webdavRemoteUrl = s.addUserPassToUrl(s.checkCorrectPathEnding(s.group[e.ke].init.webdav_url),s.group[e.ke].init.webdav_user,s.group[e.ke].init.webdav_pass) + s.group[e.ke].init.webdav_dir + e.ke + '/'+e.mid+'/'+k.filename
-                           var save = [
-                               e.mid,
-                               e.ke,
-                               k.startTime,
-                               1,
-                               s.s({
-                                   type : 'webdav'
-                               }),
-                               k.filesize,
-                               k.endTime,
-                               webdavRemoteUrl
-                           ]
-                           s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end,href) VALUES (?,?,?,?,?,?,?,?)',save)
-                       }
-                   }
-                   if(s.group[e.ke].mon[e.id].webdavDirExist !== true){
-                       //check if webdav dir exist
-                       var parentPoint = 0
-                       var webDavParentz = webdavUploadDir.split('/')
-                       var webDavParents = []
-                       webDavParentz.forEach(function(v){
-                           if(v && v !== '')webDavParents.push(v)
-                       })
-                       var stitchPieces = './'
-                       var lastParentCheck = function(){
-                           ++parentPoint
-                           if(parentPoint === webDavParents.length){
-                               startWebDavUpload()
-                           }
-                           checkPathPiece(webDavParents[parentPoint])
-                       }
-                       var checkPathPiece = function(pathPiece){
-                           if(pathPiece && pathPiece !== ''){
-                               stitchPieces += pathPiece + '/'
-                               wfs.stat(stitchPieces, function(error, stats) {
-                                   if(error){
-                                       reply = {
-                                           status : error.status,
-                                           msg : lang.WebdavErrorTextTryCreatingDir,
-                                           dir : stitchPieces,
-                                       }
-                                       s.log(e,{type:lang['Webdav Error'],msg:reply})
-                                       wfs.mkdir(stitchPieces, function(error) {
-                                           if(error){
-                                               reply = {
-                                                   status : error.status,
-                                                   msg : lang.WebdavErrorTextCreatingDir,
-                                                   dir : stitchPieces,
-                                               }
-                                               s.log(e,{type:lang['Webdav Error'],msg:reply})
-                                           }else{
-                                               lastParentCheck()
-                                           }
-                                       })
-                                   }else{
-                                       lastParentCheck()
-                                   }
-                               })
-                           }else{
-                               ++parentPoint
-                           }
-                       }
-                       checkPathPiece(webDavParents[0])
-                   }else{
-                       startWebDavUpload()
-                   }
-               }
-                //cloud auto savers - amazon s3
-                if(s.group[e.ke].aws_s3 && s.group[e.ke].init.use_aws_s3 !== '0' && s.group[e.ke].init.aws_s3_save === '1'){
-                    var fileStream = fs.createReadStream(k.dir+k.filename);
-                    fileStream.on('error', function (err) {
-                        console.error(err)
-                    })
-                    s.group[e.ke].aws_s3.upload({
-                        Bucket: s.group[e.ke].init.aws_s3_bucket,
-                        Key: s.group[e.ke].init.aws_s3_dir+e.ke+'/'+e.mid+'/'+k.filename,
-                        Body:fileStream,
-                        ACL:'public-read'
-                    },function(err,data){
-                        if(err){
-                            s.log(e,{type:lang['Amazon S3 Upload Error'],msg:err})
-                        }
-                        if(s.group[e.ke].init.aws_s3_log === '1' && data && data.Location){
-                            var save = [
-                                e.mid,
-                                e.ke,
-                                k.startTime,
-                                1,
-                                '{}',
-                                k.filesize,
-                                k.endTime,
-                                data.Location
-                            ]
-                            s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end,href) VALUES (?,?,?,?,?,?,?,?)',save)
-                        }
-                    })
-                }
+                s.uploadVideoToWebDav(e,k)
+                s.uploadVideoToAmazonS3(e,k)
                 k.details = {}
                 if(e.details&&e.details.dir&&e.details.dir!==''){
                     k.details.dir = e.details.dir

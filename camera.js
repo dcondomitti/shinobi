@@ -50,7 +50,7 @@ loadLib('ffmpeg')(s,config,function(){
     //web server routes : page handling, streams..
     loadLib('webServerPaths')(s,config,lang,app)
     //websocket connection handlers : login and streams..
-    loadLib('socketio')(s,config,io)
+    loadLib('socketio')(s,config,lang,io)
     //user and group functions
     loadLib('user')(s,config)
     //monitor/camera handlers
@@ -60,7 +60,7 @@ loadLib('ffmpeg')(s,config,function(){
     //built-in detector functions : pam-diff..
     loadLib('detector')(s,config)
     //recording functions
-    loadLib('videos')(s,config)
+    loadLib('videos')(s,config,lang)
     //event functions : motion, object matrix handler
     loadLib('events')(s,config,lang)
     //plugins : websocket connected services..

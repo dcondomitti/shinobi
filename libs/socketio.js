@@ -4,7 +4,7 @@ var execSync = require('child_process').execSync;
 var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var jsonfile = require("jsonfile");
-module.exports = function(s,config,io){
+module.exports = function(s,config,lang,io){
     //send data to detector plugin
     s.ocvTx=function(data){
         if(!s.ocv){return}

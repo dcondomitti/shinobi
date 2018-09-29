@@ -12,11 +12,11 @@ module.exports = function(s,config,callback){
                 s.systemLog('FFMPEG is too old : '+s.ffmpegVersion+', Needed : 3.2+',err)
                 throw (new Error())
             }
+            callback()
         }catch(err){
             console.log('No FFmpeg found.')
             // process.exit()
         }
-        callback()
     }
     //check local ffmpeg
     var windowsFfmpegCheck = function(failback){
