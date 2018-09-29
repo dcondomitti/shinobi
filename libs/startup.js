@@ -4,6 +4,10 @@ var exec = require('child_process').exec;
 var execSync = require('child_process').execSync;
 console.log('NODE.JS version : '+execSync("node -v"))
 module.exports = function(s,config,lang,io){
+    s.processReady = function(){
+        s.systemLog(lang.startUpText5)
+        process.send('ready')
+    }
     if(config.childNodes.mode !== 'child'){
         //add Cloud Videos table, will remove in future
         s.sqlQuery('CREATE TABLE IF NOT EXISTS `Cloud Videos` (`mid` varchar(50) NOT NULL,`ke` varchar(50) DEFAULT NULL,`href` text NOT NULL,`size` float DEFAULT NULL,`time` timestamp NULL DEFAULT NULL,`end` timestamp NULL DEFAULT NULL,`status` int(1) DEFAULT \'0\' COMMENT \'0:Complete,1:Read,2:Archive\',`details` text) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;',[],function(err){

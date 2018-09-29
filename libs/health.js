@@ -18,11 +18,7 @@ module.exports = function(s,config,lang,io){
         io.sockets.emit('ping',{beat:1});
     }
     s.beat();
-    s.processReady = function(){
-        s.systemLog(lang.startUpText5)
-        process.send('ready')
-    }
-    s.cpuUsage=function(e){
+    s.cpuUsage = function(e){
         k={}
         switch(s.platform){
             case'win32':
@@ -33,6 +29,9 @@ module.exports = function(s,config,lang,io){
             break;
             case'linux':
                 k.cmd='LANG=C top -b -n 2 | grep "^'+config.cpuUsageMarker+'" | awk \'{print $2}\' | tail -n1';
+            break;
+            case'freebsd':
+                k.cmd='vmstat 1 2 | tail -1 | awk \'{print $17}\''
             break;
         }
         if(config.customCpuCommand){
@@ -53,7 +52,7 @@ module.exports = function(s,config,lang,io){
             e(0)
         }
     }
-    s.ramUsage=function(e){
+    s.ramUsage = function(e){
         k={}
         switch(s.platform){
             case'win32':
@@ -61,6 +60,9 @@ module.exports = function(s,config,lang,io){
             break;
             case'darwin':
                 k.cmd = "vm_stat | awk '/^Pages free: /{f=substr($3,1,length($3)-1)} /^Pages active: /{a=substr($3,1,length($3-1))} /^Pages inactive: /{i=substr($3,1,length($3-1))} /^Pages speculative: /{s=substr($3,1,length($3-1))} /^Pages wired down: /{w=substr($4,1,length($4-1))} /^Pages occupied by compressor: /{c=substr($5,1,length($5-1)); print ((a+w)/(f+a+i+w+s+c))*100;}'"
+            break;
+            case'freebsd':
+        	    k.cmd = "echo \"scale=4; $(vmstat -H | tail -1 | awk '{print $5}')*1024*100/$(sysctl hw.physmem | awk '{print $2}')\" | bc"
             break;
             default:
                 k.cmd = "LANG=C free | grep Mem | awk '{print $4/$2 * 100.0}'";
