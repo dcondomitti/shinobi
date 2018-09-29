@@ -1,36 +1,101 @@
+var fs = require('fs');
 var spawn = require('child_process').spawn;
 var execSync = require('child_process').execSync;
-module.exports = function(s,config){
-    var staticFFmpeg = false;
-    try{
-        staticFFmpeg = require('ffmpeg-static').path;
-        if (!fs.existsSync(staticFFmpeg)) {
-            staticFFmpeg = false
-            console.log('"ffmpeg-static" from NPM has failed to provide a compatible library or has been corrupted.')
-            console.log('You may need to install FFmpeg manually or you can try running "npm uninstall ffmpeg-static && npm install ffmpeg-static".')
+module.exports = function(s,config,callback){
+    var downloadingFfmpeg = false;
+    var completeFfmpegCheck = function(){
+        //ffmpeg version
+        try{
+            s.ffmpegVersion = execSync(config.ffmpegDir+" -version").toString().split('Copyright')[0].replace('ffmpeg version','').trim()
+            console.log('FFMPEG version : '+s.ffmpegVersion)
+            if(s.ffmpegVersion.indexOf(': 2.')>-1){
+                s.systemLog('FFMPEG is too old : '+s.ffmpegVersion+', Needed : 3.2+',err)
+                throw (new Error())
+            }
+        }catch(err){
+            console.log('No FFmpeg found.')
+            // process.exit()
         }
-    }catch(err){
-        staticFFmpeg = false;
-        console.log('No Static FFmpeg. Continuing.')
+        callback()
+    }
+    //check local ffmpeg
+    var windowsFfmpegCheck = function(failback){
+        if (s.isWin && fs.existsSync(s.mainDirectory+'/ffmpeg/ffmpeg.exe')) {
+            config.ffmpegDir = s.mainDirectory+'/ffmpeg/ffmpeg.exe'
+        }else{
+            failback()
+        }
+    }
+    //check local ffmpeg
+    var unixFfmpegCheck = function(failback){
+        if(s.isWin === false){
+            if (fs.existsSync('/usr/bin/ffmpeg')) {
+                config.ffmpegDir = '/usr/bin/ffmpeg'
+            }else{
+                if (fs.existsSync('/usr/local/bin/ffmpeg')) {
+                    config.ffmpegDir = '/usr/local/bin/ffmpeg'
+                }else{
+                    failback()
+                }
+            }
+        }else{
+            failback()
+        }
+    }
+    //check node module : ffmpeg-static
+    var ffmpegStaticCheck = function(failback){
+        try{
+            var staticFFmpeg = require('ffmpeg-static').path;
+            if (!fs.existsSync(staticFFmpeg)) {
+                console.log('"ffmpeg-static" from NPM has failed to provide a compatible library or has been corrupted.')
+                console.log('Run "npm uninstall ffmpeg-static" to remove it.')
+                console.log('Run "npm install ffbinaries" to get a different static FFmpeg downloader.')
+            }else{
+                config.ffmpegDir = staticFFmpeg
+            }
+        }catch(err){
+            console.log('No "ffmpeg-static".')
+        }
+    }
+    //check node module : ffbinaries
+    var ffbinaryCheck = function(failback){
+        try{
+            ffbinaries = require('ffbinaries')
+            var ffbinaryDir = s.mainDirectory + '/ffmpeg/'
+            var downloadFFmpeg = function(){
+                downloadingFfmpeg = true
+                console.log('ffbinaries : Downloading FFmpeg. Please Wait...');
+                ffbinaries.downloadBinaries(['ffmpeg', 'ffprobe'], {
+                    destination: ffbinaryDir,
+                    version : '3.4'
+                },function () {
+                    config.ffmpegDir = ffbinaryDir + 'ffmpeg'
+                    console.log('ffbinaries : FFmpeg Downloaded.');
+                    completeFfmpegCheck()
+                })
+            }
+            if (!fs.existsSync(ffbinaryDir + 'ffmpeg')) {
+                downloadFFmpeg()
+            }else{
+                config.ffmpegDir = ffbinaryDir + 'ffmpeg'
+            }
+        }catch(err){
+            console.log('No "ffbinaries". Continuing.')
+            console.log('Run "npm install ffbinaries" to get this static FFmpeg downloader.')
+            failback()
+        }
     }
     //ffmpeg location
     if(!config.ffmpegDir){
-        if(staticFFmpeg !== false){
-            config.ffmpegDir = staticFFmpeg
-        }else{
-            if(s.isWin===true){
-                config.ffmpegDir = s.mainDirectory+'/ffmpeg/ffmpeg.exe'
-            }else{
-                config.ffmpegDir = 'ffmpeg'
-            }
-        }
-    }
-    //ffmpeg version
-    s.ffmpegVersion=execSync(config.ffmpegDir+" -version").toString().split('Copyright')[0].replace('ffmpeg version','').trim()
-    console.log('FFMPEG version : '+s.ffmpegVersion)
-    if(s.ffmpegVersion.indexOf(': 2.')>-1){
-        s.systemLog('FFMPEG is too old : '+s.ffmpegVersion+', Needed : 3.2+',err)
-        throw (new Error())
+        windowsFfmpegCheck(function(){
+            unixFfmpegCheck(function(){
+                ffbinaryCheck(function(){
+                    ffmpegStaticCheck(function(){
+                        console.log('No FFmpeg found.')
+                    })
+                })
+            })
+        })
     }
     s.splitForFFPMEG = function (ffmpegCommandAsString) {
         //this function ignores spaces inside quotes.
@@ -781,5 +846,9 @@ module.exports = function(s,config){
         }
         x.ffmpegCommandString = s.splitForFFPMEG(x.ffmpegCommandString.replace(/\s+/g,' ').trim())
         return spawn(config.ffmpegDir,x.ffmpegCommandString,{detached: true,stdio:x.stdioPipes});
+    }
+    if(downloadingFfmpeg === false){
+        //not downloading ffmpeg
+        completeFfmpegCheck()
     }
 }

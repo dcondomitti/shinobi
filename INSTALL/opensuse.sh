@@ -52,7 +52,7 @@ if [ "$ffmpeginstall" = "y" ] || [ "$ffmpeginstall" = "Y" ]; then
             # Install ffmpeg and ffmpeg-devel
             sudo zypper install -y ffmpeg ffmpeg-devel
         else
-            sudo npm install ffmpeg-static@2.2.1
+            sudo npm install ffbinaries
         fi
     else
         sudo zypper install -y ffmpeg ffmpeg-devel
