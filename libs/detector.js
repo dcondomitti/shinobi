@@ -18,6 +18,13 @@ module.exports = function(s,config){
         }else{
             globalSensitivity = parseInt(e.details.detector_sensitivity)
         }
+
+        // <DetectorStuff>
+        globalMaxSensitivity = parseInt(e.details.detector_max_sensitivity) || undefined
+
+        globalThreshold = parseInt(e.details.detector_threshold) || 0
+        // </DetectorStuff>
+
         if(e.details.detector_frame==='1'){
             fullFrame={
                 name:'FULL_FRAME',
@@ -30,7 +37,19 @@ module.exports = function(s,config){
                 ]
             };
         }
-        var regions = s.createPamDiffRegionArray(s.group[e.ke].mon_conf[e.id].details.cords,globalSensitivity,fullFrame);
+
+        // <DetectorStuff>
+        let regionJson
+        try{
+            regionJson = JSON.parse(s.group[e.ke].mon_conf[e.id].details.cords)
+        }catch(err){
+            regionJson = s.group[e.ke].mon_conf[e.id].details.cords
+        }
+        e.triggerTimer = {}
+        
+        var regions = s.createPamDiffRegionArray(regionJson,globalSensitivity,fullFrame)
+        // </<DetectorStuff>
+
         if(!s.group[e.ke].mon[e.id].noiseFilterArray)s.group[e.ke].mon[e.id].noiseFilterArray = {}
         var noiseFilterArray = s.group[e.ke].mon[e.id].noiseFilterArray
         Object.keys(regions.notForPam).forEach(function(name){
@@ -44,6 +63,7 @@ module.exports = function(s,config){
                 id:e.id,
                 ke:e.ke,
                 name:trigger.name,
+                full_name:e.id + ':' + trigger.name,    // <DetectorStuff/>
                 details:{
                     plug:'built-in',
                     name:trigger.name,
@@ -54,8 +74,12 @@ module.exports = function(s,config){
                 imgHeight:height,
                 imgWidth:width
             }
-            detectorObject.doObjectDetection = (s.ocv && e.details.detector_use_detect_object === '1')
-            s.triggerEvent(detectorObject)
+            // <DetectorStuff>
+            s.detectorWrapper(e, regionJson, detectorObject, function() {
+                detectorObject.doObjectDetection = (s.ocv && e.details.detector_use_detect_object === '1')
+                s.triggerEvent(detectorObject)
+            })
+            // </DetectorStuff>
         }
         var filterTheNoise = function(trigger){
             if(noiseFilterArray[trigger.name].length > 2){
@@ -126,4 +150,52 @@ module.exports = function(s,config){
         if(pamDiffCompliantArray.length===0){pamDiffCompliantArray = null}
         return {forPam:pamDiffCompliantArray,notForPam:arrayForOtherStuff};
     }
+
+    // <DetectorStuff>
+    s.detectorWrapper = function(monitor, regionJson, detectorObject, doRecord) {
+        if (regionJson === undefined || regionJson.length == 0) {
+            s.debugLog("No regions defined, ignoring trigger event")
+            return    
+        }
+        const region = Object.values(regionJson).find(x => x.name == detectorObject.name)
+        let maxSensitivity = parseInt(region.max_sensitivity) || globalMaxSensitivity
+        let threshold = parseInt(region.threshold) || globalThreshold
+        
+        if (maxSensitivity===undefined || detectorObject.details.confidence <= maxSensitivity) {
+            if (threshold <= 1) {
+                s.debugLog('Detector threshold is ' + threshold + ', motion record started: ' + detectorObject.full_name)
+                doRecord()
+            } else {
+                s.debugLog('Trigger=' + detectorObject.full_name + ', confidence='+detectorObject.details.confidence)
+                if (monitor.triggerTimer[detectorObject.name] === undefined) {
+                    monitor.triggerTimer[detectorObject.name] = {
+                        count : threshold,
+                        timeout : null
+                    }
+                }
+                if (--monitor.triggerTimer[detectorObject.name].count == 0) {
+                    s.debugLog('Trigger threshold ' + threshold + ' hit, motion record started: ' + detectorObject.full_name)
+                    doRecord()
+                    clearTimeout(monitor.triggerTimer[detectorObject.name].timeout)
+                    monitor.triggerTimer[detectorObject.name] = undefined
+                } else {
+                    const fps = parseFloat(monitor.details.detector_fps) || 2
+                    if (monitor.triggerTimer[detectorObject.name].timeout !== null)
+                        clearTimeout(monitor.triggerTimer[detectorObject.name].timeout)
+                    monitor.triggerTimer[detectorObject.name].timeout = setTimeout(function() {
+                        s.debugLog('Trigger threshold timeout: ' + detectorObject.full_name)
+                        monitor.triggerTimer[detectorObject.name] = undefined
+                    }, ((threshold+0.5) * 1000) / fps)
+                }
+            }
+        } else {
+            s.debugLog('Trigger ' + detectorObject.full_name + ', confidence='+detectorObject.details.confidence + ' (over maxSensitivity)')
+            if (monitor.triggerTimer[detectorObject.name] !== undefined) {
+                clearTimeout(monitor.triggerTimer[detectorObject.name].timeout)
+                monitor.triggerTimer[detectorObject.name] = undefined
+            }
+        }
+    }
+    // </DetectorStuff>
+
 }

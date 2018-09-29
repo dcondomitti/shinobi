@@ -2954,6 +2954,8 @@ $.zO.initCanvas=function(){
     if(!e.val){
         $.zO.f.find('[name="name"]').val('')
         $.zO.f.find('[name="sensitivity"]').val('')
+        $.zO.f.find('[name="max_sensitivity"]').val('')
+        $.zO.f.find('[name="threshold"]').val('')
         $.zO.rp.empty()
     }else{
         e.cord=$.zO.regionViewerDetails.cords[e.val];
@@ -2967,6 +2969,8 @@ $.zO.initCanvas=function(){
         $.zO.f.find('[name="name"]').val(e.val)
         $.zO.e.find('.cord_name').text(e.val)
         $.zO.f.find('[name="sensitivity"]').val(e.cord.sensitivity)
+        $.zO.f.find('[name="max_sensitivity"]').val(e.cord.max_sensitivity)
+        $.zO.f.find('[name="threshold"]').val(e.cord.threshold)
         $.zO.e.find('.canvas_holder canvas').remove();
 
         $.zO.initLiveStream()
@@ -2984,6 +2988,16 @@ $.zO.initCanvas=function(){
 $.zO.e.on('change','[name="sensitivity"]',function(e){
     e.val=$(this).val();
     $.zO.regionViewerDetails.cords[$.zO.rl.val()].sensitivity=e.val;
+    $.zO.saveCoords()
+})
+$.zO.e.on('change','[name="max_sensitivity"]',function(e){
+    e.val=$(this).val();
+    $.zO.regionViewerDetails.cords[$.zO.rl.val()].max_sensitivity=e.val;
+    $.zO.saveCoords()
+})
+$.zO.e.on('change','[name="threshold"]',function(e){
+    e.val=$(this).val();
+    $.zO.regionViewerDetails.cords[$.zO.rl.val()].threshold=e.val;
     $.zO.saveCoords()
 })
 $.zO.e.on('change','[name="name"]',function(e){
@@ -3069,7 +3083,7 @@ $.zO.e.on('click','.add',function(e){
         }
     })
     $.zO.regionViewerDetails.cords=e.save;
-    $.zO.regionViewerDetails.cords[e.gid]={name:e.gid,sensitivity:0.0005,points:[[0,0],[0,100],[100,0]]};
+    $.zO.regionViewerDetails.cords[e.gid]={name:e.gid,sensitivity:0.0005,max_sensitivity:'',threshold:1,points:[[0,0],[0,100],[100,0]]};
     $.zO.rl.append('<option value="'+e.gid+'">'+e.gid+'</option>');
     $.zO.rl.val(e.gid)
     $.zO.rl.change();
@@ -3521,6 +3535,8 @@ $.aM.generateDefaultMonitorSettings=function(){
         "detector_use_detect_object": "0",
         "detector_frame": "0",
         "detector_sensitivity": "",
+        "detector_max_sensitivity": "",
+        "detector_threshold": "1",
         "cords": "[]",
         "detector_buffer_vcodec": "auto",
         "detector_buffer_fps": "",
@@ -5622,7 +5638,7 @@ $('body')
             }
             if(!e.d.cords||e.d.cords===''){
                 e.d.cords={
-                    red:{ name:"red",sensitivity:0.0005, points:[[0,0],[0,100],[100,0]] },
+                    red:{ name:"red",sensitivity:0.0005, max_sensitivity:"",points:[[0,0],[0,100],[100,0]] },
                 }
             }
             $.zO.regionViewerDetails=e.d;
