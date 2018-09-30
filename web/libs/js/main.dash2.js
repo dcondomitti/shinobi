@@ -2859,7 +2859,7 @@ $.gR.drawList=function(){
     e.tmp='';
     $.each($.ccio.init('monGroup'),function(n,v){
         if($user.mon_groups[n]){
-           e.tmp+='<li class="mdl-menu__item" group="'+n+'">'+$user.mon_groups[n].name+'</li>'
+           e.tmp+='<li class="mdl-menu__item" groups="'+n+'">'+$user.mon_groups[n].name+'</li>'
         }
     })
     $.gR.e.html(e.tmp)
@@ -4388,7 +4388,7 @@ $.sM.f.submit(function(e){
     $.sM.linkChange()
     e.e=$(this),e.s=e.e.serializeObject();
     e.er=[];
-    if(e.s.pass!==''&&e.password_again===e.s.pass){e.er.push("<%-lang["Passwords don't match"]%>")};
+    if(e.s.pass!==''&&e.password_again===e.s.pass){e.er.push("<%-lang['Passwords don\'t match']%>")};
     if(e.er.length>0){$.sM.e.find('.msg').html(e.er.join('<br>'));return;}
     $.each(e.s,function(n,v){e.s[n]=v.trim()})
     $.ccio.cx({f:'settings',ff:'edit',form:e.s})
@@ -4406,13 +4406,14 @@ $.sM.g.change(function(e){
         $.sM.f.find('[group="'+n+'"]').val(v)
     })
 });
-$.sM.f.find('[group]').change(function(e){
-    e.v=$.sM.g.val();
+$.sM.f.find('[group]').change(function(){
+    e = {}
+    e.v = $.sM.g.val()
     if(!e.v||e.v==''){
-        e.e=$.sM.f.find('[group="name"]')
-        e.name=e.e.val()
+        e.e = $.sM.f.find('[group="name"]')
+        e.name = e.e.val()
         $('.mon_groups .add').click();
-        e.v=$.sM.g.val()
+        e.v = $.sM.g.val()
         e.e.val(e.name)
     }
     e.group=$user.mon_groups[e.v];
