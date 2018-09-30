@@ -16,8 +16,10 @@ s = {
     totalmem : os.totalmem(),
     //Check Platform
     platform : os.platform(),
+    //JSON stringify short-hand
+    s : JSON.stringify,
     //Pretty Print JSON
-    s : function(obj){return JSON.stringify(obj,null,3)},
+    prettyPrint : function(obj){return JSON.stringify(obj,null,3)},
     //Check if Windows
     isWin : (process.platform === 'win32' || process.platform === 'win64'),
     //UTC Offset
@@ -69,6 +71,8 @@ loadLib('ffmpeg')(s,config,function(){
     loadLib('health')(s,config,lang,io)
     //cluster module
     loadLib('childNode')(s,config,lang,io)
+    //cloud uploaders : amazon s3, webdav, blackblaze b2..
+    loadLib('cloudUploaders')(s,config,lang)
     //on-start actions
     loadLib('startup')(s,config,lang)
 })

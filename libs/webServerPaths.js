@@ -84,9 +84,9 @@ module.exports = function(s,config,lang,app){
             delete(s.api[req.params.auth]);
             delete(s.group[req.params.ke].users[req.params.auth]);
             s.sqlQuery("UPDATE Users SET auth=? WHERE auth=? AND ke=? AND uid=?",['',req.params.auth,req.params.ke,req.params.id])
-            res.end(s.s({ok:true,msg:'You have been logged out, session key is now inactive.'}))
+            res.end(s.prettyPrint({ok:true,msg:'You have been logged out, session key is now inactive.'}))
         }else{
-            res.end(s.s({ok:false,msg:'This group key does not exist or this user is not logged in.'}))
+            res.end(s.prettyPrint({ok:false,msg:'This group key does not exist or this user is not logged in.'}))
         }
     });
     //main page
@@ -132,7 +132,7 @@ module.exports = function(s,config,lang,app){
             }else{
                 req.ret.msg=user.lang.updateKeyText2;
             }
-            res.end(s.s(req.ret));
+            res.end(s.prettyPrint(req.ret));
         }
         s.auth(req.params,req.fn,res,req);
     });
@@ -144,7 +144,7 @@ module.exports = function(s,config,lang,app){
         s.auth(req.params,function(user){
             req.ret.ok=true
             req.ret.user=user
-            res.end(s.s(req.ret));
+            res.end(s.prettyPrint(req.ret));
         },res,req);
     })
     //register function
@@ -170,7 +170,7 @@ module.exports = function(s,config,lang,app){
                                     s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[req.params.ke,req.gid,req.body.mail,s.createHash(req.body.pass),req.body.details])
                                     s.tx({f:'add_sub_account',details:req.body.details,ke:req.params.ke,uid:req.gid,mail:req.body.mail},'ADM_'+req.params.ke);
                                 }
-                                res.end(s.s(req.resp));
+                                res.end(s.prettyPrint(req.resp));
                             })
                         }else{
                             req.resp.msg=user.lang['Passwords Don\'t Match'];
@@ -182,7 +182,7 @@ module.exports = function(s,config,lang,app){
                     req.resp.msg=user.lang['Not an Administrator Account'];
                 }
                 if(req.resp.msg){
-                    res.end(s.s(req.resp));
+                    res.end(s.prettyPrint(req.resp));
                 }
             })
         },res,req);
@@ -202,7 +202,7 @@ module.exports = function(s,config,lang,app){
         // brute check
         if(s.failedLoginAttempts[req.body.mail] && s.failedLoginAttempts[req.body.mail].failCount >= 5){
             if(req.query.json=='true'){
-                res.end(s.s({ok:false}))
+                res.end(s.prettyPrint({ok:false}))
             }else{
                 res.render(config.renderPaths.index,{
                     failedLogin:true,
@@ -230,7 +230,7 @@ module.exports = function(s,config,lang,app){
                 delete(data.config)
                 data.ok=true;
                 res.setHeader('Content-Type', 'application/json');
-                res.end(s.s(data))
+                res.end(s.prettyPrint(data))
             }else{
                 data.originalURL = s.getOriginalUrl(req)
                 data.screen=req.params.screen
@@ -262,7 +262,7 @@ module.exports = function(s,config,lang,app){
             // check if JSON
             if(req.query.json=='true'){
                 res.setHeader('Content-Type', 'application/json');
-                res.end(s.s({ok:false}))
+                res.end(s.prettyPrint({ok:false}))
             }else{
                 res.render(config.renderPaths.index,{
                     failedLogin:true,
@@ -556,7 +556,7 @@ module.exports = function(s,config,lang,app){
                             }
                             if(!req.details.acceptedMachines[req.body.machineID]){
                                 req.details.acceptedMachines[req.body.machineID]={}
-                                s.sqlQuery("UPDATE Users SET details=? WHERE ke=? AND uid=?",[s.s(req.details),req.body.ke,req.body.id])
+                                s.sqlQuery("UPDATE Users SET details=? WHERE ke=? AND uid=?",[s.prettyPrint(req.details),req.body.ke,req.body.id])
                             }
                         }
                         req.body.function = s.factorAuth[req.body.ke][req.body.id].function
@@ -582,7 +582,7 @@ module.exports = function(s,config,lang,app){
                 clearTimeout(s.failedLoginAttempts[user.mail].timeout)
                 delete(s.failedLoginAttempts[user.mail])
             }
-            res.end(s.s({ok:true}))
+            res.end(s.prettyPrint({ok:true}))
         })
     })
     // Get HLS stream (m3u8)
@@ -661,7 +661,7 @@ module.exports = function(s,config,lang,app){
                     })
                 }else{
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(s.s({ok:false,msg:'FLV not started or not ready'}))
+                    res.end(s.prettyPrint({ok:false,msg:'FLV not started or not ready'}))
                 }
             },res,req)
         },res,req)
@@ -904,7 +904,7 @@ module.exports = function(s,config,lang,app){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.fn=function(user){
             if(user.permissions.get_monitors==="0"){
-                res.end(s.s([]))
+                res.end(s.prettyPrint([]))
                 return
             }
             if(!req.params.ke){
@@ -1005,7 +1005,7 @@ module.exports = function(s,config,lang,app){
                     res.end(m3u8)
                 }else{
                     if(tvChannelMonitors.length===1){tvChannelMonitors=tvChannelMonitors[0];}
-                    res.end(s.s(tvChannelMonitors));
+                    res.end(s.prettyPrint(tvChannelMonitors));
                 }
             })
         }
@@ -1018,7 +1018,7 @@ module.exports = function(s,config,lang,app){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.fn=function(user){
         if(user.permissions.get_monitors==="0"){
-            res.end(s.s([]))
+            res.end(s.prettyPrint([]))
             return
         }
             req.sql='SELECT * FROM Monitors WHERE ke=?';req.ar=[req.params.ke];
@@ -1092,7 +1092,7 @@ module.exports = function(s,config,lang,app){
                     }
                 })
                 if(r.length===1){r=r[0];}
-                res.end(s.s(r));
+                res.end(s.prettyPrint(r));
             })
         }
         s.auth(req.params,req.fn,res,req);
@@ -1112,7 +1112,7 @@ module.exports = function(s,config,lang,app){
                 user.permissions.watch_videos==="0" ||
                 hasRestrictions && (!user.details.video_view || user.details.video_view.indexOf(req.params.id)===-1)
             ){
-                res.end(s.s([]))
+                res.end(s.prettyPrint([]))
                 return
             }
             var origURL = req.originalUrl.split('/')
@@ -1193,7 +1193,7 @@ module.exports = function(s,config,lang,app){
             }
             s.sqlQuery(req.sql,req.ar,function(err,r){
                 if(!r){
-                    res.end(s.s({total:0,limit:req.query.limit,skip:0,videos:[]}));
+                    res.end(s.prettyPrint({total:0,limit:req.query.limit,skip:0,videos:[]}));
                     return
                 }
                 s.sqlQuery(req.count_sql,req.count_ar,function(err,count){
@@ -1209,7 +1209,7 @@ module.exports = function(s,config,lang,app){
                         req.skip=0
                         req.query.limit=parseInt(req.query.limit)
                     }
-                    res.end(s.s({isUTC:config.useUTC,total:count[0]['COUNT(*)'],limit:req.query.limit,skip:req.skip,videos:r}));
+                    res.end(s.prettyPrint({isUTC:config.useUTC,total:count[0]['COUNT(*)'],limit:req.query.limit,skip:req.skip,videos:r}));
                 })
             })
         },res,req);
@@ -1221,7 +1221,7 @@ module.exports = function(s,config,lang,app){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             if(user.permissions.watch_videos==="0"||user.details.sub&&user.details.allmonitors!=='1'&&user.details.video_view.indexOf(req.params.id)===-1){
-                res.end(s.s([]))
+                res.end(s.prettyPrint([]))
                 return
             }
             req.sql='SELECT * FROM Events WHERE ke=?';req.ar=[req.params.ke];
@@ -1259,14 +1259,14 @@ module.exports = function(s,config,lang,app){
             s.sqlQuery(req.sql,req.ar,function(err,r){
                 if(err){
                     err.sql=req.sql;
-                    res.end(s.s(err));
+                    res.end(s.prettyPrint(err));
                     return
                 }
                 if(!r){r=[]}
                 r.forEach(function(v,n){
                     r[n].details=JSON.parse(v.details);
                 })
-                res.end(s.s(r));
+                res.end(s.prettyPrint(r));
             })
         },res,req);
     });
@@ -1277,7 +1277,7 @@ module.exports = function(s,config,lang,app){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             if(user.permissions.get_logs==="0" || user.details.sub && user.details.view_logs !== '1'){
-                res.end(s.s([]))
+                res.end(s.prettyPrint([]))
                 return
             }
             req.sql='SELECT * FROM Logs WHERE ke=?';req.ar=[req.params.ke];
@@ -1322,14 +1322,14 @@ module.exports = function(s,config,lang,app){
             s.sqlQuery(req.sql,req.ar,function(err,r){
                 if(err){
                     err.sql=req.sql;
-                    res.end(s.s(err));
+                    res.end(s.prettyPrint(err));
                     return
                 }
                 if(!r){r=[]}
                 r.forEach(function(v,n){
                     r[n].info=JSON.parse(v.info)
                 })
-                res.end(s.s(r));
+                res.end(s.prettyPrint(r));
             })
         },res,req);
     });
@@ -1340,7 +1340,7 @@ module.exports = function(s,config,lang,app){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.fn=function(user){
             if(user.permissions.get_monitors==="0"){
-                res.end(s.s([]))
+                res.end(s.prettyPrint([]))
                 return
             }
             req.sql='SELECT * FROM Monitors WHERE ke=?';req.ar=[req.params.ke];
@@ -1363,7 +1363,7 @@ module.exports = function(s,config,lang,app){
                 }else{
                     req.ar=[];
                 }
-                res.end(s.s(req.ar));
+                res.end(s.prettyPrint(req.ar));
             })
         }
         s.auth(req.params,req.fn,res,req);
@@ -1378,7 +1378,7 @@ module.exports = function(s,config,lang,app){
             if(req.params.f !== 'delete'){
                 if(!req.body.data&&!req.query.data){
                     req.ret.msg='No Monitor Data found.'
-                    res.end(s.s(req.ret))
+                    res.end(s.prettyPrint(req.ret))
                     return
                 }
                 try{
@@ -1390,7 +1390,7 @@ module.exports = function(s,config,lang,app){
                 }catch(er){
                     if(!req.monitor){
                         req.ret.msg=user.lang.monitorEditText1;
-                        res.end(s.s(req.ret))
+                        res.end(s.prettyPrint(req.ret))
                     }
                     return
                 }
@@ -1406,7 +1406,7 @@ module.exports = function(s,config,lang,app){
                             }catch(er){
                                 if(!req.monitor.details||!req.monitor.details.stream_type){
                                     req.ret.msg=user.lang.monitorEditText2;
-                                    res.end(s.s(req.ret))
+                                    res.end(s.prettyPrint(req.ret))
                                     return
                                 }else{
                                     req.monitor.details=JSON.stringify(req.monitor.details)
@@ -1463,15 +1463,15 @@ module.exports = function(s,config,lang,app){
                                     s.tx(req.tx,'STR_'+req.monitor.ke);
                                 };
                                 s.tx(req.tx,'GRP_'+req.monitor.ke);
-                                res.end(s.s(req.ret))
+                                res.end(s.prettyPrint(req.ret))
                             })
                         }else{
                             req.ret.msg=user.lang.monitorEditText1;
-                            res.end(s.s(req.ret))
+                            res.end(s.prettyPrint(req.ret))
                         }
                 }else{
                         req.ret.msg=user.lang['Not Permitted'];
-                        res.end(s.s(req.ret))
+                        res.end(s.prettyPrint(req.ret))
                 }
             }else{
                 if(!user.details.sub || user.details.allmonitors === '1' || user.details.monitor_edit.indexOf(req.params.id) > -1 || hasRestrictions && user.details.monitor_create === '1'){
@@ -1506,10 +1506,10 @@ module.exports = function(s,config,lang,app){
                     }
                     req.ret.ok=true;
                     req.ret.msg='Monitor Deleted by user : '+user.uid
-                    res.end(s.s(req.ret))
+                    res.end(s.prettyPrint(req.ret))
                 }else{
                     req.ret.msg=user.lang['Not Permitted'];
-                    res.end(s.s(req.ret))
+                    res.end(s.prettyPrint(req.ret))
                 }
             }
         })
@@ -1523,10 +1523,10 @@ module.exports = function(s,config,lang,app){
                 res.end(user.lang['Not Permitted'])
                 return
             }
-            if(req.params.f===''){req.ret.msg=user.lang.monitorGetText1;res.end(s.s(req.ret));return}
+            if(req.params.f===''){req.ret.msg=user.lang.monitorGetText1;res.end(s.prettyPrint(req.ret));return}
             if(req.params.f!=='stop'&&req.params.f!=='start'&&req.params.f!=='record'){
                 req.ret.msg='Mode not recognized.';
-                res.end(s.s(req.ret));
+                res.end(s.prettyPrint(req.ret));
                 return;
             }
             s.sqlQuery('SELECT * FROM Monitors WHERE ke=? AND mid=?',[req.params.ke,req.params.id],function(err,r){
@@ -1603,7 +1603,7 @@ module.exports = function(s,config,lang,app){
                 }else{
                     req.ret.msg=user.lang['Monitor or Key does not exist.'];
                 }
-                res.end(s.s(req.ret));
+                res.end(s.prettyPrint(req.ret));
             })
         },res,req);
     })
@@ -1634,7 +1634,7 @@ module.exports = function(s,config,lang,app){
                         v.href='/'+req.params.auth+'/fileBin/'+req.params.ke+'/'+req.params.id+'/'+v.details.year+'/'+v.details.month+'/'+v.details.day+'/'+v.name;
                     })
                 }
-                res.end(s.s(r));
+                res.end(s.prettyPrint(r));
             })
         }
         s.auth(req.params,req.fn,res,req);
@@ -1673,7 +1673,7 @@ module.exports = function(s,config,lang,app){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         var failed = function(resp){
             res.setHeader('Content-Type', 'application/json');
-            res.end(s.s(resp))
+            res.end(s.prettyPrint(resp))
         }
         if(req.query.videos && req.query.videos !== ''){
             s.auth(req.params,function(user){
@@ -1857,7 +1857,7 @@ module.exports = function(s,config,lang,app){
         res.setHeader('Content-Type', 'application/json');
         s.auth(req.params,function(user){
             s.log(req.params,{type:'Test',msg:'Hook Test'})
-            res.end(s.s({ok:true}))
+            res.end(s.prettyPrint({ok:true}))
         },res,req);
     })
     //control trigger
@@ -1866,7 +1866,7 @@ module.exports = function(s,config,lang,app){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             s.camera('control',req.params,function(resp){
-                res.end(s.s(resp))
+                res.end(s.prettyPrint(resp))
             });
         },res,req);
     })
@@ -1942,7 +1942,7 @@ module.exports = function(s,config,lang,app){
                 }else{
                     req.ret.msg=user.lang['No such file'];
                 }
-                res.end(s.s(req.ret));
+                res.end(s.prettyPrint(req.ret));
             })
         },res,req);
     })
@@ -2058,12 +2058,12 @@ module.exports = function(s,config,lang,app){
                 default:
                     if(!req.query.url){
                         req.ret.error = 'Missing URL'
-                        res.end(s.s(req.ret));
+                        res.end(s.prettyPrint(req.ret));
                         return
                     }
                     if(user.ffprobe){
                         req.ret.error = 'Account is already probing'
-                        res.end(s.s(req.ret));
+                        res.end(s.prettyPrint(req.ret));
                         return
                     }
                     user.ffprobe=1;
@@ -2084,7 +2084,7 @@ module.exports = function(s,config,lang,app){
                             req.ret.result = stdout+stderr
                         }
                         req.ret.probe = req.probeCommand
-                        res.end(s.s(req.ret));
+                        res.end(s.prettyPrint(req.ret));
                     })
                 break;
             }
@@ -2100,7 +2100,7 @@ module.exports = function(s,config,lang,app){
                 response.ok = false
                 response.msg = msg
                 response.error = error
-                res.end(s.s(response))
+                res.end(s.prettyPrint(response))
             }
             var actionCallback = function(onvifActionResponse){
                 response.ok = true
@@ -2110,7 +2110,7 @@ module.exports = function(s,config,lang,app){
                     response.responseFromDevice = onvifActionResponse
                 }
                 if(onvifActionResponse.soap)response.soap = onvifActionResponse.soap
-                res.end(s.s(response))
+                res.end(s.prettyPrint(response))
             }
             var isEmpty = function(obj) {
                 for(var key in obj) {
@@ -2128,10 +2128,10 @@ module.exports = function(s,config,lang,app){
                     }else if(command){
                         response.ok = true
                         response.repsonseFromDevice = command
-                        res.end(s.s(response))
+                        res.end(s.prettyPrint(response))
                     }else{
                         response.error = 'Big Errors, Please report it to Shinobi Development'
-                        res.end(s.s(response))
+                        res.end(s.prettyPrint(response))
                     }
                 }
                 var action

@@ -13,11 +13,11 @@ module.exports = function(s,config,lang,io){
             s.tx({f:'diskUsed',size:s.group[e.ke].usedSpace,limit:s.group[e.ke].sizeLimit},'GRP_'+e.ke);
         }
     }
-    s.beat=function(){
-        setTimeout(s.beat, 8000);
+    s.heartBeat = function(){
+        setTimeout(s.heartBeat, 8000);
         io.sockets.emit('ping',{beat:1});
     }
-    s.beat();
+    s.heartBeat()
     s.cpuUsage = function(callback){
         k={}
         switch(s.platform){

@@ -45,123 +45,12 @@ module.exports = function(s,config,lang){
             v.details = details
         })
     }
-    s.uploadVideoToWebDav = function(e,k){
-        //e = video object
-        //k = temporary values
-        if(!k)k={};
-        //cloud saver - webdav
-       var wfs = s.group[e.ke].webdav
-       if(wfs && s.group[e.ke].init.use_webdav !== '0' && s.group[e.ke].init.webdav_save === "1"){
-           var webdavUploadDir = s.group[e.ke].init.webdav_dir+e.ke+'/'+e.mid+'/'
-           var startWebDavUpload = function(){
-               s.group[e.ke].mon[e.id].webdavDirExist = true
-               var wfsWriteStream =
-               fs.createReadStream(k.dir + k.filename).pipe(wfs.createWriteStream(webdavUploadDir + k.filename))
-               if(s.group[e.ke].init.webdav_log === '1'){
-                   var webdavRemoteUrl = s.addUserPassToUrl(s.checkCorrectPathEnding(s.group[e.ke].init.webdav_url),s.group[e.ke].init.webdav_user,s.group[e.ke].init.webdav_pass) + s.group[e.ke].init.webdav_dir + e.ke + '/'+e.mid+'/'+k.filename
-                   var save = [
-                       e.mid,
-                       e.ke,
-                       k.startTime,
-                       1,
-                       s.s({
-                           type : 'webdav'
-                       }),
-                       k.filesize,
-                       k.endTime,
-                       webdavRemoteUrl
-                   ]
-                   s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end,href) VALUES (?,?,?,?,?,?,?,?)',save)
-               }
-           }
-           if(s.group[e.ke].mon[e.id].webdavDirExist !== true){
-               //check if webdav dir exist
-               var parentPoint = 0
-               var webDavParentz = webdavUploadDir.split('/')
-               var webDavParents = []
-               webDavParentz.forEach(function(v){
-                   if(v && v !== '')webDavParents.push(v)
-               })
-               var stitchPieces = './'
-               var lastParentCheck = function(){
-                   ++parentPoint
-                   if(parentPoint === webDavParents.length){
-                       startWebDavUpload()
-                   }
-                   checkPathPiece(webDavParents[parentPoint])
-               }
-               var checkPathPiece = function(pathPiece){
-                   if(pathPiece && pathPiece !== ''){
-                       stitchPieces += pathPiece + '/'
-                       wfs.stat(stitchPieces, function(error, stats) {
-                           if(error){
-                               reply = {
-                                   status : error.status,
-                                   msg : lang.WebdavErrorTextTryCreatingDir,
-                                   dir : stitchPieces,
-                               }
-                               s.log(e,{type:lang['Webdav Error'],msg:reply})
-                               wfs.mkdir(stitchPieces, function(error) {
-                                   if(error){
-                                       reply = {
-                                           status : error.status,
-                                           msg : lang.WebdavErrorTextCreatingDir,
-                                           dir : stitchPieces,
-                                       }
-                                       s.log(e,{type:lang['Webdav Error'],msg:reply})
-                                   }else{
-                                       lastParentCheck()
-                                   }
-                               })
-                           }else{
-                               lastParentCheck()
-                           }
-                       })
-                   }else{
-                       ++parentPoint
-                   }
-               }
-               checkPathPiece(webDavParents[0])
-           }else{
-               startWebDavUpload()
-           }
-       }
+    //extender for "s.insertCompletedVideo"
+    s.insertCompletedVideoExtensions = []
+    s.insertCompletedVideoExtender = function(callback){
+        s.insertCompletedVideoExtensions.push(callback)
     }
-    s.uploadVideoToAmazonS3 = function(e,k){
-        //e = video object
-        //k = temporary values
-        if(!k)k={};
-        //cloud saver - amazon s3
-        if(s.group[e.ke].aws_s3 && s.group[e.ke].init.use_aws_s3 !== '0' && s.group[e.ke].init.aws_s3_save === '1'){
-            var fileStream = fs.createReadStream(k.dir+k.filename);
-            fileStream.on('error', function (err) {
-                console.error(err)
-            })
-            s.group[e.ke].aws_s3.upload({
-                Bucket: s.group[e.ke].init.aws_s3_bucket,
-                Key: s.group[e.ke].init.aws_s3_dir+e.ke+'/'+e.mid+'/'+k.filename,
-                Body:fileStream,
-                ACL:'public-read'
-            },function(err,data){
-                if(err){
-                    s.log(e,{type:lang['Amazon S3 Upload Error'],msg:err})
-                }
-                if(s.group[e.ke].init.aws_s3_log === '1' && data && data.Location){
-                    var save = [
-                        e.mid,
-                        e.ke,
-                        k.startTime,
-                        1,
-                        '{}',
-                        k.filesize,
-                        k.endTime,
-                        data.Location
-                    ]
-                    s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end,href) VALUES (?,?,?,?,?,?,?,?)',save)
-                }
-            })
-        }
-    }
+    //on video completion
     s.insertCompletedVideo = function(e,k){
         //e = video object
         //k = temporary values
@@ -246,8 +135,9 @@ module.exports = function(s,config,lang){
                         end:k.endTime
                     },'GRP_'+e.ke,'video_view');
                 }
-                s.uploadVideoToWebDav(e,k)
-                s.uploadVideoToAmazonS3(e,k)
+                s.insertCompletedVideoExtensions.forEach(function(extender){
+                    extender(e,k)
+                })
                 k.details = {}
                 if(e.details&&e.details.dir&&e.details.dir!==''){
                     k.details.dir = e.details.dir
@@ -264,8 +154,10 @@ module.exports = function(s,config,lang){
                     k.endTime,
                 ]
                 s.sqlQuery('INSERT INTO Videos (mid,ke,time,ext,status,details,size,end) VALUES (?,?,?,?,?,?,?,?)',save)
+                //purge over max
+                s.purgeDiskForGroup(e)
                 //send new diskUsage values
-                s.purgeDiskForGroup(e,k)
+                s.setDiskUsedForGroup(e,k.filesizeMB)
             }
         }
     }
@@ -308,10 +200,38 @@ module.exports = function(s,config,lang){
             }
         })
     }
+    s.deleteVideoFromCloudExtensions = {}
+    s.deleteVideoFromCloudExtensionsRunner = function(e,storageType,video){
+        // e = user
+        if(!storageType){
+            var videoDetails = JSON.parse(r.details)
+            videoDetails.type = videoDetails.type || 's3'
+        }
+        if(s.deleteVideoFromCloudExtensions[storageType]){
+            s.deleteVideoFromCloudExtensions[storageType](e,video,function(){
+                s.tx({
+                    f: 'video_delete_cloud',
+                    mid: e.mid,
+                    ke: e.ke,
+                    time: e.time,
+                    end: e.end
+                },'GRP_'+e.ke);
+            })
+        }
+    }
     s.deleteVideoFromCloud = function(e){
         //e = video object
-        s.sqlQuery('DELETE FROM `Cloud Videos` WHERE `mid`=? AND `ke`=? AND `time`=?',[e.id,e.ke,new Date(e.time)],function(){
-            s.tx({f:'video_delete_cloud',mid:e.mid,ke:e.ke,time:e.time,end:e.end},'GRP_'+e.ke);
+        var videoSelector = [e.id,e.ke,new Date(e.time)]
+        s.sqlQuery('SELECT * FROM `Cloud Videos` WHERE `mid`=? AND `ke`=? AND `time`=?',videoSelector,function(err,r){
+            if(r&&r[0]){
+                r = r[0]
+                s.sqlQuery('DELETE FROM `Cloud Videos` WHERE `mid`=? AND `ke`=? AND `time`=?',videoSelector,function(){
+                    s.deleteVideoFromCloudExtensionsRunner(e,r)
+                })
+            }else{
+//                    console.log('Delete Failed',e)
+//                    console.error(err)
+            }
         })
     }
 }

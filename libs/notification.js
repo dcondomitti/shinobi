@@ -32,6 +32,29 @@ module.exports = function(s,config,lang){
                     }
                 })
             }
+            var loadDiscordBotForUser = function(user){
+                ar=JSON.parse(user.details);
+                //discordbot
+                if(!s.group[user.ke].discordBot &&
+                   config.discordBot === true &&
+                   ar.discordbot === '1' &&
+                   ar.discordbot_token !== ''
+                  ){
+                    s.group[user.ke].discordBot = new Discord.Client()
+                    s.group[user.ke].discordBot.on('ready', () => {
+                        console.log(`${user.mail} : Discord Bot Logged in as ${s.group[user.ke].discordBot.user.tag}!`)
+                    })
+                    s.group[user.ke].discordBot.login(ar.discordbot_token)
+                }
+            }
+            var unloadDiscordBotForUser = function(user){
+                if(s.group[user.ke].discordBot && s.group[user.ke].discordBot.destroy){
+                    s.group[user.ke].discordBot.destroy()
+                    delete(s.group[user.ke].discordBot)
+                }
+            }
+            s.loadGroupAppExtender(loadDiscordBotForUser)
+            s.unloadGroupAppExtender(unloadDiscordBotForUser)
         }catch(err){
             console.log('Could not start Discord bot, please run "npm install discord.js" inside the Shinobi folder.')
             s.discordMsg = function(){}

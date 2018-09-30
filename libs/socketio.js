@@ -597,13 +597,14 @@ module.exports = function(s,config,lang,io){
                                             }
                                             ///unchangeable from client side, so reset them in case they did.
                                             d.form.details=JSON.parse(d.form.details)
+                                            s.beforeAccountSaveExtensions.forEach(function(extender){
+                                                extender(d)
+                                            })
                                             //admin permissions
                                             d.form.details.permissions=d.d.permissions
                                             d.form.details.edit_size=d.d.edit_size
                                             d.form.details.edit_days=d.d.edit_days
                                             d.form.details.use_admin=d.d.use_admin
-                                            d.form.details.use_webdav=d.d.use_webdav
-                                            d.form.details.use_aws_s3=d.d.use_aws_s3
                                             d.form.details.use_ldap=d.d.use_ldap
                                             //check
                                             if(d.d.edit_days=="0"){
@@ -624,7 +625,7 @@ module.exports = function(s,config,lang,io){
                                                 if(d.d.days){d.form.details.days=d.d.days;}
                                                 delete(d.form.details.mon_groups)
                                             }
-                                            var newSize = d.form.details.size
+                                            var newSize = d.form.details.size || 10000
                                             d.form.details=JSON.stringify(d.form.details)
                                             ///
                                             d.set=[],d.ar=[];
@@ -637,14 +638,15 @@ module.exports = function(s,config,lang,io){
                                             d.ar.push(d.ke),d.ar.push(d.uid);
                                             s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE ke=? AND uid=?',d.ar,function(err,r){
                                                 if(!d.d.sub){
+                                                    var user = Object.assign(d.form,{ke : d.ke})
+                                                    var userDetails = JSON.parse(d.form.details)
                                                     s.group[d.ke].sizeLimit = parseFloat(newSize)
-                                                    s.group[d.ke].webdav = null
-                                                    s.group[d.ke].aws = null
-                                                    s.group[d.ke].aws_s3 = null
-                                                    if(s.group[d.ke].discordBot && s.group[d.ke].discordBot.destroy){
-                                                        s.group[d.ke].discordBot.destroy()
-                                                        delete(s.group[d.ke].discordBot)
-                                                    }
+                                                    s.onAccountSaveExtensions.forEach(function(extender){
+                                                        extender(s.group[d.ke],userDetails)
+                                                    })
+                                                    s.unloadGroupAppExtensions.forEach(function(extender){
+                                                        extender(user)
+                                                    })
                                                     s.loadGroupApps(d)
                                                 }
                                                 tx({f:'user_settings_change',uid:d.uid,ke:d.ke,form:d.form});

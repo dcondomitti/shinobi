@@ -2,18 +2,27 @@ var fs = require('fs');
 var events = require('events');
 var spawn = require('child_process').spawn;
 var exec = require('child_process').exec;
-var request = require('request');
-var webdav = require("webdav-fs");
 module.exports = function(s,config){
-    s.purgeDiskForGroup = function(e,video){
+    s.purgeDiskForGroup = function(e){
         if(s.group[e.ke].diskUsedEmitter){
-            s.group[e.ke].diskUsedEmitter.emit('purge',video)
+            s.group[e.ke].diskUsedEmitter.emit('purge')
         }
     }
     s.setDiskUsedForGroup = function(e,bytes){
         //`bytes` will be used as the value to add or substract
         if(s.group[e.ke].diskUsedEmitter){
             s.group[e.ke].diskUsedEmitter.emit('set',bytes)
+        }
+    }
+    s.purgeCloudDiskForGroup = function(e,storageType){
+        if(s.group[e.ke].diskUsedEmitter){
+            s.group[e.ke].diskUsedEmitter.emit('purgeCloud',storageType)
+        }
+    }
+    s.setCloudDiskUsedForGroup = function(e,usage){
+        //`bytes` will be used as the value to add or substract
+        if(s.group[e.ke].diskUsedEmitter){
+            s.group[e.ke].diskUsedEmitter.emit('setCloud',usage)
         }
     }
     s.sendDiskUsedAmountToClients = function(e){
@@ -29,7 +38,6 @@ module.exports = function(s,config){
             s.sqlQuery('INSERT INTO Logs (ke,mid,info) VALUES (?,?,?)',[e.ke,e.mid,s.s(x)]);
         }
         s.tx({f:'log',ke:e.ke,mid:e.mid,log:x,time:s.timeObject()},'GRPLOG_'+e.ke);
-    //    s.systemLog('s.log : ',{f:'log',ke:e.ke,mid:e.mid,log:x,time:s.timeObject()},'GRP_'+e.ke)
     }
     s.loadGroup = function(e){
         if(!s.group[e.ke]){
@@ -49,7 +57,29 @@ module.exports = function(s,config){
         //emit the changes to connected users
         s.sendDiskUsedAmountToClients(e)
     }
+    s.loadGroupAppExtensions = []
+    s.loadGroupAppExtender = function(callback){
+        s.loadGroupAppExtensions.push(callback)
+    }
+    s.unloadGroupAppExtensions = []
+    s.unloadGroupAppExtender = function(callback){
+        s.unloadGroupAppExtensions.push(callback)
+    }
+    s.cloudDisksLoaded = []
+    s.cloudDisksLoader = function(storageType){
+        s.cloudDisksLoaded.push(storageType)
+    }
+    s.onAccountSaveExtensions = []
+    s.onAccountSave = function(callback){
+        s.onAccountSaveExtensions.push(callback)
+    }
+    s.beforeAccountSaveExtensions = []
+    s.beforeAccountSave = function(callback){
+        s.beforeAccountSaveExtensions.push(callback)
+    }
+    s.cloudDiskUseStartupExtensions = {}
     s.loadGroupApps = function(e){
+        // e = user
         if(!s.group[e.ke].init){
             s.group[e.ke].init={};
         }
@@ -57,65 +87,73 @@ module.exports = function(s,config){
             if(r&&r[0]){
                 r=r[0];
                 ar=JSON.parse(r.details);
-                //owncloud/webdav
-                if(!s.group[e.ke].webdav &&
-                   ar.webdav_user&&
-                   ar.webdav_user!==''&&
-                   ar.webdav_pass&&
-                   ar.webdav_pass!==''&&
-                   ar.webdav_url&&
-                   ar.webdav_url!==''
-                  ){
-                    if(!ar.webdav_dir||ar.webdav_dir===''){
-                        ar.webdav_dir='/'
-                    }
-                    ar.webdav_dir = s.checkCorrectPathEnding(ar.webdav_dir)
-                    s.group[e.ke].webdav = webdav(
-                        ar.webdav_url,
-                        ar.webdav_user,
-                        ar.webdav_pass
-                    )
-                }
-                //Amazon S3
-                if(!s.group[e.ke].aws &&
-                   !s.group[e.ke].aws_s3 &&
-                   ar.aws_s3 !== '0' &&
-                   ar.aws_accessKeyId !== ''&&
-                   ar.aws_secretAccessKey &&
-                   ar.aws_secretAccessKey !== ''&&
-                   ar.aws_region &&
-                   ar.aws_region !== ''&&
-                   ar.aws_s3_bucket !== ''
-                  ){
-                    if(!ar.aws_s3_dir || ar.aws_s3_dir === '/'){
-                        ar.aws_s3_dir = ''
-                    }
-                    if(ar.aws_s3_dir !== ''){
-                        ar.aws_s3_dir = s.checkCorrectPathEnding(ar.aws_s3_dir)
-                    }
-                    s.group[e.ke].aws = new require("aws-sdk")
-                    s.group[e.ke].aws.config = new s.group[e.ke].aws.Config({
-                        accessKeyId: ar.aws_accessKeyId,
-                        secretAccessKey: ar.aws_secretAccessKey,
-                        region: ar.aws_region
-                    })
-                    s.group[e.ke].aws_s3 = new s.group[e.ke].aws.S3();
-                }
-                //discordbot
-                if(!s.group[e.ke].discordBot &&
-                   config.discordBot === true &&
-                   ar.discordbot === '1' &&
-                   ar.discordbot_token !== ''
-                  ){
-                    s.group[e.ke].discordBot = new Discord.Client()
-                    s.group[e.ke].discordBot.on('ready', () => {
-                        console.log(`${r.mail} : Discord Bot Logged in as ${s.group[e.ke].discordBot.user.tag}!`)
-                    })
-                    s.group[e.ke].discordBot.login(ar.discordbot_token)
-                }
+                //load extenders
+                s.loadGroupAppExtensions.forEach(function(extender){
+                    extender(r)
+                })
                 //disk Used Emitter
                 if(!s.group[e.ke].diskUsedEmitter){
                     s.group[e.ke].diskUsedEmitter = new events.EventEmitter()
+                    s.group[e.ke].diskUsedEmitter.on('setCloud',function(currentChange){
+                        var amount = currentChange.amount
+                        var storageType = currentChange.storageType
+                        var cloudDisk = s.group[e.ke].cloudDiskUse[storageType]
+                        //validate current values
+                        if(!cloudDisk.usedSpace){
+                            cloudDisk.usedSpace = 0
+                        }else{
+                            cloudDisk.usedSpace = parseFloat(cloudDisk.usedSpace)
+                        }
+                        if(cloudDisk.usedSpace < 0 || isNaN(cloudDisk.usedSpace)){
+                            cloudDisk.usedSpace = 0
+                        }
+                        //change global size value
+                        cloudDisk.usedSpace = cloudDisk.usedSpace + amount
+                    })
+                    s.group[e.ke].diskUsedEmitter.on('purgeCloud',function(storageType){
+                        if(config.cron.deleteOverMax === true){
+                                //set queue processor
+                                var finish=function(){
+                                    // s.sendDiskUsedAmountToClients(e)
+                                }
+                                var deleteVideos = function(){
+                                    //run purge command
+                                    var cloudDisk = s.group[e.ke].cloudDiskUse[storageType]
+                                    if(cloudDisk.sizeLimitCheck && cloudDisk.usedSpace > (cloudDisk.sizeLimit*config.cron.deleteOverMaxOffset)){
+                                            s.sqlQuery('SELECT * FROM `Cloud Videos` WHERE status != 0 AND ke=? AND details LIKE \'%"type":"'+storageType+'"%\' ORDER BY `time` ASC LIMIT 2',[e.ke],function(err,videos){
+                                                var videosToDelete = []
+                                                var queryValues = [e.ke]
+                                                if(!videos)return console.log(err)
+                                                videos.forEach(function(video){
+                                                    video.dir = s.getVideoDirectory(video) + s.formattedTime(video.time) + '.' + video.ext
+                                                    videosToDelete.push('(mid=? AND `time`=?)')
+                                                    queryValues.push(video.mid)
+                                                    queryValues.push(video.time)
+                                                    s.setCloudDiskUsedForGroup(e,{
+                                                        amount : -(video.size/1000000),
+                                                        storageType : storageType
+                                                    })
+                                                    s.deleteVideoFromCloudExtensionsRunner(e,storageType,video)
+                                                })
+                                                if(videosToDelete.length > 0){
+                                                    videosToDelete = videosToDelete.join(' OR ')
+                                                    s.sqlQuery('DELETE FROM `Cloud Videos` WHERE ke =? AND ('+videosToDelete+')',queryValues,function(){
+                                                        deleteVideos()
+                                                    })
+                                                }else{
+                                                    finish()
+                                                }
+                                            })
+                                    }else{
+                                        finish()
+                                    }
+                                }
+                                deleteVideos()
+                        }else{
+                            // s.sendDiskUsedAmountToClients(e)
+                        }
+                    })
+                    //s.setDiskUsedForGroup
                     s.group[e.ke].diskUsedEmitter.on('set',function(currentChange){
                         //validate current values
                         if(!s.group[e.ke].usedSpace){
@@ -131,30 +169,39 @@ module.exports = function(s,config){
                         //remove value just used from queue
                         s.sendDiskUsedAmountToClients(e)
                     })
-                    s.group[e.ke].diskUsedEmitter.on('purge',function(currentPurge){
-                        s.setDiskUsedForGroup(e,currentPurge.filesizeMB)
-                        if(config.cron.deleteOverMax===true){
+                    s.group[e.ke].diskUsedEmitter.on('purge',function(){
+                        if(config.cron.deleteOverMax === true){
                                 //set queue processor
                                 var finish=function(){
                                     s.sendDiskUsedAmountToClients(e)
                                 }
                                 var deleteVideos = function(){
                                     //run purge command
-                                    if(s.group[e.ke].usedSpace>(s.group[e.ke].sizeLimit*config.cron.deleteOverMaxOffset)){
-                                            s.sqlQuery('SELECT * FROM Videos WHERE status != 0 AND details NOT LIKE \'%"archived":"1"%\' AND ke=? ORDER BY `time` ASC LIMIT 2',[e.ke],function(err,evs){
-                                                k.del=[];k.ar=[e.ke];
-                                                if(!evs)return console.log(err)
-                                                evs.forEach(function(ev){
-                                                    ev.dir=s.getVideoDirectory(ev)+s.formattedTime(ev.time)+'.'+ev.ext;
-                                                    k.del.push('(mid=? AND `time`=?)');
-                                                    k.ar.push(ev.mid),k.ar.push(ev.time);
-                                                    s.file('delete',ev.dir);
-                                                    s.setDiskUsedForGroup(e,-(ev.size/1000000))
-                                                    s.tx({f:'video_delete',ff:'over_max',filename:s.formattedTime(ev.time)+'.'+ev.ext,mid:ev.mid,ke:ev.ke,time:ev.time,end:s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+e.ke);
-                                                });
-                                                if(k.del.length>0){
-                                                    k.qu=k.del.join(' OR ');
-                                                    s.sqlQuery('DELETE FROM Videos WHERE ke =? AND ('+k.qu+')',k.ar,function(){
+                                    if(s.group[e.ke].usedSpace > (s.group[e.ke].sizeLimit*config.cron.deleteOverMaxOffset)){
+                                            s.sqlQuery('SELECT * FROM Videos WHERE status != 0 AND details NOT LIKE \'%"archived":"1"%\' AND ke=? ORDER BY `time` ASC LIMIT 2',[e.ke],function(err,videos){
+                                                var videosToDelete = []
+                                                var queryValues = [e.ke]
+                                                if(!videos)return console.log(err)
+                                                videos.forEach(function(video){
+                                                    video.dir = s.getVideoDirectory(video) + s.formattedTime(video.time) + '.' + video.ext
+                                                    videosToDelete.push('(mid=? AND `time`=?)')
+                                                    queryValues.push(video.mid)
+                                                    queryValues.push(video.time)
+                                                    s.file('delete',video.dir)
+                                                    s.setDiskUsedForGroup(e,-(video.size/1000000))
+                                                    s.tx({
+                                                        f: 'video_delete',
+                                                        ff: 'over_max',
+                                                        filename: s.formattedTime(video.time)+'.'+video.ext,
+                                                        mid: video.mid,
+                                                        ke: video.ke,
+                                                        time: video.time,
+                                                        end: s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')
+                                                    },'GRP_'+e.ke)
+                                                })
+                                                if(videosToDelete.length > 0){
+                                                    videosToDelete = videosToDelete.join(' OR ')
+                                                    s.sqlQuery('DELETE FROM Videos WHERE ke =? AND ('+videosToDelete+')',queryValues,function(){
                                                         deleteVideos()
                                                     })
                                                 }else{

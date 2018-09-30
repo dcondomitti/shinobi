@@ -208,6 +208,19 @@
                     </label>
                 </div>
                 <div class="form-group">
+                    <label><div><span><%-lang['Use Max Storage Amount']%></span></div>
+                            <div><select class="form-control" detail="use_webdav_size_limit" selector="h_webdavzl">
+                                <option value="0" selected><%-lang.No%></option>
+                                <option value="1"><%-lang.Yes%></option>
+                            </select></div>
+                    </label>
+                </div>
+                <div class="form-group h_webdavzl_input h_webdavzl_1">
+                    <label><div><span><%-lang['Max Storage Amount']%></span></div>
+                        <div><input class="form-control" placeholder="10000" detail="webdav_size_limit"></div>
+                    </label>
+                </div>
+                <div class="form-group">
                     <label><div><span><%-lang['Save Directory']%></span></div>
                         <div><input class="form-control" placeholder="/" detail="webdav_dir"></div>
                     </label>
@@ -275,8 +288,77 @@
                     </label>
                 </div>
                 <div class="form-group">
+                    <label><div><span><%-lang['Use Max Storage Amount']%></span></div>
+                            <div><select class="form-control" detail="use_aws_s3_size_limit" selector="h_s3zl">
+                                <option value="0" selected><%-lang.No%></option>
+                                <option value="1"><%-lang.Yes%></option>
+                            </select></div>
+                    </label>
+                </div>
+                <div class="form-group h_s3zl_input h_s3zl_1">
+                    <label><div><span><%-lang['Max Storage Amount']%></span></div>
+                        <div><input class="form-control" placeholder="10000" detail="aws_s3_size_limit"></div>
+                    </label>
+                </div>
+                <div class="form-group">
                     <label><div><span><%-lang['Save Directory']%></span></div>
                         <div><input class="form-control" placeholder="" detail="aws_s3_dir"></div>
+                    </label>
+                </div>
+            </div>
+            <% } %>
+            <% if(details.use_bb_b2!=='0'){ %>
+          <div class="form-group-group forestgreen">
+                <h4><%-lang['Backblaze B2']%></h4>
+                <div class="form-group">
+                    <label><div><span><%-lang.Bucket%></span></div>
+                        <div><input class="form-control" detail="bb_b2_bucket" placeholder="Example : slippery-seal"></div>
+                    </label>
+                </div>
+                <div class="row">
+                    <div class="form-group col-md-12">
+                        <label><div><span><%-lang.accountId%></span></div>
+                            <div><input class="form-control" detail="bb_b2_accountId"></div>
+                        </label>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label><div><span><%-lang.applicationKey%></span></div>
+                            <div><input class="form-control" type="password" detail="bb_b2_applicationKey"></div>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang.Autosave%></span></div>
+                            <div><select class="form-control" detail="bb_b2_save">
+                                <option value="0" selected><%-lang.No%></option>
+                                <option value="1"><%-lang.Yes%></option>
+                            </select></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang['Save Links to Database']%></span></div>
+                            <div><select class="form-control" detail="bb_b2_log">
+                                <option value="0"><%-lang.No%></option>
+                                <option value="1" selected><%-lang.Yes%></option>
+                            </select></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang['Use Max Storage Amount']%></span></div>
+                            <div><select class="form-control" detail="use_bb_b2_size_limit" selector="h_b2zl">
+                                <option value="0" selected><%-lang.No%></option>
+                                <option value="1"><%-lang.Yes%></option>
+                            </select></div>
+                    </label>
+                </div>
+                <div class="form-group h_b2zl_input h_b2zl_1">
+                    <label><div><span><%-lang['Max Storage Amount']%></span></div>
+                        <div><input class="form-control" placeholder="10000" detail="bb_b2_size_limit"></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang['Save Directory']%></span></div>
+                        <div><input class="form-control" placeholder="" detail="bb_b2_dir"></div>
                     </label>
                 </div>
             </div>

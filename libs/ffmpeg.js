@@ -84,18 +84,6 @@ module.exports = function(s,config,callback){
             failback()
         }
     }
-    //ffmpeg location
-    if(!config.ffmpegDir){
-        windowsFfmpegCheck(function(){
-            unixFfmpegCheck(function(){
-                ffbinaryCheck(function(){
-                    ffmpegStaticCheck(function(){
-                        console.log('No FFmpeg found.')
-                    })
-                })
-            })
-        })
-    }
     s.splitForFFPMEG = function (ffmpegCommandAsString) {
         //this function ignores spaces inside quotes.
         return ffmpegCommandAsString.match(/\\?.|^$/g).reduce((p, c) => {
@@ -845,6 +833,17 @@ module.exports = function(s,config,callback){
         }
         x.ffmpegCommandString = s.splitForFFPMEG(x.ffmpegCommandString.replace(/\s+/g,' ').trim())
         return spawn(config.ffmpegDir,x.ffmpegCommandString,{detached: true,stdio:x.stdioPipes});
+    }
+    if(!config.ffmpegDir){
+        windowsFfmpegCheck(function(){
+            unixFfmpegCheck(function(){
+                ffbinaryCheck(function(){
+                    ffmpegStaticCheck(function(){
+                        console.log('No FFmpeg found.')
+                    })
+                })
+            })
+        })
     }
     if(downloadingFfmpeg === false){
         //not downloading ffmpeg
