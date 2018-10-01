@@ -7,6 +7,10 @@ var onvif = require('node-onvif');
 var request = require('request');
 var connectionTester = require('connection-tester');
 module.exports = function(s,config,lang){
+    s.onDetectorNoTriggerTimeoutExensions = []
+    s.onDetectorNoTriggerTimeout = function(callback){
+        s.onDetectorNoTriggerTimeoutExensions.push(callback)
+    }
     s.initiateMonitorObject = function(e){
         if(!s.group[e.ke]){s.group[e.ke]={}};
         if(!s.group[e.ke].mon){s.group[e.ke].mon={}}
@@ -778,31 +782,13 @@ module.exports = function(s,config,lang){
                             e.details.detector_notrigger_timeout=10
                         }
                         e.detector_notrigger_timeout=parseFloat(e.details.detector_notrigger_timeout)*1000*60;
-                        s.sqlQuery('SELECT mail FROM Users WHERE ke=? AND details NOT LIKE ?',[e.ke,'%"sub"%'],function(err,r){
-                            r=r[0];
-                            s.group[e.ke].mon[e.id].detector_notrigger_timeout_function=function(){
-                                if(config.mail&&e.details.detector_notrigger_mail=='1'){
-                                    e.mailOptions = {
-                                        from: config.mail.from, // sender address
-                                        to: r.mail, // list of receivers
-                                        subject: lang.NoMotionEmailText1+' '+e.name+' ('+e.id+')', // Subject line
-                                        html: '<i>'+lang.NoMotionEmailText2+' '+e.details.detector_notrigger_timeout+' '+lang.minutes+'.</i>',
-                                    };
-                                    e.mailOptions.html+='<div><b>'+lang['Monitor Name']+' </b> : '+e.name+'</div>'
-                                    e.mailOptions.html+='<div><b>'+lang['Monitor ID']+' </b> : '+e.id+'</div>'
-                                    s.nodemailer.sendMail(e.mailOptions, (error, info) => {
-                                        if (error) {
-                                           s.systemLog('detector:notrigger:sendMail',error)
-                                            s.tx({f:'error',ff:'detector_notrigger_mail',id:e.id,ke:e.ke,error:error},'GRP_'+e.ke);
-                                            return ;
-                                        }
-                                        s.tx({f:'detector_notrigger_mail',id:e.id,ke:e.ke,info:info},'GRP_'+e.ke);
-                                    });
-                                }
-                            }
-                            clearInterval(s.group[e.ke].mon[e.id].detector_notrigger_timeout)
-                            s.group[e.ke].mon[e.id].detector_notrigger_timeout=setInterval(s.group[e.ke].mon[e.id].detector_notrigger_timeout_function,s.group[e.ke].mon[e.id].detector_notrigger_timeout)
-                        })
+                        s.group[e.ke].mon[e.id].detector_notrigger_timeout_function = function(){
+                            s.onDetectorNoTriggerTimeoutExensions.forEach(function(extender){
+                                extender(r,e)
+                            })
+                        }
+                        clearInterval(s.group[e.ke].mon[e.id].detector_notrigger_timeout)
+                        s.group[e.ke].mon[e.id].detector_notrigger_timeout=setInterval(s.group[e.ke].mon[e.id].detector_notrigger_timeout_function,s.group[e.ke].mon[e.id].detector_notrigger_timeout)
                     }
                     var resetRecordingCheck = function(){
                         clearTimeout(s.group[e.ke].mon[e.id].checker)

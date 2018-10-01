@@ -9,8 +9,8 @@ module.exports = function(s,config,lang){
             case's.tx':
                 s.tx(d.data,d.to)
             break;
-            case'sql':
-                sql.query(d.query,d.values);
+            case's.sqlQuery':
+                s.sqlQuery(d.query,d.values)
             break;
             case'log':
                 s.systemLog('PLUGIN : '+d.plug+' : ',d)

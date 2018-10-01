@@ -4,40 +4,24 @@ var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var request = require('request');
 module.exports = function(s,config,lang){
+    s.onEventTriggerExtensions = []
+    s.onEventTrigger = function(callback){
+        s.onEventTriggerExtensions.push(callback)
+    }
+    s.onEventTriggerBeforeFilterExtensions = []
+    s.onEventTriggerBeforeFilter = function(callback){
+        s.onEventTriggerBeforeFilterExtensions.push(callback)
+    }
+    s.onFilterEventExtensions = []
+    s.onFilterEvent = function(callback){
+        s.onFilterEventExtensions.push(callback)
+    }
     s.filterEvents = function(x,d){
         switch(x){
             case'archive':
                 d.videos.forEach(function(v,n){
                     s.video('archive',v)
                 })
-            break;
-            case'email':
-                if(d.videos&&d.videos.length>0){
-                    d.videos.forEach(function(v,n){
-
-                    })
-                    d.mailOptions = {
-                        from: config.mail.from, // sender address
-                        to: d.mail, // list of receivers
-                        subject: lang['Filter Matches']+' : '+d.name, // Subject line
-                        html: lang.FilterMatchesText1+' '+d.videos.length+' '+lang.FilterMatchesText2,
-                    };
-                    if(d.execute&&d.execute!==''){
-                        d.mailOptions.html+='<div><b>'+lang.Executed+' :</b> '+d.execute+'</div>'
-                    }
-                    if(d.delete==='1'){
-                        d.mailOptions.html+='<div><b>'+lang.Deleted+' :</b> '+lang.Yes+'</div>'
-                    }
-                    d.mailOptions.html+='<div><b>'+lang.Query+' :</b> '+d.query+'</div>'
-                    d.mailOptions.html+='<div><b>'+lang['Filter ID']+' :</b> '+d.id+'</div>'
-                    nodemailer.sendMail(d.mailOptions, (error, info) => {
-                        if (error) {
-                            s.tx({f:'error',ff:'filter_mail',ke:d.ke,error:error},'GRP_'+d.ke);
-                            return ;
-                        }
-                        s.tx({f:'filter_mail',ke:d.ke,info:info},'GRP_'+d.ke);
-                    });
-                }
             break;
             case'delete':
                 d.videos.forEach(function(v,n){
@@ -48,6 +32,9 @@ module.exports = function(s,config,lang){
                 exec(d.execute,{detached: true})
             break;
         }
+        s.onEventTriggerBeforeFilterExtensions.forEach(function(extender){
+            extender(x,d)
+        })
     }
     s.triggerEvent = function(d){
         var filter = {
@@ -55,13 +42,14 @@ module.exports = function(s,config,lang){
             addToMotionCounter : true,
             useLock : true,
             save : true,
-            discord : true,
             webhook : true,
             command : true,
-            mail : true,
             record : true,
             indifference : false
         }
+        s.onEventTriggerBeforeFilterExtensions.forEach(function(extender){
+            extender(d,filter)
+        })
         if(s.group[d.ke].mon[d.id].open){
             d.details.videoTime = s.group[d.ke].mon[d.id].open;
         }
@@ -239,7 +227,7 @@ module.exports = function(s,config,lang){
             if(filter.save && currentConfig.detector_save==='1'){
                 s.sqlQuery('INSERT INTO Events (ke,mid,details) VALUES (?,?,?)',[d.ke,d.id,detailString])
             }
-            if(currentConfig.detector_notrigger=='1'){
+            if(currentConfig.detector_notrigger === '1'){
                 var detector_notrigger_timeout
                 if(!currentConfig.detector_notrigger_timeout||currentConfig.detector_notrigger_timeout===''){
                     detector_notrigger_timeout = 10
@@ -248,24 +236,6 @@ module.exports = function(s,config,lang){
                 s.group[d.ke].mon[d.id].detector_notrigger_timeout = detector_notrigger_timeout;
                 clearInterval(s.group[d.ke].mon[d.id].detector_notrigger_timeout)
                 s.group[d.ke].mon[d.id].detector_notrigger_timeout = setInterval(s.group[d.ke].mon[d.id].detector_notrigger_timeout_function,detector_notrigger_timeout)
-            }
-            if(filter.webhook && currentConfig.detector_webhook=='1'){
-                var detector_webhook_url = currentConfig.detector_webhook_url
-                    .replace(/{{TIME}}/g,s.timeObject(new Date).format())
-                    .replace(/{{REGION_NAME}}/g,d.details.name)
-                    .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
-                    .replace(/{{MONITOR_ID}}/g,d.id)
-                    .replace(/{{GROUP_KEY}}/g,d.ke)
-                    .replace(/{{DETAILS}}/g,detailString)
-                    if(d.details.confidence){
-                        detector_webhook_url = detector_webhook_url
-                        .replace(/{{CONFIDENCE}}/g,d.details.confidence)
-                    }
-                request({url:detector_webhook_url,method:'GET',encoding:null},function(err,data){
-                    if(err){
-                        s.log(d,{type:lang["Event Webhook Error"],msg:{error:err,data:data}})
-                    }
-                })
             }
             var detector_timeout
             if(!currentConfig.detector_timeout||currentConfig.detector_timeout===''){
@@ -351,150 +321,35 @@ module.exports = function(s,config,lang){
 
                 }).end();
             }
-            var currentTime = new Date()
-            var currentTimestamp = s.timeObject(currentTime).format()
-            var screenshotName = 'Motion_'+(d.mon.name.replace(/[^\w\s]/gi,''))+'_'+d.id+'_'+d.ke+'_'+s.formattedTime()
-            var screenshotBuffer = null
+            d.currentTime = new Date()
+            d.currentTimestamp = s.timeObject(d.currentTime).format()
+            d.screenshotName = 'Motion_'+(d.mon.name.replace(/[^\w\s]/gi,''))+'_'+d.id+'_'+d.ke+'_'+s.formattedTime()
+            d.screenshotBuffer = null
 
-            //discord bot
-            if(filter.discord && currentConfig.detector_discordbot === '1' && !s.group[d.ke].mon[d.id].detector_discordbot){
-                var detector_discordbot_timeout
-                if(!currentConfig.detector_discordbot_timeout||currentConfig.detector_discordbot_timeout===''){
-                    detector_discordbot_timeout = 1000*60*10;
-                }else{
-                    detector_discordbot_timeout = parseFloat(currentConfig.detector_discordbot_timeout)*1000*60;
-                }
-                //lock mailer so you don't get emailed on EVERY trigger event.
-                s.group[d.ke].mon[d.id].detector_discordbot=setTimeout(function(){
-                    //unlock so you can mail again.
-                    clearTimeout(s.group[d.ke].mon[d.id].detector_discordbot);
-                    delete(s.group[d.ke].mon[d.id].detector_discordbot);
-                },detector_discordbot_timeout);
-                var files = []
-                var sendAlert = function(){
-                    s.discordMsg({
-                        author: {
-                          name: s.group[d.ke].mon_conf[d.id].name,
-                          icon_url: config.iconURL
-                        },
-                        title: lang.Event+' - '+screenshotName,
-                        description: lang.EventText1+' '+currentTimestamp,
-                        fields: [],
-                        timestamp: currentTime,
-                        footer: {
-                          icon_url: config.iconURL,
-                          text: "Shinobi Systems"
-                        }
-                    },files,d.ke)
-                }
-                if(currentConfig.detector_discordbot_send_video === '1'){
-                    s.mergeDetectorBufferChunks(d,function(mergedFilepath,filename){
-                        s.discordMsg({
-                            author: {
-                              name: s.group[d.ke].mon_conf[d.id].name,
-                              icon_url: config.iconURL
-                            },
-                            title: filename,
-                            fields: [],
-                            timestamp: currentTime,
-                            footer: {
-                              icon_url: config.iconURL,
-                              text: "Shinobi Systems"
-                            }
-                        },[
-                            {
-                                attachment: mergedFilepath,
-                                name: filename
-                            }
-                        ],d.ke)
-                    })
-                }
-                s.getRawSnapshotFromMonitor(d.mon,function(data){
-                    if((data[data.length-2] === 0xFF && data[data.length-1] === 0xD9)){
-                        screenshotBuffer = data
-                        files.push({
-                            attachment: screenshotBuffer,
-                            name: screenshotName+'.jpg'
-                        })
+            s.onEventTriggerExtensions.forEach(function(extender){
+                extender(d,filter)
+            })
+
+            if(filter.webhook && currentConfig.detector_webhook === '1'){
+                var detector_webhook_url = currentConfig.detector_webhook_url
+                    .replace(/{{TIME}}/g,d.currentTimestamp)
+                    .replace(/{{REGION_NAME}}/g,d.details.name)
+                    .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
+                    .replace(/{{MONITOR_ID}}/g,d.id)
+                    .replace(/{{GROUP_KEY}}/g,d.ke)
+                    .replace(/{{DETAILS}}/g,detailString)
+                    if(d.details.confidence){
+                        detector_webhook_url = detector_webhook_url
+                        .replace(/{{CONFIDENCE}}/g,d.details.confidence)
                     }
-                    sendAlert()
+                request({url:detector_webhook_url,method:'GET',encoding:null},function(err,data){
+                    if(err){
+                        s.log(d,{type:lang["Event Webhook Error"],msg:{error:err,data:data}})
+                    }
                 })
             }
-            //mailer
-            if(filter.mail && config.mail && !s.group[d.ke].mon[d.id].detector_mail && currentConfig.detector_mail === '1'){
-                s.sqlQuery('SELECT mail FROM Users WHERE ke=? AND details NOT LIKE ?',[d.ke,'%"sub"%'],function(err,r){
-                    r=r[0];
-                    var detector_mail_timeout
-                    if(!currentConfig.detector_mail_timeout||currentConfig.detector_mail_timeout===''){
-                        detector_mail_timeout = 1000*60*10;
-                    }else{
-                        detector_mail_timeout = parseFloat(currentConfig.detector_mail_timeout)*1000*60;
-                    }
-                    //lock mailer so you don't get emailed on EVERY trigger event.
-                    s.group[d.ke].mon[d.id].detector_mail=setTimeout(function(){
-                        //unlock so you can mail again.
-                        clearTimeout(s.group[d.ke].mon[d.id].detector_mail);
-                        delete(s.group[d.ke].mon[d.id].detector_mail);
-                    },detector_mail_timeout);
-                    var files = []
-                    var mailOptions = {
-                        from: config.mail.from, // sender address
-                        to: r.mail, // list of receivers
-                        subject: lang.Event+' - '+screenshotName, // Subject line
-                        html: '<i>'+lang.EventText1+' '+currentTimestamp+'.</i>',
-                        attachments: files
-                    }
-                    var sendMail = function(){
-                        Object.keys(d.details).forEach(function(v,n){
-                            mailOptions.html+='<div><b>'+v+'</b> : '+d.details[v]+'</div>'
-                        })
-                        s.nodemailer.sendMail(mailOptions, (error, info) => {
-                            if (error) {
-                                s.systemLog(lang.MailError,error)
-                                return false;
-                            }
-                        })
-                    }
-                    if(currentConfig.detector_mail_send_video === '1'){
-                        s.mergeDetectorBufferChunks(d,function(mergedFilepath,filename){
-                            s.nodemailer.sendMail({
-                                from: config.mail.from,
-                                to: r.mail,
-                                subject: filename,
-                                html: '',
-                                attachments: [
-                                    {
-                                        filename: filename,
-                                        content: fs.readFileSync(mergedFilepath)
-                                    }
-                                ]
-                            }, (error, info) => {
-                                if (error) {
-                                    s.systemLog(lang.MailError,error)
-                                    return false;
-                                }
-                            })
-                        })
-                    }
-                    if(screenshotBuffer){
-                        files.push({
-                            filename: screenshotName+'.jpg',
-                            content: screenshotBuffer
-                        })
-                        sendMail()
-                    }else{
-                        s.getRawSnapshotFromMonitor(d.mon,function(data){
-                            screenshotBuffer = data
-                            files.push({
-                                filename: screenshotName+'.jpg',
-                                content: data
-                            })
-                            sendMail()
-                        })
-                    }
-                });
-            }
-            if(filter.command && currentConfig.detector_command_enable==='1'&&!s.group[d.ke].mon[d.id].detector_command){
+
+            if(filter.command && currentConfig.detector_command_enable === '1' && !s.group[d.ke].mon[d.id].detector_command){
                 var detector_command_timeout
                 if(!currentConfig.detector_command_timeout||currentConfig.detector_command_timeout===''){
                     detector_command_timeout = 1000*60*10;
@@ -507,7 +362,7 @@ module.exports = function(s,config,lang){
 
                 },detector_command_timeout);
                 var detector_command = currentConfig.detector_command
-                    .replace(/{{TIME}}/g,currentTimestamp)
+                    .replace(/{{TIME}}/g,d.currentTimestamp)
                     .replace(/{{REGION_NAME}}/g,d.details.name)
                     .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
                     .replace(/{{MONITOR_ID}}/g,d.id)

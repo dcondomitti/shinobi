@@ -57,21 +57,21 @@ loadLib('ffmpeg')(s,config,function(){
     loadLib('user')(s,config)
     //monitor/camera handlers
     loadLib('monitor')(s,config,lang)
+    //event functions : motion, object matrix handler
+    loadLib('events')(s,config,lang)
     //notifiers : discord..
     loadLib('notification')(s,config,lang)
     //built-in detector functions : pam-diff..
     loadLib('detector')(s,config)
     //recording functions
     loadLib('videos')(s,config,lang)
-    //event functions : motion, object matrix handler
-    loadLib('events')(s,config,lang)
     //plugins : websocket connected services..
     loadLib('plugins')(s,config,lang)
     //health : cpu and ram trackers..
     loadLib('health')(s,config,lang,io)
     //cluster module
     loadLib('childNode')(s,config,lang,io)
-    //cloud uploaders : amazon s3, webdav, blackblaze b2..
+    //cloud uploaders : amazon s3, webdav, backblaze b2..
     loadLib('cloudUploaders')(s,config,lang)
     //on-start actions
     loadLib('startup')(s,config,lang)

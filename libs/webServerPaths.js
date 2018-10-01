@@ -357,36 +357,9 @@ module.exports = function(s,config,lang,app){
                                     if(!s.factorAuth[r.ke]){s.factorAuth[r.ke]={}}
                                     if(!s.factorAuth[r.ke][r.uid]){
                                         s.factorAuth[r.ke][r.uid]={key:s.nid(),user:r}
-                                        if(r.details.factor_mail !== '0'){
-                                            var mailOptions = {
-                                                from: config.mail.from,
-                                                to: r.mail,
-                                                subject: r.lang['2-Factor Authentication'],
-                                                html: r.lang['Enter this code to proceed']+' <b>'+s.factorAuth[r.ke][r.uid].key+'</b>. '+r.lang.FactorAuthText1,
-                                            };
-                                            s.nodemailer.sendMail(mailOptions, (error, info) => {
-                                                if (error) {
-                                                    s.systemLog(r.lang.MailError,error)
-                                                    return
-                                                }
-                                            });
-                                        }
-                                        if(r.details.factor_discord === '1'){
-                                            s.discordMsg({
-                                                author: {
-                                                  name: r.lang['2-Factor Authentication'],
-                                                  icon_url: config.iconURL
-                                                },
-                                                title: r.lang['Enter this code to proceed'],
-                                                description: '**'+s.factorAuth[r.ke][r.uid].key+'** '+r.lang.FactorAuthText1,
-                                                fields: [],
-                                                timestamp: new Date(),
-                                                footer: {
-                                                  icon_url: config.iconURL,
-                                                  text: "Shinobi Systems"
-                                                }
-                                            },[],r.ke)
-                                        }
+                                        s.onTwoFactorAuthCodeNotificationExtensions.forEach(function(extender){
+                                            extender(r)
+                                        })
                                         req.complete()
                                     }else{
                                         req.complete()

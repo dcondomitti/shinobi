@@ -50,9 +50,5 @@ module.exports = function(s){
             '3123asdasdf1dtj1hjk23sdfaasd12asdasddfdbtnkkfgvesra3asdsd3123afdsfqw345'
         ];
 
-    if(config.mail){
-        if(config.mail.from === undefined){config.mail.from = '"ShinobiCCTV" <no-reply@shinobi.video>'}
-        s.nodemailer = require('nodemailer').createTransport(config.mail);
-    }
     return config
 }

@@ -77,6 +77,10 @@ module.exports = function(s,config){
     s.beforeAccountSave = function(callback){
         s.beforeAccountSaveExtensions.push(callback)
     }
+    s.onTwoFactorAuthCodeNotificationExtensions = []
+    s.onTwoFactorAuthCodeNotification = function(callback){
+        s.onTwoFactorAuthCodeNotificationExtensions.push(callback)
+    }
     s.cloudDiskUseStartupExtensions = {}
     s.loadGroupApps = function(e){
         // e = user
