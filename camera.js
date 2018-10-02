@@ -39,6 +39,8 @@ var config = loadLib('config')(s)
 var lang = loadLib('language')(s,config)
 //basic functions
 loadLib('basic')(s,config)
+//load extender functions
+loadLib('extenders')(s,config)
 //video processing engine
 loadLib('ffmpeg')(s,config,function(){
     //database connection : mysql, sqlite3..
@@ -59,8 +61,6 @@ loadLib('ffmpeg')(s,config,function(){
     loadLib('monitor')(s,config,lang)
     //event functions : motion, object matrix handler
     loadLib('events')(s,config,lang)
-    //notifiers : discord..
-    loadLib('notification')(s,config,lang)
     //built-in detector functions : pam-diff..
     loadLib('detector')(s,config)
     //recording functions
@@ -73,6 +73,8 @@ loadLib('ffmpeg')(s,config,function(){
     loadLib('childNode')(s,config,lang,io)
     //cloud uploaders : amazon s3, webdav, backblaze b2..
     loadLib('cloudUploaders')(s,config,lang)
+    //notifiers : discord..
+    loadLib('notification')(s,config,lang)
     //on-start actions
     loadLib('startup')(s,config,lang)
 })

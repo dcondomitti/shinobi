@@ -57,31 +57,6 @@ module.exports = function(s,config){
         //emit the changes to connected users
         s.sendDiskUsedAmountToClients(e)
     }
-    s.loadGroupAppExtensions = []
-    s.loadGroupAppExtender = function(callback){
-        s.loadGroupAppExtensions.push(callback)
-    }
-    s.unloadGroupAppExtensions = []
-    s.unloadGroupAppExtender = function(callback){
-        s.unloadGroupAppExtensions.push(callback)
-    }
-    s.cloudDisksLoaded = []
-    s.cloudDisksLoader = function(storageType){
-        s.cloudDisksLoaded.push(storageType)
-    }
-    s.onAccountSaveExtensions = []
-    s.onAccountSave = function(callback){
-        s.onAccountSaveExtensions.push(callback)
-    }
-    s.beforeAccountSaveExtensions = []
-    s.beforeAccountSave = function(callback){
-        s.beforeAccountSaveExtensions.push(callback)
-    }
-    s.onTwoFactorAuthCodeNotificationExtensions = []
-    s.onTwoFactorAuthCodeNotification = function(callback){
-        s.onTwoFactorAuthCodeNotificationExtensions.push(callback)
-    }
-    s.cloudDiskUseStartupExtensions = {}
     s.loadGroupApps = function(e){
         // e = user
         if(!s.group[e.ke].init){

@@ -4,18 +4,6 @@ var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var request = require('request');
 module.exports = function(s,config,lang){
-    s.onEventTriggerExtensions = []
-    s.onEventTrigger = function(callback){
-        s.onEventTriggerExtensions.push(callback)
-    }
-    s.onEventTriggerBeforeFilterExtensions = []
-    s.onEventTriggerBeforeFilter = function(callback){
-        s.onEventTriggerBeforeFilterExtensions.push(callback)
-    }
-    s.onFilterEventExtensions = []
-    s.onFilterEvent = function(callback){
-        s.onFilterEventExtensions.push(callback)
-    }
     s.filterEvents = function(x,d){
         switch(x){
             case'archive':

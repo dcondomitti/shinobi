@@ -260,7 +260,7 @@ module.exports = function(s,config,lang,app){
                 delete(s.failedLoginAttempts[req.body.mail])
             },1000 * 60 * 15)
             // check if JSON
-            if(req.query.json=='true'){
+            if(req.query.json === 'true'){
                 res.setHeader('Content-Type', 'application/json');
                 res.end(s.prettyPrint({ok:false}))
             }else{

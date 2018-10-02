@@ -133,7 +133,7 @@ module.exports = function(s,config,lang){
                         time:k.startTime,
                         size:k.filesize,
                         end:k.endTime
-                    },'GRP_'+e.ke,'video_view');
+                    },'GRP_'+e.ke,'video_view')
                 }
                 s.insertCompletedVideoExtensions.forEach(function(extender){
                     extender(e,k)
