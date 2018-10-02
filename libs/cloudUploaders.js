@@ -273,7 +273,6 @@ module.exports = function(s,config,lang){
     var loadBackblazeB2ForUser = function(e){
         var ar = JSON.parse(e.details);
         try{
-            var B2 = require('backblaze-b2')
             if(!s.group[e.ke].bb_b2 &&
                ar.bb_b2_accountId &&
                ar.bb_b2_accountId !=='' &&
@@ -282,6 +281,7 @@ module.exports = function(s,config,lang){
                ar.bb_b2_bucket &&
                ar.bb_b2_bucket !== ''
               ){
+                var B2 = require('backblaze-b2')
                 if(!ar.bb_b2_dir || ar.bb_b2_dir === '/'){
                   ar.bb_b2_dir = ''
                 }
@@ -321,7 +321,7 @@ module.exports = function(s,config,lang){
                 }).catch(backblazeErr)
             }
         }catch(err){
-            console.log(err)
+            s.debugLog(err)
         }
     }
     var unloadBackblazeB2ForUser = function(user){

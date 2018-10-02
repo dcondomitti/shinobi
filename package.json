@@ -41,6 +41,7 @@
     "http-proxy": "^1.17.0",
     "webdav-fs": "^1.11.0",
     "discord.js": "^11.3.2",
+    "backblaze-b2": "^1.0.4",
     "ldapauth-fork": "^4.0.2"
   },
   "devDependencies": {}
