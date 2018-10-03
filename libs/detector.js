@@ -5,6 +5,7 @@ module.exports = function(s,config){
         var width,
             height,
             globalSensitivity,
+            globalColorThreshold,
             fullFrame = false
         if(s.group[e.ke].mon_conf[e.id].details.detector_scale_x===''||s.group[e.ke].mon_conf[e.id].details.detector_scale_y===''){
             width = s.group[e.ke].mon_conf[e.id].details.detector_scale_x;
@@ -17,6 +18,11 @@ module.exports = function(s,config){
             globalSensitivity = 10
         }else{
             globalSensitivity = parseInt(e.details.detector_sensitivity)
+        }
+        if(e.details.detector_color_threshold===''){
+            globalColorThreshold = 9
+        }else{
+            globalColorThreshold = parseInt(e.details.detector_color_threshold)
         }
 
         globalThreshold = parseInt(e.details.detector_threshold) || 0
@@ -32,6 +38,7 @@ module.exports = function(s,config){
             fullFrame = {
                 name:'FULL_FRAME',
                 sensitivity:globalSensitivity,
+                color_threshold:globalColorThreshold,
                 points:[
                     [0,0],
                     [0,height],
@@ -43,7 +50,7 @@ module.exports = function(s,config){
 
         e.triggerTimer = {}
 
-        var regions = s.createPamDiffRegionArray(regionJson,globalSensitivity,fullFrame)
+        var regions = s.createPamDiffRegionArray(regionJson,globalColorThreshold,globalSensitivity,fullFrame)
 
         s.group[e.ke].mon[e.id].pamDiff = new PamDiff({grayscale: 'luminosity', regions : regions.forPam});
         s.group[e.ke].mon[e.id].p2p = new P2P();
@@ -91,7 +98,7 @@ module.exports = function(s,config){
         }
     }
 
-    s.createPamDiffRegionArray = function(regions,globalSensitivity,fullFrame){
+    s.createPamDiffRegionArray = function(regions,globalColorThreshold,globalSensitivity,fullFrame){
         var pamDiffCompliantArray = [],
             arrayForOtherStuff = [],
             json
@@ -114,7 +121,12 @@ module.exports = function(s,config){
             }else{
                 region.sensitivity = parseInt(region.sensitivity)
             }
-            pamDiffCompliantArray.push({name: region.name, difference: 9, percent: region.sensitivity, polygon:region.polygon})
+            if(region.color_threshold===''){
+                region.color_threshold = globalColorThreshold
+            }else{
+                region.color_threshold = parseInt(region.color_threshold)
+            }
+            pamDiffCompliantArray.push({name: region.name, difference: region.color_threshold, percent: region.sensitivity, polygon:region.polygon})
             arrayForOtherStuff[region.name] = region;
         })
         if(pamDiffCompliantArray.length===0){pamDiffCompliantArray = null}
@@ -189,5 +201,4 @@ module.exports = function(s,config){
             }
         }
     }
-
 }
