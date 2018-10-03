@@ -2985,19 +2985,11 @@ $.zO.initCanvas=function(){
         e.e.change();
     }
 }
-$.zO.e.on('change','[name="sensitivity"]',function(e){
-    e.val=$(this).val();
-    $.zO.regionViewerDetails.cords[$.zO.rl.val()].sensitivity=e.val;
-    $.zO.saveCoords()
-})
-$.zO.e.on('change','[name="max_sensitivity"]',function(e){
-    e.val=$(this).val();
-    $.zO.regionViewerDetails.cords[$.zO.rl.val()].max_sensitivity=e.val;
-    $.zO.saveCoords()
-})
-$.zO.e.on('change','[name="threshold"]',function(e){
-    e.val=$(this).val();
-    $.zO.regionViewerDetails.cords[$.zO.rl.val()].threshold=e.val;
+$.zO.e.on('change','[name]:not([name="name"])',function(){
+    var el = $(this)
+    var val = el.val()
+    var key = el.attr('name')
+    $.zO.regionViewerDetails.cords[$.zO.rl.val()][key] = val
     $.zO.saveCoords()
 })
 $.zO.e.on('change','[name="name"]',function(e){
