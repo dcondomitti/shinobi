@@ -294,7 +294,7 @@ module.exports = function(s,config,lang){
                 }
                 request({url:d.url,method:'GET'},function(err,data){
                     if(err){
-
+                        //could not start hotswap
                     }else{
                         delete(s.group[d.ke].users[d.auth])
                         d.cx.f='detector_record_engaged';

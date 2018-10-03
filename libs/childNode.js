@@ -1,3 +1,6 @@
+var http = require('http');
+var https = require('https');
+var express = require('express');
 module.exports = function(s,config,lang){
     //setup Master for childNodes
     if(config.childNodes.enabled === true && config.childNodes.mode === 'master'){

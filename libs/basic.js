@@ -3,6 +3,8 @@ var crypto = require('crypto');
 var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var events = require('events');
+var http = require('http');
+var https = require('https');
 module.exports = function(s,config){
     //kill any ffmpeg running
     s.ffmpegKill=function(){
