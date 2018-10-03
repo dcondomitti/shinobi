@@ -292,22 +292,16 @@ module.exports = function(s,config,lang){
                 if(d.urlQuery.length>0){
                     d.url+='?'+d.urlQuery.join('&')
                 }
-                http.get(d.url, function(data) {
-                    data.setEncoding('utf8');
-                    var chunks='';
-                    data.on('data', (chunk) => {
-                        chunks+=chunk;
-                    });
-                    data.on('end', () => {
+                request({url:d.url,method:'GET'},function(err,data){
+                    if(err){
+
+                    }else{
                         delete(s.group[d.ke].users[d.auth])
                         d.cx.f='detector_record_engaged';
-                        d.cx.msg=JSON.parse(chunks);
+                        d.cx.msg = JSON.parse(data.body)
                         s.tx(d.cx,'GRP_'+d.ke);
-                    });
-
-                }).on('error', function(e) {
-
-                }).end();
+                    }
+                })
             }
             d.currentTime = new Date()
             d.currentTimestamp = s.timeObject(d.currentTime).format()
