@@ -248,11 +248,15 @@
             "info": [
                {
                   "name": "detail=stream_type",
-                  "field": "Stream  Type",
+                  "field": "Stream Type",
                   "description": "The method that will used to consume the video stream.",
                   "default": "HLS",
                   "example": "",
                   "possible": [
+                     {
+                        "name": "Poseidon",
+                        "info": "Simulates a streaming MP4 file but using the data of a live stream. Includes Audio. Some browsers can play it like a regular MP4 file. Streams over HTTP or WebSocket."
+                     },
                      {
                         "name": "MJPEG",
                         "info": "Standard Motion JPEG image. No audio."
@@ -285,8 +289,8 @@
                },
                {
                   "name": "detail=stream_flv_type",
-                  "field": "FLV Stream Type",
-                  "description": "The method you will view your FLV stream. Both methods are always active for each stream regardless of your viewing choice for the Shinobi Dashboard.",
+                  "field": "Connection Type",
+                  "description": "The method you will view your stream. Both methods are always active regardless of your viewing choice for the Dashboard.",
                   "default": "10",
                   "example": "",
                   "possible": ""
