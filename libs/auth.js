@@ -112,7 +112,7 @@ module.exports = function(s,config,lang){
         req.super.forEach(function(v,n){
             if(
                 x.mail.toLowerCase() === v.mail.toLowerCase() &&
-                (x.pass === v.pass || v.pass === s.createHash(x.pass) || v.pass === s.md5(x.pass))
+                (x.pass === v.pass || v.pass === s.createHash(x.pass) || v.pass.toLowerCase() === s.md5(x.pass).toLowerCase())
             ){
                 req.found=1;
                 if(x.users===true){

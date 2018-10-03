@@ -31,7 +31,7 @@
     <nav id="main-nav" class="navbar navbar-expand-lg bg-primary fixed-top" color-on-scroll="400">
         <div class="container">
             <div class="navbar-translate">
-                <a tabindex="1" class="navbar-brand logout" href="/" data-placement="bottom" target="_blank">
+                <a tabindex="1" class="navbar-brand logout" style="outline:0" href="/" data-placement="bottom">
                     <%-lang.superAdminTitle%>
                 </a>
                 <button class="navbar-toggler navbar-toggler" type="button" data-toggle="collapse" data-target="#navigation" aria-controls="navigation-index" aria-expanded="false" aria-label="Toggle navigation">
@@ -68,6 +68,9 @@
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link" data-toggle="tab" href="#system" role="tab">Controls and Logs</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-toggle="tab" href="#changeSuperPreferences" role="tab">Preferences</a>
                                 </li>
                             </ul>
                             <div class="card-body">
@@ -157,6 +160,9 @@
                                             <table class="table table-striped"></table>
                                         </div>
                                     </div>
+                                    <div class="tab-pane text-left" id="changeSuperPreferences" role="tabpanel">
+                                        <% include blocks/changeSuperPreferences.ejs %>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -219,11 +225,15 @@ $.ccio.ws.on('f',function(d){
         case'save_configuration':
             d.msg = 'Saved, Restart Shinobi to apply changes.'
         break;
+        case'save_preferences':
+            d.msg = 'Saved Preferences'
+        break;
         case'edit_account':
             d.msg='Account Edited';
             $.each(d.form,function(n,v){
-                $.ccio.accounts[d.ke][n]=v;
-            });
+                $.ccio.accounts[d.ke][n]=v
+            })
+            $('[ke="'+d.ke+'"] .mail').text(d.form.mail)
         break;
         case'add_account':
             d.msg='Account Created';
@@ -235,7 +245,7 @@ $.ccio.ws.on('f',function(d){
         break;
     }
     if(d.msg&&typeof d.msg==='string'){
-        new PNotify({text:d.msg,type:'error'})
+        new PNotify({text:d.msg})
     }
 })
 
@@ -469,6 +479,19 @@ $.system.e.find('[restart]').click(function(e){
         $.ccio.cx({f:'system',ff:'restart',target:e.target})
     });
 })
+$.changeSuperPreferences = {
+    window : $('#changeSuperPreferences')
+}
+$.changeSuperPreferences.form = $.changeSuperPreferences.window.find('form')
+$.changeSuperPreferences.form.find('.submit').click(function(){
+    $.changeSuperPreferences.form.submit()
+})
+$.changeSuperPreferences.form.submit(function(e){
+    e.preventDefault()
+    var formValues = $(this).serializeObject()
+    $.ccio.cx({f:'accounts',ff:'saveSuper',form:formValues})
+    return false
+})
 $(document).ready(function(){
     $.each(<%-JSON.stringify(Logs)%>,function(n,v){
         $.ccio.tm(4,v,'#logs table')
@@ -478,7 +501,7 @@ $(document).ready(function(){
 $('body')
 .on('click','.logout',function(e){
     localStorage.removeItem('ShinobiLogin_'+location.host);location.href='/';
-})    
+})
 </script>
 <% include blocks/mainpermissions.ejs %>
 </html>

@@ -1054,13 +1054,56 @@ module.exports = function(s,config,lang,io){
                         break;
                         case'accounts':
                             switch(d.ff){
+                                case'saveSuper':
+                                    var currentSuperUserList = jsonfile.readFileSync(s.location.super)
+                                    var currentSuperUser = {}
+                                    var currentSuperUserPosition = -1
+                                    //find this user in current list
+                                    currentSuperUserList.forEach(function(user,pos){
+                                        if(user.mail === cn.mail){
+                                            currentSuperUser = user
+                                            currentSuperUserPosition = pos
+                                        }
+                                    })
+                                    var logDetails = {
+                                        by : cn.mail,
+                                        ip : cn.ip
+                                    }
+                                    //check if pass and pass_again match, if not remove password
+                                    if(d.form.pass !== '' && d.form.pass === d.form.pass_again){
+                                        d.form.pass = s.createHash(d.form.pass)
+                                    }else{
+                                        delete(d.form.pass)
+                                    }
+                                    //delete pass_again from object
+                                    delete(d.form.pass_again)
+                                    //set new values
+                                    currentSuperUser = Object.assign(currentSuperUser,d.form)
+                                    //reset email and log change of email
+                                    if(d.form.mail !== cn.mail){
+                                        logDetails.oldEmail = cn.mail + ''
+                                        cn.mail = d.form.mail
+                                    }
+                                    //log this change
+                                    s.systemLog('super.json Modified',logDetails)
+                                    //modify or add account in temporary master list
+                                    if(currentSuperUserList[currentSuperUserPosition]){
+                                        currentSuperUserList[currentSuperUserPosition] = currentSuperUser
+                                    }else{
+                                        currentSuperUserList.push(currentSuperUser)
+                                    }
+                                    //update master list in system
+                                    jsonfile.writeFile(s.location.super,currentSuperUserList,{spaces: 2},function(){
+                                        s.tx({f:'save_preferences'},cn.id)
+                                    })
+                                break;
                                 case'register':
                                     if(d.form.mail!==''&&d.form.pass!==''){
                                         if(d.form.pass===d.form.password_again){
                                             s.sqlQuery('SELECT * FROM Users WHERE mail=?',[d.form.mail],function(err,r) {
                                                 if(r&&r[0]){
                                                     //found address already exists
-                                                    d.msg='Email address is in use.';
+                                                    d.msg=lang['Email address is in use.'];
                                                     s.tx({f:'error',ff:'account_register',msg:d.msg},cn.id)
                                                 }else{
                                                     //create new
@@ -1119,6 +1162,7 @@ module.exports = function(s,config,lang,io){
                                             d.values.push(d.account.mail)
                                             s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE mail=?',d.values,function(err,r) {
                                                 if(err){
+                                                    console.log(err)
                                                     s.tx({f:'error',ff:'edit_account',msg:lang.AccountEditText1},cn.id)
                                                     return
                                                 }

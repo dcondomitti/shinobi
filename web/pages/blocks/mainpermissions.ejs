@@ -34,7 +34,7 @@
             <label><div><span><%-lang['2-Factor Authentication']%> (<%-lang.Email%>)</span></div>
                     <div><select class="form-control" detail="factorAuth">
                         <option value="0" selected><%-lang.No%></option>
-                        <option value="1"><%-lang.Yes%></option>  
+                        <option value="1"><%-lang.Yes%></option>
                     </select></div>
             </label>
         </div>
@@ -66,8 +66,8 @@
         <div class="form-group">
             <label><div><span><%-lang['Permissions']%></span></div>
                 <div><select class="form-control" detail="permissions" selector="h_l">
-                    <option value="all" selected><%-lang['All Privileges']%></option>  
-                    <option value="limited"><%-lang.Limited%></option>  
+                    <option value="all" selected><%-lang['All Privileges']%></option>
+                    <option value="limited"><%-lang.Limited%></option>
                 </select></div>
             </label>
         </div>
@@ -75,7 +75,7 @@
             <label><div><span><%-lang['Can edit Max Storage']%></span></div>
                 <div><select class="form-control" detail="edit_size">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -83,7 +83,7 @@
             <label><div><span><%-lang['Can edit Max Days']%></span></div>
                 <div><select class="form-control" detail="edit_days">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -91,7 +91,7 @@
             <label><div><span><%-lang['Can edit how long to keep Events']%> <small><%-lang['in Days']%></small></span></div>
                 <div><select class="form-control" detail="edit_event_days">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -99,7 +99,7 @@
             <label><div><span><%-lang['Can edit how long to keep Logs']%> <small><%-lang['in Days']%></small></span></div>
                 <div><select class="form-control" detail="edit_log_days">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -107,7 +107,7 @@
             <label><div><span><%-lang['Can use Admin Panel']%></span></div>
                 <div><select class="form-control" detail="use_admin">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -115,7 +115,7 @@
             <label><div><span><%-lang['Can use Amazon S3']%></span></div>
                 <div><select class="form-control" detail="use_aws_s3">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -123,7 +123,7 @@
             <label><div><span><%-lang['Can use WebDAV']%></span></div>
                 <div><select class="form-control" detail="use_webdav">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -131,7 +131,7 @@
             <label><div><span><%-lang['Can use Discord Bot']%></span></div>
                 <div><select class="form-control" detail="use_discordbot">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -139,14 +139,14 @@
             <label><div><span><%-lang['Can use LDAP']%></span></div>
                 <div><select class="form-control" detail="use_ldap">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default pull-left" data-dismiss="modal"><i class="fa fa-times"></i> <%-lang.Close%></button>
-          
+
             <div class="pull-left">
             <div class="marc-toggle display-inline">
                 <input type="checkbox" id="edit"/><label for="edit">Add or Edit</label>
@@ -174,6 +174,14 @@ $.aN.f.submit(function(e){
     $.aN.e.modal('hide')
     return false;
 });
+$.aN.e.on('change','[name="mail"]',function(){
+    var thisVal = $(this).val()
+    $.each(users,function(n,user){
+        if(user.ke !== $.aN.selected.ke && thisVal.toLowerCase() === user.mail.toLowerCase()){
+            new PNotify({text:"<%=lang['Email address is in use.']%>",type:'error'})
+        }
+    })
+})
 $.aN.e.on('change','[detail]',function(){
     e = {}
     e.ar = {}
@@ -181,7 +189,7 @@ $.aN.e.on('change','[detail]',function(){
         try{
             e.ar = Object.assign(JSON.parse($.aN.selected.details),{})
         }catch(err){
-            
+
         }
     }
     $.each($.aN.e.find('[detail]'),function(n,v){
@@ -194,7 +202,7 @@ $('#edit').change(function(e){
     if($('#edit').is(':checked')){
         $.aN.modeIsEdit = true
         $('#title').text("<%-lang['Edit']%>")
-        $.aN.e.find('[name="mail"],[name="ke"]').prop('disabled',true)
+        $.aN.e.find('[name="ke"]').prop('disabled',true)
     }else{
         $.aN.modeIsEdit = false
         $('#title').text("<%-lang['Add New']%>")
@@ -236,13 +244,15 @@ $.aC.e.on('click','.permission',function(e){
     $.aN.e.find('input').val('');
     $.each(e.account,function(n,v){
         if(n=='pass'){return}
-        $.aN.e.find('[name="'+n+'"]').val(v).change()
+        var el = $.aN.e.find('[name="'+n+'"]')
+        el.val(v)
+        if(n !== 'mail')el.change()
     })
     $.each(JSON.parse(e.account.details),function(n,v){
         $.aN.e.find('[detail="'+n+'"]').val(v)
     })
     $('#edit').prop('checked',true).change().parent().addClass('is-checked')
 //    $.pR.e.modal('show');
-    
+
 })
 </script>
