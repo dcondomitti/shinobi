@@ -45,4 +45,10 @@ module.exports = function(s,config){
     s.onFilterEvent = function(callback){
         s.onFilterEventExtensions.push(callback)
     }
+
+    ////// MONITOR //////
+    s.onDetectorNoTriggerTimeoutExtensions = []
+    s.onDetectorNoTriggerTimeout = function(callback){
+        s.onDetectorNoTriggerTimeoutExtensions.push(callback)
+    }
 }

@@ -505,7 +505,7 @@ module.exports = function(s,config,lang,app){
                             }
                             data.Logs=r;
                             fs.readFile(s.location.config,'utf8',function(err,file){
-                                data.plainConfig=JSON.parse(file)
+                                data.plainConfig = JSON.parse(file)
                                 req.renderFunction(config.renderPaths.super,data);
                             })
                         })

@@ -7,10 +7,6 @@ var onvif = require('node-onvif');
 var request = require('request');
 var connectionTester = require('connection-tester');
 module.exports = function(s,config,lang){
-    s.onDetectorNoTriggerTimeoutExensions = []
-    s.onDetectorNoTriggerTimeout = function(callback){
-        s.onDetectorNoTriggerTimeoutExensions.push(callback)
-    }
     s.initiateMonitorObject = function(e){
         if(!s.group[e.ke]){s.group[e.ke]={}};
         if(!s.group[e.ke].mon){s.group[e.ke].mon={}}
@@ -783,7 +779,7 @@ module.exports = function(s,config,lang){
                         }
                         e.detector_notrigger_timeout=parseFloat(e.details.detector_notrigger_timeout)*1000*60;
                         s.group[e.ke].mon[e.id].detector_notrigger_timeout_function = function(){
-                            s.onDetectorNoTriggerTimeoutExensions.forEach(function(extender){
+                            s.onDetectorNoTriggerTimeoutExtensions.forEach(function(extender){
                                 extender(r,e)
                             })
                         }
