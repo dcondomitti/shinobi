@@ -898,6 +898,14 @@
                   "possible": "Any non-negative integer."
                },
                {
+                  "name": "detail=detector_color_threshold",
+                  "field": "Color Threshold",
+                  "description": "The amount of difference allowed in a pixel before it is considered motion.",
+                  "default": "9",
+                  "example": "9",
+                  "possible": "Any non-negative integer."
+               },
+               {
                   "name": "detail=detector_webhook",
                   "field": "Webhook",
                   "description": "Send a GET request to a URL with some values from the event.",
