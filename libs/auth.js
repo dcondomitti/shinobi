@@ -1,3 +1,4 @@
+var fs = require('fs');
 module.exports = function(s,config,lang){
     //Authenticator functions
     s.api = {}
@@ -106,28 +107,38 @@ module.exports = function(s,config,lang){
         }
     }
     //super user authentication handler
-    s.superAuth = function(x,callback){
-        req={};
-        req.super=require(s.location.super);
-        req.super.forEach(function(v,n){
-            if(
-                x.mail.toLowerCase() === v.mail.toLowerCase() &&
-                (x.pass === v.pass || v.pass === s.createHash(x.pass) || v.pass.toLowerCase() === s.md5(x.pass).toLowerCase())
-            ){
-                req.found=1;
-                if(x.users===true){
-                    s.sqlQuery('SELECT * FROM Users WHERE details NOT LIKE ?',['%"sub"%'],function(err,r) {
-                        callback({$user:v,users:r,config:config,lang:lang})
-                    })
-                }else{
-                    callback({$user:v,config:config,lang:lang})
+    s.superAuth = function(query,callback){
+        var userFound = false
+        try{
+            var superUserList = JSON.parse(fs.readFileSync(s.location.super))
+            superUserList.forEach(function(superUser,n){
+                if(
+                    userFound === false &&
+                    query.mail.toLowerCase() === superUser.mail.toLowerCase() &&
+                    (
+                        query.pass === superUser.pass || //user give it already hashed
+                        superUser.pass === s.createHash(query.pass) || //hash and check it
+                        superUser.pass.toLowerCase() === s.md5(query.pass).toLowerCase() //check if still using md5
+                    )
+                ){
+                    userFound = true;
+                    if(query.users === true){
+                        s.sqlQuery('SELECT * FROM Users WHERE details NOT LIKE ?',['%"sub"%'],function(err,r) {
+                            callback({$user:superUser,users:r,config:config,lang:lang})
+                        })
+                    }else{
+                        callback({$user:superUser,config:config,lang:lang})
+                    }
                 }
-            }
-        })
-        if(req.found!==1){
-            return false;
+            })
+        }catch(err){
+            console.log('The gollowing error may mean your super.json is not formatted correctly.')
+            console.log(err)
+        }
+        if(userFound === true){
+            return true
         }else{
-            return true;
+            return false
         }
     }
 }
