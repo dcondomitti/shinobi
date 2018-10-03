@@ -1081,6 +1081,7 @@ module.exports = function(s,config,lang,io){
                                     currentSuperUser = Object.assign(currentSuperUser,d.form)
                                     //reset email and log change of email
                                     if(d.form.mail !== cn.mail){
+                                        logDetails.newEmail = d.form.mail
                                         logDetails.oldEmail = cn.mail + ''
                                         cn.mail = d.form.mail
                                     }

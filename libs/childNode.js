@@ -37,7 +37,7 @@ module.exports = function(s,config,lang){
                         tx({
                             f : 'init_success',
                             childNodes : s.childNodes
-                        });
+                        })
                     }else{
                         switch(d.f){
                             case'cpu':
