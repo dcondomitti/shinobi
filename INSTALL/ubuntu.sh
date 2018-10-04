@@ -9,11 +9,11 @@ echo "============="
 echo "============="
 echo " Detecting Ubuntu Version"
 echo "============="
-declare -i getubuntuversion=$(lsb_release -r | awk '{print $2}' | cut -d . -f1)
+getubuntuversion=$(lsb_release -r | awk '{print $2}' | cut -d . -f1)
 echo "============="
 echo " Ubuntu Version: $getubuntuversion"
 echo "============="
-if [[ "$getubuntuversion" == "18" || "$getubuntuversion" > "18" ]]; then
+if [ "$getubuntuversion" = "18" ] || [ "$getubuntuversion" > "18" ]; then
     apt install sudo wget -y
     sudo apt install -y software-properties-common
     sudo add-apt-repository universe -y
@@ -58,7 +58,7 @@ if [ "$ffmpeginstall" = "y" ] || [ "$ffmpeginstall" = "Y" ]; then
     echo "Press [ENTER] for default (npm)"
     read ffmpegstaticinstall
     if [ "$ffmpegstaticinstall" = "a" ] || [ "$ffmpegstaticinstall" = "A" ]; then
-        if [[ "$getubuntuversion" == "16" || "$getubuntuversion" < "16" ]]; then
+        if [ "$getubuntuversion" = "16" ] || [ "$getubuntuversion" < "16" ]; then
             echo "============="
             echo "Shinobi - Get FFMPEG 3.x from ppa:jonathonf/ffmpeg-3"
             sudo add-apt-repository ppa:jonathonf/ffmpeg-3 -y
