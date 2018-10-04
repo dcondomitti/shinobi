@@ -113,6 +113,7 @@ sudo npm install pm2 -g
 echo "Shinobi - Finished"
 sudo chmod -R 755 .
 touch INSTALL/installed.txt
+dos2unix /home/Shinobi/INSTALL/shinobi
 ln -s /home/Shinobi/INSTALL/shinobi /usr/bin/shinobi
 if [ "$mysqlDefaultData" = "y" ] || [ "$mysqlDefaultData" = "Y" ]; then
     echo "=====================================" > INSTALL/installed.txt

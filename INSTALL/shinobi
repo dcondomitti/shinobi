@@ -4,8 +4,9 @@ if [ ! "$1" ]; then
     echo "========================================================="
     echo "==!! Shinobi : The Open Source CCTV and NVR Solution !!=="
     echo "========================================================="
-    echo "You are missing function parameter."
-    echo "Example : shinobi [command]"
+    echo "You are missing function parameters."
+    echo "Example : shinobi [command] .."
+    echo "Example : shinobi flush restart logs"
     echo "========================================================="
     echo "Your available options for COMMAND are as follows"
     echo "========================================================="
@@ -27,30 +28,34 @@ if [ ! "$1" ]; then
     echo "| kill :"
     echo "|--> Stop the entire PM2 daemon."
 fi
-if [ "$1" = "start" ] || [ "$1" = "s" ] || [ "$1" = "now" ] || [ "$1" = "n" ]; then
-    proccessAlive=$(pm2 list | grep camera | grep online)
-    if [ "$proccessAlive" ]; then
-        echo "Shinobi process is already running."
-    else
-        if [ -e "$installationDirectory/INSTALL/installed.txt" ]; then
-            echo "Starting Shinobi"
-            pm2 start $installationDirectory/camera.js
-            pm2 start $installationDirectory/cron.js
-        fi
-        if [ ! -e "$installationDirectory/INSTALL/installed.txt" ]; then
-            chmod +x $installationDirectory/INSTALL/now.sh&&INSTALL/now.sh
-        fi
-    fi
+if [[ $@ == *'clear'* ]] || [[ $@ == *'flush'* ]]; then
+    pm2 flush
 fi
-if [ "$1" = "restart" ] || [ "$1" = "r" ]; then
+if [[ $@ == *'restart'* ]]; then
     proccessAlive=$(pm2 list | grep camera)
     if [ "$proccessAlive" ]; then
         pm2 restart all
     else
         echo "Shinobi process is not running."
     fi
+else
+    if [[ $@ == *'start'* ]] || [[ $@ == *'now'* ]]; then
+        proccessAlive=$(pm2 list | grep camera | grep online)
+        if [ "$proccessAlive" ]]; then
+            echo "Shinobi process is already running."
+        else
+            if [ -e "$installationDirectory/INSTALL/installed.txt" ]; then
+                echo "Starting Shinobi"
+                pm2 start $installationDirectory/camera.js
+                pm2 start $installationDirectory/cron.js
+            fi
+            if [ ! -e "$installationDirectory/INSTALL/installed.txt" ]; then
+                chmod +x $installationDirectory/INSTALL/now.sh&&INSTALL/now.sh
+            fi
+        fi
+    fi
 fi
-if [ "$1" = "stop" ] || [ "$1" = "exit" ] || [ "$1" = "e" ]; then
+if [[ $@ == *'stop'* ]] || [[ $@ == *'exit'* ]]; then
     proccessAlive=$(pm2 list | grep camera)
     if [ "$proccessAlive" ]; then
         pm2 kill
@@ -58,12 +63,9 @@ if [ "$1" = "stop" ] || [ "$1" = "exit" ] || [ "$1" = "e" ]; then
         echo "Shinobi process is not running."
     fi
 fi
-if [ "$1" = "kill" ]; then
+if [[ $@ == *'kill'* ]]; then
     pm2 kill
 fi
-if [ "$1" = "logs" ]; then
+if [[ $@ == *'logs'* ]]; then
     pm2 logs --lines 100
-fi
-if [ "$1" = "clear" ] || [ "$1" = "flush" ] || [ "$1" = "f" ]; then
-    pm2 flush
 fi
