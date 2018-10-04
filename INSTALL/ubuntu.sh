@@ -5,9 +5,24 @@ echo "========================================================="
 echo "To answer yes type the letter (y) in lowercase and press ENTER."
 echo "Default is no (N). Skip any components you already have or don't need."
 echo "============="
+#Detect Ubuntu Version
+echo "============="
+echo " Detecting Ubuntu Version"
+echo "============="
+declare -i getubuntuversion=$(lsb_release -r | awk '{print $2}' | cut -d . -f1)
+echo "============="
+echo " Ubuntu Version: $getubuntuversion"
+echo "============="
+if [[ "$getubuntuversion" == "18" || "$getubuntuversion" > "18" ]]; then
+    apt install sudo wget -y
+    sudo apt install -y software-properties-common
+    sudo add-apt-repository universe -y
+fi
+#create conf.json
 if [ ! -e "./conf.json" ]; then
     sudo cp conf.sample.json conf.json
 fi
+#create super.json
 if [ ! -e "./super.json" ]; then
     echo "Shinobi - Do you want to enable superuser access?"
     echo "This may be useful if passwords are forgotten or"
@@ -43,14 +58,6 @@ if [ "$ffmpeginstall" = "y" ] || [ "$ffmpeginstall" = "Y" ]; then
     echo "Press [ENTER] for default (npm)"
     read ffmpegstaticinstall
     if [ "$ffmpegstaticinstall" = "a" ] || [ "$ffmpegstaticinstall" = "A" ]; then
-        #Detect Ubuntu Version
-        echo "============="
-        echo " Detecting Ubuntu Version"
-        echo "============="
-        declare -i getubuntuversion=$(lsb_release -r | awk '{print $2}' | cut -d . -f1)
-        echo "============="
-        echo " Ubuntu Version: $getubuntuversion"
-        echo "============="
         if [[ "$getubuntuversion" == "16" || "$getubuntuversion" < "16" ]]; then
             echo "============="
             echo "Shinobi - Get FFMPEG 3.x from ppa:jonathonf/ffmpeg-3"
