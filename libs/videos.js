@@ -54,6 +54,7 @@ module.exports = function(s,config,lang){
     s.insertCompletedVideo = function(e,k){
         //e = video object
         //k = temporary values
+        if(!e.id && e.mid)e.id = e.mid
         if(!k)k={};
         e.dir = s.getVideoDirectory(e)
         k.dir = e.dir.toString()
@@ -164,6 +165,7 @@ module.exports = function(s,config,lang){
     s.deleteVideo = function(e){
         //e = video object
         e.dir = s.getVideoDirectory(e)
+        if(!e.id && e.mid)e.id = e.mid
         if(!e.filename && e.time){
             e.filename = s.formattedTime(e.time)
         }
@@ -182,20 +184,20 @@ module.exports = function(s,config,lang){
         time = new Date(time)
         e.save=[e.id,e.ke,time];
         s.sqlQuery('SELECT * FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',e.save,function(err,r){
-            if(r&&r[0]){
-                r=r[0]
+            if(r && r[0]){
+                r = r[0]
                 s.sqlQuery('DELETE FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',e.save,function(){
                     fs.stat(e.dir+filename,function(err,file){
                         if(err){
-                            s.systemLog('File Delete Error : '+e.ke+' : '+' : '+e.mid,err)
+                            s.systemLog('File Delete Error : '+e.ke+' : '+' : '+e.id,err)
                         }
                         s.setDiskUsedForGroup(e,-(r.size/1000000))
                     })
-                    s.tx({f:'video_delete',filename:filename,mid:e.mid,ke:e.ke,time:s.nameToTime(filename),end:s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+e.ke);
+                    s.tx({f:'video_delete',filename:filename,mid:e.id,ke:e.ke,time:s.nameToTime(filename),end:s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+e.ke);
                     s.file('delete',e.dir+filename)
                 })
             }else{
-//                    console.log('Delete Failed',e)
+                console.log('Delete Failed',e.save)
 //                    console.error(err)
             }
         })
@@ -221,6 +223,7 @@ module.exports = function(s,config,lang){
     }
     s.deleteVideoFromCloud = function(e){
         //e = video object
+        if(!e.id && e.mid)e.id = e.mid
         var videoSelector = [e.id,e.ke,new Date(e.time)]
         s.sqlQuery('SELECT * FROM `Cloud Videos` WHERE `mid`=? AND `ke`=? AND `time`=?',videoSelector,function(err,r){
             if(r&&r[0]){
