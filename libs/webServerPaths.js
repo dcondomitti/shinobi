@@ -31,6 +31,10 @@ module.exports = function(s,config,lang,app){
         if(config.webPaths.admin === undefined){config.webPaths.admin='/admin'}
         //API Prefix
         if(config.webPaths.apiPrefix === undefined){config.webPaths.apiPrefix='/'}else{config.webPaths.apiPrefix = s.checkCorrectPathEnding(config.webPaths.apiPrefix)}
+        //Admin API Prefix
+        if(config.webPaths.adminApiPrefix === undefined){config.webPaths.adminApiPrefix='/super/'}else{config.webPaths.adminApiPrefix = s.checkCorrectPathEnding(config.webPaths.adminApiPrefix)}
+        //Super API Prefix
+        if(config.webPaths.superApiPrefix === undefined){config.webPaths.superApiPrefix='/super/'}else{config.webPaths.superApiPrefix = s.checkCorrectPathEnding(config.webPaths.superApiPrefix)}
     //Render Configurations - Page Render Paths
     if(config.renderPaths === undefined){config.renderPaths={}}
         //login page
@@ -67,6 +71,19 @@ module.exports = function(s,config,lang,app){
         }else{
             cb()
         }
+    }
+    //get post data
+    s.getPostData = function(req){
+        var postData = false
+        try{
+            if(req.query.data){
+                postData = JSON.parse(req.query.data)
+            }else{
+                postData = JSON.parse(req.body.data)
+            }
+        }catch(er){
+        }
+        return postData
     }
     ////Pages
     app.enable('trust proxy');
@@ -546,7 +563,7 @@ module.exports = function(s,config,lang,app){
                 req.failed(lang['2-Factor Authentication'])
             }
         }
-    });
+    })
     // Brute Protection Lock Reset by API
     app.get([config.webPaths.apiPrefix+':auth/resetBruteProtection/:ke'], function (req,res){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -578,7 +595,7 @@ module.exports = function(s,config,lang,app){
             },res,req)
         }
         s.auth(req.params,req.fn,res,req);
-    });
+    })
     //Get JPEG snap
     app.get(config.webPaths.apiPrefix+':auth/jpeg/:ke/:id/s.jpg', function(req,res){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -1305,7 +1322,7 @@ module.exports = function(s,config,lang,app){
                 res.end(s.prettyPrint(r));
             })
         },res,req);
-    });
+    })
     // Get monitors online json
     app.get(config.webPaths.apiPrefix+':auth/smonitor/:ke', function (req,res){
         req.ret={ok:false};
