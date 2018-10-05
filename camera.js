@@ -53,6 +53,10 @@ loadLib('ffmpeg')(s,config,function(){
     var app = loadLib('webServer')(s,config,lang,io)
     //web server routes : page handling, streams..
     loadLib('webServerPaths')(s,config,lang,app)
+    //web server admin routes : create sub accounts, share monitors, share videos
+    // loadLib('webServerAdminPaths')(s,config,lang,app)
+    //web server superuser routes : create admin accounts and manage system functions
+    loadLib('webServerSuperPaths')(s,config,lang,app)
     //websocket connection handlers : login and streams..
     loadLib('socketio')(s,config,lang,io)
     //user and group functions

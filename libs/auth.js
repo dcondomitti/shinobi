@@ -107,33 +107,66 @@ module.exports = function(s,config,lang){
         }
     }
     //super user authentication handler
-    s.superAuth = function(query,callback){
+    s.superAuth = function(params,callback,res,req){
         var userFound = false
+        var userSelected = false
+        var adminUsersSelected = false
         try{
             var superUserList = JSON.parse(fs.readFileSync(s.location.super))
             superUserList.forEach(function(superUser,n){
                 if(
                     userFound === false &&
-                    query.mail.toLowerCase() === superUser.mail.toLowerCase() &&
                     (
-                        query.pass === superUser.pass || //user give it already hashed
-                        superUser.pass === s.createHash(query.pass) || //hash and check it
-                        superUser.pass.toLowerCase() === s.md5(query.pass).toLowerCase() //check if still using md5
+                        superUser.tokens && superUser.tokens[params.auth] || //using API key or..
+                        (
+                            params.mail.toLowerCase() === superUser.mail.toLowerCase() && //email matches
+                            (
+                                params.pass === superUser.pass || //user give it already hashed
+                                superUser.pass === s.createHash(params.pass) || //hash and check it
+                                superUser.pass.toLowerCase() === s.md5(params.pass).toLowerCase() //check if still using md5
+                            )
+                        )
                     )
                 ){
-                    userFound = true;
-                    if(query.users === true){
+                    userFound = true
+                    userSelected = superUser
+                    if(params.users === true){
                         s.sqlQuery('SELECT * FROM Users WHERE details NOT LIKE ?',['%"sub"%'],function(err,r) {
-                            callback({$user:superUser,users:r,config:config,lang:lang})
+                            adminUsersSelected = r
+                            callback({
+                                $user:superUser,
+                                users:r,
+                                config:config,
+                                lang:lang
+                            })
                         })
                     }else{
-                        callback({$user:superUser,config:config,lang:lang})
+                        callback({
+                            $user:superUser,
+                            config:config,
+                            lang:lang
+                        })
                     }
                 }
             })
         }catch(err){
-            console.log('The gollowing error may mean your super.json is not formatted correctly.')
+            console.log('The following error may mean your super.json is not formatted correctly.')
             console.log(err)
+        }
+        if(req && res){
+            if(!res.notJSON)res.setHeader('Content-Type', 'application/json')
+            resp = req.headers['cf-connecting-ip']||req.headers["CF-Connecting-IP"]||req.headers["'x-forwarded-for"]||req.connection.remoteAddress;
+            var resp = {ok : userFound}
+            if(userFound === false){
+                resp.msg = lang['Not Authorized']
+            }
+            if(userSelected){
+                resp.$user = userSelected
+            }
+            if(adminUsersSelected){
+                resp.users = adminUsersSelected
+            }
+            res.end(s.prettyPrint(resp))
         }
         if(userFound === true){
             return true

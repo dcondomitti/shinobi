@@ -987,7 +987,7 @@ module.exports = function(s,config,lang,io){
                 tx({ok:false,msg:lang.NotAuthorizedText1});
             }
         });
-        // admin page socket functions
+        // super page socket functions
         cn.on('super',function(d){
             if(!cn.init&&d.f=='init'){
                 d.ok=s.superAuth({mail:d.mail,pass:d.pass},function(data){
@@ -1008,6 +1008,7 @@ module.exports = function(s,config,lang,io){
                         case'logs':
                             switch(d.ff){
                                 case'delete':
+                                    //config.webPaths.superApiPrefix+':auth/logs/delete'
                                     s.sqlQuery('DELETE FROM Logs WHERE ke=?',[d.ke])
                                 break;
                             }
@@ -1015,6 +1016,7 @@ module.exports = function(s,config,lang,io){
                         case'system':
                             switch(d.ff){
                                 case'update':
+                                    //config.webPaths.superApiPrefix+':auth/update'
                                     s.ffmpegKill()
                                     s.systemLog('Shinobi ordered to update',{
                                         by:cn.mail,
@@ -1029,6 +1031,7 @@ module.exports = function(s,config,lang,io){
                                     })
                                 break;
                                 case'restart':
+                                    //config.webPaths.superApiPrefix+':auth/restart/:script'
                                     d.check=function(x){return d.target.indexOf(x)>-1}
                                     if(d.check('system')){
                                         s.systemLog('Shinobi ordered to restart',{by:cn.mail,ip:cn.ip})
