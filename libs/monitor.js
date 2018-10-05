@@ -1173,26 +1173,27 @@ module.exports = function(s,config,lang){
                                             var filename = d.split('.')[0]+'.'+e.ext
                                             s.insertCompletedVideo(e,{
                                                 file : filename
-                                            })
-                                            s.log(e,{type:lang['Video Finished'],msg:{filename:d}})
-                                            if(
-                                                e.details.detector === '1' &&
-                                                s.group[e.ke].mon[e.id].started === 1 &&
-                                                e.details &&
-                                                e.details.detector_record_method === 'del'&&
-                                                e.details.detector_delete_motionless_videos === '1'&&
-                                                s.group[e.ke].mon[e.id].detector_motion_count === 0
-                                            ){
-                                                if(e.details.loglevel !== 'quiet'){
-                                                    s.log(e,{type:lang['Delete Motionless Video'],msg:filename});
+                                            },function(err){
+                                                s.log(e,{type:lang['Video Finished'],msg:{filename:d}})
+                                                if(
+                                                    e.details.detector === '1' &&
+                                                    s.group[e.ke].mon[e.id].started === 1 &&
+                                                    e.details &&
+                                                    e.details.detector_record_method === 'del'&&
+                                                    e.details.detector_delete_motionless_videos === '1'&&
+                                                    s.group[e.ke].mon[e.id].detector_motion_count === 0
+                                                ){
+                                                    if(e.details.loglevel !== 'quiet'){
+                                                        s.log(e,{type:lang['Delete Motionless Video'],msg:filename})
+                                                    }
+                                                    s.deleteVideo({
+                                                        filename : filename,
+                                                        ke : e.ke,
+                                                        id : e.id
+                                                    })
                                                 }
-                                                s.deleteVideo({
-                                                    filename : filename,
-                                                    ke : e.ke,
-                                                    id : e.id
-                                                })
-                                            }
-                                            s.group[e.ke].mon[e.id].detector_motion_count = 0
+                                                s.group[e.ke].mon[e.id].detector_motion_count = 0
+                                            })
                                             resetRecordingCheck()
                                             return;
                                         break;

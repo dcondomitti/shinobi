@@ -51,7 +51,7 @@ module.exports = function(s,config,lang){
         s.insertCompletedVideoExtensions.push(callback)
     }
     //on video completion
-    s.insertCompletedVideo = function(e,k){
+    s.insertCompletedVideo = function(e,k,callback){
         //e = video object
         //k = temporary values
         if(!e.id && e.mid)e.id = e.mid
@@ -154,7 +154,9 @@ module.exports = function(s,config,lang){
                     k.filesize,
                     k.endTime,
                 ]
-                s.sqlQuery('INSERT INTO Videos (mid,ke,time,ext,status,details,size,end) VALUES (?,?,?,?,?,?,?,?)',save)
+                s.sqlQuery('INSERT INTO Videos (mid,ke,time,ext,status,details,size,end) VALUES (?,?,?,?,?,?,?,?)',save,function(err){
+                    if(callback)callback(err)
+                })
                 //purge over max
                 s.purgeDiskForGroup(e)
                 //send new diskUsage values
