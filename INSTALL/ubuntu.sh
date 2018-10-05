@@ -24,6 +24,7 @@ if [ ! -e "./conf.json" ]; then
 fi
 #create super.json
 if [ ! -e "./super.json" ]; then
+    echo "============="
     echo "Shinobi - Do you want to enable superuser access?"
     echo "This may be useful if passwords are forgotten or"
     echo "if you would like to limit accessibility of an"
@@ -37,6 +38,7 @@ if [ ! -e "./super.json" ]; then
         sudo cp super.sample.json super.json
     fi
 fi
+echo "============="
 echo "Shinobi - Do you want to Install Node.js?"
 echo "(y)es or (N)o"
 read nodejsinstall
@@ -45,7 +47,6 @@ if [ "$nodejsinstall" = "y" ] || [ "$nodejsinstall" = "Y" ]; then
     chmod +x setup_8.x
     ./setup_8.x
     sudo apt install nodejs -y
-    sudo apt install npm -y
 fi
 sudo apt install make -y
 echo "============="
