@@ -11,7 +11,9 @@ module.exports = function(s,config,lang,app){
         res.setHeader('Content-Type', 'application/json')
         res.end(s.prettyPrint(endData))
     }
-    //sub-account edit
+    /**
+    * API : Administrator : Edit Sub-Account (Account to share cameras with)
+    */
     app.all(config.webPaths.adminApiPrefix+':auth/accounts/:ke/edit', function (req,res){
         s.auth(req.params,function(user){
             var endData = {
@@ -54,7 +56,9 @@ module.exports = function(s,config,lang,app){
             closeResponse(res,endData)
         },res,req)
     })
-    //sub-account delete
+    /**
+    * API : Administrator : Delete Sub-Account (Account to share cameras with)
+    */
     app.all(config.webPaths.adminApiPrefix+':auth/accounts/:ke/delete', function (req,res){
         s.auth(req.params,function(user){
             var endData = {
@@ -84,7 +88,9 @@ module.exports = function(s,config,lang,app){
             closeResponse(res,endData)
         },res,req)
     })
-    //sub-account add
+    /**
+    * API : Administrator : Add Sub-Account (Account to share cameras with)
+    */
     app.post([
         config.webPaths.adminApiPrefix+':auth/register/:ke/:uid',
         config.webPaths.apiPrefix+':auth/register/:ke/:uid'
@@ -142,7 +148,9 @@ module.exports = function(s,config,lang,app){
             })
         },res,req)
     })
-    // Monitor Add,Edit,Delete
+    /**
+    * API : Administrator : Monitor : Add, Edit, and Delete
+    */
     app.all([
         config.webPaths.apiPrefix+':auth/configureMonitor/:ke/:id',
         config.webPaths.apiPrefix+':auth/configureMonitor/:ke/:id/:f',

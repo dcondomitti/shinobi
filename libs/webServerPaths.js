@@ -95,7 +95,9 @@ module.exports = function(s,config,lang,app){
     //add template handler
     if(config.renderPaths.handler!==undefined){require(s.mainDirectory+'/web/'+config.renderPaths.handler+'.js').addHandlers(s,app,io)}
 
-    //logout
+    /**
+    * API : Logout
+    */
     app.get(config.webPaths.apiPrefix+':auth/logout/:ke/:id', function (req,res){
         if(s.group[req.params.ke]&&s.group[req.params.ke].users[req.params.auth]){
             delete(s.api[req.params.auth]);
@@ -106,7 +108,9 @@ module.exports = function(s,config,lang,app){
             res.end(s.prettyPrint({ok:false,msg:'This group key does not exist or this user is not logged in.'}))
         }
     });
-    //main page
+    /**
+    * Page : Login Screen
+    */
     app.get(config.webPaths.home, function (req,res){
         res.render(config.renderPaths.index,{lang:lang,config:config,screen:'dashboard',originalURL:s.getOriginalUrl(req)},function(err,html){
             if(err){
@@ -115,7 +119,9 @@ module.exports = function(s,config,lang,app){
             res.end(html)
         })
     });
-    //admin page
+    /**
+    * Page : Administrator Login Screen
+    */
     app.get(config.webPaths.admin, function (req,res){
         res.render(config.renderPaths.index,{lang:lang,config:config,screen:'admin',originalURL:s.getOriginalUrl(req)},function(err,html){
             if(err){
@@ -124,7 +130,9 @@ module.exports = function(s,config,lang,app){
             res.end(html)
         })
     });
-    //super page
+    /**
+    * Page : Superuser Login Screen
+    */
     app.get(config.webPaths.super, function (req,res){
 
         res.render(config.renderPaths.index,{lang:lang,config:config,screen:'super',originalURL:s.getOriginalUrl(req)},function(err,html){
@@ -134,26 +142,9 @@ module.exports = function(s,config,lang,app){
             res.end(html)
         })
     });
-    //update server
-    app.get(config.webPaths.apiPrefix+':auth/update/:key', function (req,res){
-        req.ret={ok:false};
-        res.setHeader('Content-Type', 'application/json');
-        req.fn=function(user){
-            if(!config.updateKey){
-                req.ret.msg=user.lang.updateKeyText1;
-                return;
-            }
-            if(req.params.key===config.updateKey){
-                req.ret.ok=true;
-                exec('chmod +x '+s.mainDirectory+'/UPDATE.sh&&'+s.mainDirectory+'/UPDATE.sh',{detached: true})
-            }else{
-                req.ret.msg=user.lang.updateKeyText2;
-            }
-            res.end(s.prettyPrint(req.ret));
-        }
-        s.auth(req.params,req.fn,res,req);
-    });
-    //get user details by API key
+    /**
+    * API : Get User Info
+    */
     app.get(config.webPaths.apiPrefix+':auth/userInfo/:ke',function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
@@ -171,6 +162,9 @@ module.exports = function(s,config,lang,app){
             delete(s.factorAuth[r.ke])
         }
     }
+    /**
+    * API : Login handler. Dashboard, Streamer, Dashcam Administrator, Superuser
+    */
     app.post([config.webPaths.home,s.checkCorrectPathEnding(config.webPaths.home)+':screen'],function (req,res){
         req.ip=req.headers['cf-connecting-ip']||req.headers["CF-Connecting-IP"]||req.headers["'x-forwarded-for"]||req.connection.remoteAddress;
         if(req.query.json === 'true'){
@@ -556,7 +550,9 @@ module.exports = function(s,config,lang,app){
             }
         }
     })
-    // Brute Protection Lock Reset by API
+    /**
+    * API : Brute Protection Lock Reset by API
+    */
     app.get([config.webPaths.apiPrefix+':auth/resetBruteProtection/:ke'], function (req,res){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
@@ -567,7 +563,9 @@ module.exports = function(s,config,lang,app){
             res.end(s.prettyPrint({ok:true}))
         })
     })
-    // Get HLS stream (m3u8)
+    /**
+    * API : Get HLS Stream
+    */
     app.get([config.webPaths.apiPrefix+':auth/hls/:ke/:id/:file',config.webPaths.apiPrefix+':auth/hls/:ke/:id/:channel/:file'], function (req,res){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.fn=function(user){
@@ -588,7 +586,9 @@ module.exports = function(s,config,lang,app){
         }
         s.auth(req.params,req.fn,res,req);
     })
-    //Get JPEG snap
+    /**
+    * API : Get JPEG Snapshot
+    */
     app.get(config.webPaths.apiPrefix+':auth/jpeg/:ke/:id/s.jpg', function(req,res){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
@@ -612,7 +612,9 @@ module.exports = function(s,config,lang,app){
             },res,req);
         },res,req);
     });
-    //Get FLV stream
+    /**
+    * API : Get FLV Stream
+    */
     app.get([config.webPaths.apiPrefix+':auth/flv/:ke/:id/s.flv',config.webPaths.apiPrefix+':auth/flv/:ke/:id/:channel/s.flv'], function(req,res) {
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
@@ -648,7 +650,9 @@ module.exports = function(s,config,lang,app){
             },res,req)
         },res,req)
     })
-    //Get H.265/h265 HEVC stream
+    /**
+    * API : Get H.265/h265 HEVC stream
+    */
     app.get([config.webPaths.apiPrefix+':auth/h265/:ke/:id/s.hevc',config.webPaths.apiPrefix+':auth/h265/:ke/:id/:channel/s.hevc'], function(req,res) {
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
@@ -677,7 +681,9 @@ module.exports = function(s,config,lang,app){
             },res,req)
         },res,req)
     })
-    //montage - stand alone squished view with gridstackjs
+    /**
+    * Page : Montage - stand alone squished view with gridstackjs
+    */
     app.get([
         config.webPaths.apiPrefix+':auth/grid/:ke',
         config.webPaths.apiPrefix+':auth/grid/:ke/:group',
@@ -786,8 +792,10 @@ module.exports = function(s,config,lang,app){
             })
         },res,req)
     });
-    //MJPEG feed
-    // if query string `full=true` is not present then it will load the MJPEG data directly and not the iframe ready page.
+    /**
+    * API and Page : Get MJPEG Stream or Page
+     * @param {string} full - if `true` page will load the MJPEG iframe page
+     */
     app.get([config.webPaths.apiPrefix+':auth/mjpeg/:ke/:id',config.webPaths.apiPrefix+':auth/mjpeg/:ke/:id/:channel'], function(req,res) {
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         if(req.query.full=='true'){
@@ -835,7 +843,9 @@ module.exports = function(s,config,lang,app){
             },res,req);
         }
     });
-    //embed monitor
+    /**
+    * Page : Get Embed Stream
+     */
     app.get([config.webPaths.apiPrefix+':auth/embed/:ke/:id',config.webPaths.apiPrefix+':auth/embed/:ke/:id/:addon'], function (req,res){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.params.protocol=req.protocol;
@@ -857,7 +867,9 @@ module.exports = function(s,config,lang,app){
             }
         },res,req);
     });
-    // Get TV Channels (Monitor Streams) json
+    /**
+    * API : Get TV Channels (Monitor Streams) json
+     */
     app.get([config.webPaths.apiPrefix+':auth/tvChannels/:ke',config.webPaths.apiPrefix+':auth/tvChannels/:ke/:id','/get.php'], function (req,res){
         req.ret={ok:false};
         if(req.query.username&&req.query.password){
@@ -993,7 +1005,9 @@ module.exports = function(s,config,lang,app){
         }
         s.auth(req.params,req.fn,res,req);
     });
-    // Get monitors json
+    /**
+    * API : Get Monitors
+     */
     app.get([config.webPaths.apiPrefix+':auth/monitor/:ke',config.webPaths.apiPrefix+':auth/monitor/:ke/:id'], function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
@@ -1079,7 +1093,9 @@ module.exports = function(s,config,lang,app){
         }
         s.auth(req.params,req.fn,res,req);
     });
-    // Get videos json
+    /**
+    * API : Get Videos
+     */
     app.get([
         config.webPaths.apiPrefix+':auth/videos/:ke',
         config.webPaths.apiPrefix+':auth/videos/:ke/:id',
@@ -1196,7 +1212,9 @@ module.exports = function(s,config,lang,app){
             })
         },res,req);
     });
-    // Get events json (motion logs)
+    /**
+    * API : Get Events
+     */
     app.get([config.webPaths.apiPrefix+':auth/events/:ke',config.webPaths.apiPrefix+':auth/events/:ke/:id',config.webPaths.apiPrefix+':auth/events/:ke/:id/:limit',config.webPaths.apiPrefix+':auth/events/:ke/:id/:limit/:start',config.webPaths.apiPrefix+':auth/events/:ke/:id/:limit/:start/:end'], function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
@@ -1252,7 +1270,9 @@ module.exports = function(s,config,lang,app){
             })
         },res,req);
     });
-    // Get logs json
+    /**
+    * API : Get Logs
+     */
     app.get([config.webPaths.apiPrefix+':auth/logs/:ke',config.webPaths.apiPrefix+':auth/logs/:ke/:id'], function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
@@ -1315,7 +1335,9 @@ module.exports = function(s,config,lang,app){
             })
         },res,req);
     })
-    // Get monitors online json
+    /**
+    * API : Get Monitors Online
+     */
     app.get(config.webPaths.apiPrefix+':auth/smonitor/:ke', function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
@@ -1350,7 +1372,9 @@ module.exports = function(s,config,lang,app){
         }
         s.auth(req.params,req.fn,res,req);
     });
-    //monitor mode controller
+    /**
+    * API : Monitor Mode Controller
+     */
     app.get([config.webPaths.apiPrefix+':auth/monitor/:ke/:id/:f',config.webPaths.apiPrefix+':auth/monitor/:ke/:id/:f/:ff',config.webPaths.apiPrefix+':auth/monitor/:ke/:id/:f/:ff/:fff'], function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
@@ -1444,7 +1468,9 @@ module.exports = function(s,config,lang,app){
             })
         },res,req);
     })
-    //get file from fileBin bin
+    /**
+    * API : Get fileBin files
+     */
     app.get([config.webPaths.apiPrefix+':auth/fileBin/:ke',config.webPaths.apiPrefix+':auth/fileBin/:ke/:id'],function (req,res){
         res.setHeader('Content-Type', 'application/json');
         res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -1476,7 +1502,9 @@ module.exports = function(s,config,lang,app){
         }
         s.auth(req.params,req.fn,res,req);
     });
-    //get file from fileBin bin
+    /**
+    * API : Get fileBin file
+     */
     app.get(config.webPaths.apiPrefix+':auth/fileBin/:ke/:id/:year/:month/:day/:file', function (req,res){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.fn=function(user){
@@ -1505,7 +1533,9 @@ module.exports = function(s,config,lang,app){
         }
         s.auth(req.params,req.fn,res,req);
     });
-    //zip videos and get link from fileBin
+    /**
+    * API : Zip Videos and Get Link from fileBin
+     */
     app.get(config.webPaths.apiPrefix+':auth/zipVideos/:ke', function (req,res){
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         var failed = function(resp){
@@ -1593,7 +1623,9 @@ module.exports = function(s,config,lang,app){
             failed({ok:false,msg:'"videos" query variable is missing from request.'})
         }
     });
-    // Get cloud video file (proxy)
+    /**
+    * API : Get Cloud Video File (proxy)
+     */
     app.get(config.webPaths.apiPrefix+':auth/cloudVideos/:ke/:id/:file', function (req,res){
         s.auth(req.params,function(user){
             if(user.permissions.watch_videos==="0"||user.details.sub&&user.details.allmonitors!=='1'&&user.details.monitors.indexOf(req.params.id)===-1){
@@ -1615,7 +1647,9 @@ module.exports = function(s,config,lang,app){
             })
         },res,req);
     });
-    // Get video file
+    /**
+    * API : Get Video File
+     */
     app.get(config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file', function (req,res){
         s.auth(req.params,function(user){
             if(user.permissions.watch_videos==="0"||user.details.sub&&user.details.allmonitors!=='1'&&user.details.monitors.indexOf(req.params.id)===-1){
@@ -1667,7 +1701,9 @@ module.exports = function(s,config,lang,app){
             })
         },res,req);
     });
-    //motion trigger
+    /**
+    * API : Motion Trigger via GET request
+     */
     app.get(config.webPaths.apiPrefix+':auth/motion/:ke/:id', function (req,res){
         s.auth(req.params,function(user){
             if(req.query.data){
@@ -1689,7 +1725,9 @@ module.exports = function(s,config,lang,app){
             res.end(user.lang['Trigger Successful'])
         },res,req);
     })
-    //hookTester trigger
+    /**
+    * API : WebHook Tester
+     */
     app.get(config.webPaths.apiPrefix+':auth/hookTester/:ke/:id', function (req,res){
         res.setHeader('Content-Type', 'application/json');
         s.auth(req.params,function(user){
@@ -1697,7 +1735,9 @@ module.exports = function(s,config,lang,app){
             res.end(s.prettyPrint({ok:true}))
         },res,req);
     })
-    //control trigger
+    /**
+    * API : Camera PTZ Controller
+     */
     app.get(config.webPaths.apiPrefix+':auth/control/:ke/:id/:direction', function (req,res){
         res.setHeader('Content-Type', 'application/json');
         res.header("Access-Control-Allow-Origin",req.headers.origin);
@@ -1707,7 +1747,9 @@ module.exports = function(s,config,lang,app){
             });
         },res,req);
     })
-    //modify video file
+    /**
+    * API : Modify Video File
+     */
     app.get([
         config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode',
         config.webPaths.apiPrefix+':auth/videos/:ke/:id/:file/:mode/:f',
@@ -1783,7 +1825,9 @@ module.exports = function(s,config,lang,app){
             })
         },res,req);
     })
-    //ffmpeg pushed stream in here to make a pipe
+    /**
+    * API : Stream In to push data to ffmpeg by HTTP
+     */
     app.all(['/streamIn/:ke/:id','/streamIn/:ke/:id/:feed'], function (req, res) {
         var checkOrigin = function(search){return req.headers.host.indexOf(search)>-1}
         if(checkOrigin('127.0.0.1')){
@@ -1803,7 +1847,9 @@ module.exports = function(s,config,lang,app){
             res.end('Local connection is only allowed.')
         }
     })
-    //MP4 Stream
+    /**
+    * API : Get Poseidon MP4 Stream
+     */
     app.get([config.webPaths.apiPrefix+':auth/mp4/:ke/:id/:channel/s.mp4',config.webPaths.apiPrefix+':auth/mp4/:ke/:id/s.mp4',config.webPaths.apiPrefix+':auth/mp4/:ke/:id/:channel/s.ts',config.webPaths.apiPrefix+':auth/mp4/:ke/:id/s.ts'], function (req, res) {
         s.auth(req.params,function(user){
             if(!s.group[req.params.ke] || !s.group[req.params.ke].mon[req.params.id]){
@@ -1845,7 +1891,9 @@ module.exports = function(s,config,lang,app){
             },res,req);
         },res,req);
     });
-    //simulate RTSP over HTTP
+    /**
+    * API : Get H.264 over HTTP
+     */
     app.get([
         config.webPaths.apiPrefix+':auth/mpegts/:ke/:id/:feed/:file',
         config.webPaths.apiPrefix+':auth/mpegts/:ke/:id/:feed/',
@@ -1882,7 +1930,9 @@ module.exports = function(s,config,lang,app){
             },res,req);
         },res,req);
     });
-    //FFprobe by API
+    /**
+    * API : FFprobe
+     */
     app.get(config.webPaths.apiPrefix+':auth/probe/:ke',function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
@@ -1927,7 +1977,9 @@ module.exports = function(s,config,lang,app){
             }
         },res,req);
     })
-    //ONVIF requesting with Shinobi API structure
+    /**
+    * API : ONVIF Method Controller
+     */
     app.all([config.webPaths.apiPrefix+':auth/onvif/:ke/:id/:action',config.webPaths.apiPrefix+':auth/onvif/:ke/:id/:service/:action'],function (req,res){
         var response = {ok:false};
         res.setHeader('Content-Type', 'application/json');
