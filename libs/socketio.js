@@ -991,12 +991,16 @@ module.exports = function(s,config,lang,io){
         cn.on('super',function(d){
             if(!cn.init&&d.f=='init'){
                 d.ok=s.superAuth({mail:d.mail,pass:d.pass},function(data){
-                    cn.uid=d.mail
+                    cn.mail=d.mail
                     cn.join('$');
+                    var tempSessionKey = s.gid(30)
+                    cn.superSessionKey = tempSessionKey
+                    s.superUsersApi[tempSessionKey] = data
+                    if(!data.$user.tokens)data.$user.tokens = {}
+                    data.$user.tokens[tempSessionKey] = {}
                     cn.ip=cn.request.connection.remoteAddress
-                    s.log({ke:'$',mid:'$USER'},{type:lang['Websocket Connected'],msg:{for:lang['Superuser'],id:cn.uid,ip:cn.ip}})
+                    s.log({ke:'$',mid:'$USER'},{type:lang['Websocket Connected'],msg:{for:lang['Superuser'],id:cn.mail,ip:cn.ip}})
                     cn.init='super';
-                    cn.mail=d.mail;
                     s.tx({f:'init_success',mail:d.mail},cn.id);
                 })
                 if(d.ok===false){
@@ -1395,11 +1399,13 @@ module.exports = function(s,config,lang,io){
                         })
                     }
                 }else if(!cn.embedded){
-                    if(s.group[cn.ke].users[cn.auth].login_type==='Dashboard'){
-                        s.tx({f:'user_status_change',ke:cn.ke,uid:cn.uid,status:0})
+                    if(s.group[cn.ke].users[cn.auth]){
+                        if(s.group[cn.ke].users[cn.auth].login_type === 'Dashboard'){
+                            s.tx({f:'user_status_change',ke:cn.ke,uid:cn.uid,status:0})
+                        }
+                        s.log({ke:cn.ke,mid:'$USER'},{type:lang['Websocket Disconnected'],msg:{mail:s.group[cn.ke].users[cn.auth].mail,id:cn.uid,ip:cn.ip}})
+                        delete(s.group[cn.ke].users[cn.auth]);
                     }
-                    s.log({ke:cn.ke,mid:'$USER'},{type:lang['Websocket Disconnected'],msg:{mail:s.group[cn.ke].users[cn.auth].mail,id:cn.uid,ip:cn.ip}})
-                    delete(s.group[cn.ke].users[cn.auth]);
                     if(s.group[cn.ke].dashcamUsers && s.group[cn.ke].dashcamUsers[cn.auth])delete(s.group[cn.ke].dashcamUsers[cn.auth]);
                 }
             }
@@ -1415,6 +1421,9 @@ module.exports = function(s,config,lang,io){
                 s.tx({f:'detector_unplugged',plug:s.ocv.plug},'CPU')
                 delete(s.ocv);
                 delete(s.api[cn.id])
+            }
+            if(cn.superSessionKey){
+                delete(s.superUsersApi[cn.superSessionKey])
             }
         })
     });

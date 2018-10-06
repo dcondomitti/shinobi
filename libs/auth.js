@@ -2,6 +2,7 @@ var fs = require('fs');
 module.exports = function(s,config,lang){
     //Authenticator functions
     s.api = {}
+    s.superUsersApi = {}
     s.factorAuth = {}
     s.failedLoginAttempts = {}
     //auth handler
@@ -112,43 +113,53 @@ module.exports = function(s,config,lang){
         var userSelected = false
         var adminUsersSelected = false
         try{
-            var superUserList = JSON.parse(fs.readFileSync(s.location.super))
-            superUserList.forEach(function(superUser,n){
-                if(
-                    userFound === false &&
-                    (
-                        superUser.tokens && superUser.tokens[params.auth] || //using API key or..
-                        (
-                            params.mail.toLowerCase() === superUser.mail.toLowerCase() && //email matches
-                            (
-                                params.pass === superUser.pass || //user give it already hashed
-                                superUser.pass === s.createHash(params.pass) || //hash and check it
-                                superUser.pass.toLowerCase() === s.md5(params.pass).toLowerCase() //check if still using md5
-                            )
-                        )
-                    )
-                ){
-                    userFound = true
-                    userSelected = superUser
-                    if(params.users === true){
-                        s.sqlQuery('SELECT * FROM Users WHERE details NOT LIKE ?',['%"sub"%'],function(err,r) {
-                            adminUsersSelected = r
-                            callback({
-                                $user:superUser,
-                                users:r,
-                                config:config,
-                                lang:lang
-                            })
-                        })
-                    }else{
+            var foundUser = function(){
+                if(params.users === true){
+                    s.sqlQuery('SELECT * FROM Users WHERE details NOT LIKE ?',['%"sub"%'],function(err,r) {
+                        adminUsersSelected = r
                         callback({
-                            $user:superUser,
+                            $user:userSelected,
+                            users:r,
                             config:config,
                             lang:lang
                         })
-                    }
+                    })
+                }else{
+                    callback({
+                        $user:userSelected,
+                        config:config,
+                        lang:lang
+                    })
                 }
-            })
+            }
+            if(params.auth && s.superUsersApi[params.auth]){
+                userFound = true
+                userSelected = s.superUsersApi[params.auth].$user
+                foundUser()
+            }else{
+                var superUserList = JSON.parse(fs.readFileSync(s.location.super))
+                superUserList.forEach(function(superUser,n){
+                    if(
+                        userFound === false &&
+                        (
+                            params.auth && superUser.tokens && superUser.tokens[params.auth] || //using API key (object)
+                            params.auth && superUser.tokens && superUser.tokens.indexOf && superUser.tokens.indexOf(params.auth) > -1 || //using API key (array)
+                            (
+                                params.mail.toLowerCase() === superUser.mail.toLowerCase() && //email matches
+                                (
+                                    params.pass === superUser.pass || //user give it already hashed
+                                    superUser.pass === s.createHash(params.pass) || //hash and check it
+                                    superUser.pass.toLowerCase() === s.md5(params.pass).toLowerCase() //check if still using md5
+                                )
+                            )
+                        )
+                    ){
+                        userFound = true
+                        userSelected = superUser
+                        foundUser()
+                    }
+                })
+            }
         }catch(err){
             console.log('The following error may mean your super.json is not formatted correctly.')
             console.log(err)
