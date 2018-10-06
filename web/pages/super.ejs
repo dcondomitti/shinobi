@@ -378,6 +378,21 @@ $.conf.e.submit(function(e){
         e.html+='<pre>'+JSON.stringify($.parseJSON($.conf.draw.val()),null,3)+'</pre>'
         $.confirm.body.html(e.html)
         $.confirm.click({title:'Save',class:'btn-success'},function(){
+            // $.post('<%=config.webPaths.superApiPrefix%>'+$user.auth_token+'/system/configure',{
+            //     uid: $.pR.user,
+            //     mail: $.ccio.subs[$.pR.user].mail,
+            //     data: JSON.stringify(form)
+            // },function(data){
+            //     if(data.ok){
+            //         $.pR.e.modal('hide')
+            //     }else{
+            //         new PNotify({
+            //             title : 'Failed to Add Account',
+            //             text : data.msg,
+            //             type : 'error'
+            //         })
+            //     }
+            // })
             $.ccio.cx({f:'system',ff:'configure',data:$.parseJSON($.conf.draw.val())})
         });
     }else{
@@ -493,6 +508,7 @@ $.changeSuperPreferences.form.submit(function(e){
     $.ccio.cx({f:'accounts',ff:'saveSuper',form:formValues})
     return false
 })
+////
 $(document).ready(function(){
     $.each(<%-JSON.stringify(Logs)%>,function(n,v){
         $.ccio.tm(4,v,'#logs table')
