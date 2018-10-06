@@ -32,7 +32,7 @@ module.exports = function(s,config,lang,app){
         //API Prefix
         if(config.webPaths.apiPrefix === undefined){config.webPaths.apiPrefix='/'}else{config.webPaths.apiPrefix = s.checkCorrectPathEnding(config.webPaths.apiPrefix)}
         //Admin API Prefix
-        if(config.webPaths.adminApiPrefix === undefined){config.webPaths.adminApiPrefix='/super/'}else{config.webPaths.adminApiPrefix = s.checkCorrectPathEnding(config.webPaths.adminApiPrefix)}
+        if(config.webPaths.adminApiPrefix === undefined){config.webPaths.adminApiPrefix='/admin/'}else{config.webPaths.adminApiPrefix = s.checkCorrectPathEnding(config.webPaths.adminApiPrefix)}
         //Super API Prefix
         if(config.webPaths.superApiPrefix === undefined){config.webPaths.superApiPrefix='/super/'}else{config.webPaths.superApiPrefix = s.checkCorrectPathEnding(config.webPaths.superApiPrefix)}
     //Render Configurations - Page Render Paths
@@ -164,46 +164,6 @@ module.exports = function(s,config,lang,app){
             res.end(s.prettyPrint(req.ret));
         },res,req);
     })
-    //register function
-    app.post(config.webPaths.apiPrefix+':auth/register/:ke/:uid',function (req,res){
-        req.resp={ok:false};
-        res.setHeader('Content-Type', 'application/json');
-        s.auth(req.params,function(user){
-            if(user.details.sub){
-                res.end(user.lang['Not Permitted'])
-                return
-            }
-            s.sqlQuery('SELECT * FROM Users WHERE uid=? AND ke=? AND details NOT LIKE ? LIMIT 1',[req.params.uid,req.params.ke,'%"sub"%'],function(err,u) {
-                if(u&&u[0]){
-                    if(req.body.mail!==''&&req.body.pass!==''){
-                        if(req.body.pass===req.body.password_again){
-                            s.sqlQuery('SELECT * FROM Users WHERE mail=?',[req.body.mail],function(err,r) {
-                                if(r&&r[0]){//found one exist
-                                    req.resp.msg='Email address is in use.';
-                                }else{//create new
-                                    req.resp.msg='New Account Created';req.resp.ok=true;
-                                    req.gid=s.gid();
-                                    req.body.details='{"sub":"1","allmonitors":"1"}';
-                                    s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[req.params.ke,req.gid,req.body.mail,s.createHash(req.body.pass),req.body.details])
-                                    s.tx({f:'add_sub_account',details:req.body.details,ke:req.params.ke,uid:req.gid,mail:req.body.mail},'ADM_'+req.params.ke);
-                                }
-                                res.end(s.prettyPrint(req.resp));
-                            })
-                        }else{
-                            req.resp.msg=user.lang['Passwords Don\'t Match'];
-                        }
-                    }else{
-                        req.resp.msg=user.lang['Fields cannot be empty'];
-                    }
-                }else{
-                    req.resp.msg=user.lang['Not an Administrator Account'];
-                }
-                if(req.resp.msg){
-                    res.end(s.prettyPrint(req.resp));
-                }
-            })
-        },res,req);
-    })
     //login function
     s.deleteFactorAuth=function(r){
         delete(s.factorAuth[r.ke][r.uid])
@@ -232,13 +192,13 @@ module.exports = function(s,config,lang,app){
                     if(err){
                         s.systemLog(err)
                     }
-                    res.end(html);
-                });
+                    res.end(html)
+                })
             }
             return false
         }
         //
-        req.renderFunction=function(focus,data){
+        renderPage = function(focus,data){
             if(s.failedLoginAttempts[req.body.mail]){
                 clearTimeout(s.failedLoginAttempts[req.body.mail].timeout)
                 delete(s.failedLoginAttempts[req.body.mail])
@@ -256,10 +216,10 @@ module.exports = function(s,config,lang,app){
                         s.systemLog(err)
                     }
                     res.end(html)
-                });
+                })
             }
         }
-        req.failed=function(board){
+        failedAuthentication = function(board){
             // brute protector
             if(!s.failedLoginAttempts[req.body.mail]){
                 s.failedLoginAttempts[req.body.mail] = {
@@ -278,7 +238,7 @@ module.exports = function(s,config,lang,app){
             },1000 * 60 * 15)
             // check if JSON
             if(req.query.json === 'true'){
-                res.setHeader('Content-Type', 'application/json');
+                res.setHeader('Content-Type', 'application/json')
                 res.end(s.prettyPrint({ok:false}))
             }else{
                 res.render(config.renderPaths.index,{
@@ -292,55 +252,82 @@ module.exports = function(s,config,lang,app){
                     if(err){
                         s.systemLog(err)
                     }
-                    res.end(html);
-                });
+                    res.end(html)
+                })
             }
-            req.logTo={ke:'$',mid:'$USER'}
-            req.logData={type:lang['Authentication Failed'],msg:{for:board,mail:req.body.mail,ip:req.ip}}
+            var logTo = {
+                ke: '$',
+                mid: '$USER'
+            }
+            var logData = {
+                type: lang['Authentication Failed'],
+                msg: {
+                    for: board,
+                    mail: req.body.mail,
+                    ip: req.ip
+                }
+            }
             if(board==='super'){
-                s.log(req.logTo,req.logData)
+                s.log(logTo,logData)
             }else{
                 s.sqlQuery('SELECT ke,uid,details FROM Users WHERE mail=?',[req.body.mail],function(err,r) {
                     if(r&&r[0]){
-                        r=r[0]
+                        r = r[0]
                         r.details=JSON.parse(r.details);
                         r.lang=s.getLanguageFile(r.details.lang)
-                        req.logData.id=r.uid
-                        req.logData.type=r.lang['Authentication Failed']
-                        req.logTo.ke=r.ke
+                        logData.id=r.uid
+                        logData.type=r.lang['Authentication Failed']
+                        logTo.ke = r.ke
                     }
-                    s.log(req.logTo,req.logData)
+                    s.log(logTo,logData)
                 })
             }
         }
-        req.fn=function(r){
+        checkRoute = function(r){
             switch(req.body.function){
                 case'cam':
                     s.sqlQuery('SELECT * FROM Monitors WHERE ke=? AND type=?',[r.ke,"dashcam"],function(err,rr){
                         req.resp.mons=rr;
-                        req.renderFunction(config.renderPaths.dashcam,{$user:req.resp,lang:r.lang,define:s.getDefinitonFile(r.details.lang)});
+                        renderPage(config.renderPaths.dashcam,{
+                            // config: config,
+                            $user: req.resp,
+                            lang: r.lang,
+                            define: s.getDefinitonFile(r.details.lang)
+                        })
                     })
                 break;
                 case'streamer':
                     s.sqlQuery('SELECT * FROM Monitors WHERE ke=? AND type=?',[r.ke,"socket"],function(err,rr){
                         req.resp.mons=rr;
-                        req.renderFunction(config.renderPaths.streamer,{$user:req.resp,lang:r.lang,define:s.getDefinitonFile(r.details.lang)});
+                        renderPage(config.renderPaths.streamer,{
+                            // config: config,
+                            $user: req.resp,
+                            lang: r.lang,
+                            define: s.getDefinitonFile(r.details.lang)
+                        })
                     })
                 break;
                 case'admin':
                     if(!r.details.sub){
                         s.sqlQuery('SELECT uid,mail,details FROM Users WHERE ke=? AND details LIKE \'%"sub"%\'',[r.ke],function(err,rr) {
                             s.sqlQuery('SELECT * FROM Monitors WHERE ke=?',[r.ke],function(err,rrr) {
-                                req.renderFunction(config.renderPaths.admin,{$user:req.resp,$subs:rr,$mons:rrr,lang:r.lang,define:s.getDefinitonFile(r.details.lang)});
+                                renderPage(config.renderPaths.admin,{
+                                    config: config,
+                                    $user: req.resp,
+                                    $subs: rr,
+                                    $mons: rrr,
+                                    lang: r.lang,
+                                    define: s.getDefinitonFile(r.details.lang)
+                                })
                             })
                         })
                     }else{
                         //not admin user
-                        req.renderFunction(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.mainDirectory});
+                        renderPage(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.mainDirectory});
                     }
                 break;
                 default:
-                    req.renderFunction(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.mainDirectory});
+                    renderPage(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.mainDirectory});
                 break;
             }
             s.log({ke:r.ke,mid:'$USER'},{type:r.lang['New Authentication Token'],msg:{for:req.body.function,mail:r.mail,id:r.uid,ip:req.ip}})
@@ -369,7 +356,7 @@ module.exports = function(s,config,lang,app){
                                         s.factorAuth[r.ke][r.uid].expireAuth=setTimeout(function(){
                                             s.deleteFactorAuth(r)
                                         },1000*60*15)
-                                        req.renderFunction(config.renderPaths.factorAuth,{$user:req.resp,lang:r.lang})
+                                        renderPage(config.renderPaths.factorAuth,{$user:req.resp,lang:r.lang})
                                     }
                                     if(!s.factorAuth[r.ke]){s.factorAuth[r.ke]={}}
                                     if(!s.factorAuth[r.ke][r.uid]){
@@ -382,10 +369,10 @@ module.exports = function(s,config,lang,app){
                                         req.complete()
                                     }
                                 }else{
-                                   req.fn(r)
+                                   checkRoute(r)
                                 }
                             }else{
-                               req.fn(r)
+                               checkRoute(r)
                             }
                         }
                         if(r.details.sub){
@@ -400,7 +387,7 @@ module.exports = function(s,config,lang,app){
                             req.factorAuth()
                         }
                     }else{
-                        req.failed(req.body.function)
+                        failedAuthentication(req.body.function)
                     }
                 })
             }
@@ -490,7 +477,7 @@ module.exports = function(s,config,lang,app){
                                         req.resp.details=JSON.stringify(req.resp.details)
                                         req.resp.auth_token=req.resp.auth
                                         req.resp.ok=true
-                                        req.fn(req.resp)
+                                        checkRoute(req.resp)
                                     })
                                     return
                                 }
@@ -515,20 +502,25 @@ module.exports = function(s,config,lang,app){
                         res.end(lang.superAdminText)
                         return
                     }
-                    req.ok=s.superAuth({mail:req.body.mail,pass:req.body.pass,users:true,md5:true},function(data){
+                    var ok = s.superAuth({
+                        mail: req.body.mail,
+                        pass: req.body.pass,
+                        users: true,
+                        md5: true
+                    },function(data){
                         s.sqlQuery('SELECT * FROM Logs WHERE ke=? ORDER BY `time` DESC LIMIT 30',['$'],function(err,r) {
                             if(!r){
                                 r=[]
                             }
-                            data.Logs=r;
+                            data.Logs = r
                             fs.readFile(s.location.config,'utf8',function(err,file){
                                 data.plainConfig = JSON.parse(file)
-                                req.renderFunction(config.renderPaths.super,data);
+                                renderPage(config.renderPaths.super,data)
                             })
                         })
                     })
-                    if(req.ok===false){
-                        req.failed(req.body.function)
+                    if(ok === false){
+                        failedAuthentication(req.body.function)
                     }
                 }else{
                     req.default()
@@ -551,16 +543,16 @@ module.exports = function(s,config,lang,app){
                         }
                         req.body.function = s.factorAuth[req.body.ke][req.body.id].function
                         req.resp = s.factorAuth[req.body.ke][req.body.id].info
-                        req.fn(s.factorAuth[req.body.ke][req.body.id].user)
+                        checkRoute(s.factorAuth[req.body.ke][req.body.id].user)
                     }else{
-                        req.renderFunction(config.renderPaths.factorAuth,{$user:s.factorAuth[req.body.ke][req.body.id].info,lang:req.lang});
+                        renderPage(config.renderPaths.factorAuth,{$user:s.factorAuth[req.body.ke][req.body.id].info,lang:req.lang});
                         res.end();
                     }
                 }else{
-                    req.failed(lang['2-Factor Authentication'])
+                    failedAuthentication(lang['2-Factor Authentication'])
                 }
             }else{
-                req.failed(lang['2-Factor Authentication'])
+                failedAuthentication(lang['2-Factor Authentication'])
             }
         }
     })
