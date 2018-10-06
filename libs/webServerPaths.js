@@ -497,7 +497,7 @@ module.exports = function(s,config,lang,app){
                     }
                 })
             }else{
-                if(req.body.function==='super'){
+                if(req.body.function === 'super'){
                     if(!fs.existsSync(s.location.super)){
                         res.end(lang.superAdminText)
                         return

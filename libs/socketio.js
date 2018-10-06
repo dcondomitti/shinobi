@@ -1001,7 +1001,7 @@ module.exports = function(s,config,lang,io){
                     cn.ip=cn.request.connection.remoteAddress
                     s.log({ke:'$',mid:'$USER'},{type:lang['Websocket Connected'],msg:{for:lang['Superuser'],id:cn.mail,ip:cn.ip}})
                     cn.init='super';
-                    s.tx({f:'init_success',mail:d.mail},cn.id);
+                    s.tx({f:'init_success',mail:d.mail,superSessionKey:tempSessionKey},cn.id);
                 })
                 if(d.ok===false){
                     cn.disconnect();

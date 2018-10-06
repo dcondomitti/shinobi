@@ -121,7 +121,7 @@
                                             </div>
                                         </form>
                                     </div>
-                                    <div class="tab-pane" id="system" role="tabpanel">
+                                    <div class="tab-pane text-left" id="system" role="tabpanel">
                                         <nav class="navbar navbar-rounded navbar-expand-lg bg-primary">
                                             <div class="container">
                                                 <div class="collapse navbar-collapse">
@@ -216,10 +216,13 @@ switch($user.lang){
 $.ccio.ws=io(location.origin);
 $.ccio.cx=function(x){return $.ccio.ws.emit('super',x)}
 $.ccio.ws.on('connect',function(d){
-    $.ccio.cx({f:'init',mail:$user.mail,pass:$user.pass});
+    $.ccio.cx({f:'init',mail:$user.mail,pass:$user.pass})
 })
 $.ccio.ws.on('f',function(d){
     switch(d.f){
+        case'init_success':
+            $user.sessionKey = d.superSessionKey
+        break;
         case'log':
             $.ccio.tm(4,d.log,'#logs table')
         break;
@@ -246,7 +249,7 @@ $.ccio.ws.on('f',function(d){
         break;
     }
     if(d.msg&&typeof d.msg==='string'){
-        new PNotify({text:d.msg})
+        new PNotify({text:d.msg,type:'error'})
     }
 })
 
@@ -378,22 +381,12 @@ $.conf.e.submit(function(e){
         e.html+='<pre>'+JSON.stringify($.parseJSON($.conf.draw.val()),null,3)+'</pre>'
         $.confirm.body.html(e.html)
         $.confirm.click({title:'Save',class:'btn-success'},function(){
-            // $.post('<%=config.webPaths.superApiPrefix%>'+$user.auth_token+'/system/configure',{
-            //     uid: $.pR.user,
-            //     mail: $.ccio.subs[$.pR.user].mail,
-            //     data: JSON.stringify(form)
-            // },function(data){
-            //     if(data.ok){
-            //         $.pR.e.modal('hide')
-            //     }else{
-            //         new PNotify({
-            //             title : 'Failed to Add Account',
-            //             text : data.msg,
-            //             type : 'error'
-            //         })
-            //     }
-            // })
-            $.ccio.cx({f:'system',ff:'configure',data:$.parseJSON($.conf.draw.val())})
+            $.post('<%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/system/configure',{
+                data: $.conf.draw.val()
+            },function(data){
+                // console.log(data)
+            })
+            // $.ccio.cx({f:'system',ff:'configure',data:$.parseJSON($.conf.draw.val())})
         });
     }else{
         new PNotify({text:'Invalid JSON Syntax, Cannot Save.',type:'error'})
@@ -457,7 +450,10 @@ $.system.e.find('[system]').click(function(e){
             e.html='Do you want to delete these logs? User logs will <b>not</b> be deleted.'
             $.confirm.body.html(e.html)
             $.confirm.click({title:'Delete',class:'btn-danger'},function(){
-                $.ccio.cx({f:'logs',ff:'delete',ke:'$'})
+                // $.ccio.cx({f:'logs',ff:'delete',ke:'$'})
+                $.get('<%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/logs/delete',function(data){
+                    console.log(data)
+                })
                 $.logs.e.find('table').empty()
             });
         break;
@@ -466,8 +462,11 @@ $.system.e.find('[system]').click(function(e){
             $.confirm.title.html('Update Shinobi?')
             $.confirm.body.html('Updating Shinobi means overwriting files. If you have modified any files yourself you should update Shinobi manually.')
             $.confirm.click({title:'Update',class:'btn-danger'},function(){
-                $.ccio.cx({f:'system',ff:'update'})
-            });
+                // $.ccio.cx({f:'system',ff:'update'})
+                $.get('<%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/system/update',function(data){
+                    console.log(data)
+                })
+            })
         break;
     }
 })
@@ -492,7 +491,10 @@ $.system.e.find('[restart]').click(function(e){
     $.confirm.title.html('Restart?')
     $.confirm.body.html(e.html)
     $.confirm.click({title:'Restart',class:'btn-danger'},function(){
-        $.ccio.cx({f:'system',ff:'restart',target:e.target})
+        // $.ccio.cx({f:'system',ff:'restart',target:e.target})
+        $.get('<%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/system/restart/'+encodeURIComponent(e.target),function(data){
+            console.log(data)
+        })
     });
 })
 $.changeSuperPreferences = {
@@ -505,7 +507,12 @@ $.changeSuperPreferences.form.find('.submit').click(function(){
 $.changeSuperPreferences.form.submit(function(e){
     e.preventDefault()
     var formValues = $(this).serializeObject()
-    $.ccio.cx({f:'accounts',ff:'saveSuper',form:formValues})
+    // $.ccio.cx({f:'accounts',ff:'saveSuper',form:formValues})
+    $.post('<%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/accounts/saveSettings',{
+        data: JSON.stringify(formValues)
+    },function(data){
+        console.log(data)
+    })
     return false
 })
 ////

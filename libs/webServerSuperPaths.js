@@ -8,10 +8,8 @@ var spawn = require('child_process').spawn;
 var execSync = require('child_process').execSync;
 module.exports = function(s,config,lang,app){
     // Get logs json
-    app.get([config.webPaths.supersuperApiPrefix+':auth/logs/:ke',config.webPaths.superApiPrefix+':auth/logs/:ke/:id'], function (req,res){
+    app.all([config.webPaths.supersuperApiPrefix+':auth/logs/:ke',config.webPaths.superApiPrefix+':auth/logs/:ke/:id'], function (req,res){
         req.ret={ok:false};
-        res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.superAuth(req.params,function(resp){
             req.sql='SELECT * FROM Logs WHERE ke=?';req.ar=['$'];
             if(!req.params.id){
@@ -66,7 +64,7 @@ module.exports = function(s,config,lang,app){
             })
         },res,req)
     })
-    app.get(config.webPaths.superApiPrefix+':auth/logs/delete', function (req,res){
+    app.all(config.webPaths.superApiPrefix+':auth/logs/delete', function (req,res){
         s.superAuth(req.params,function(resp){
             s.sqlQuery('DELETE FROM Logs WHERE ke=?',['$'],function(){
                 var endData = {
@@ -76,7 +74,7 @@ module.exports = function(s,config,lang,app){
             })
         },res,req)
     })
-    app.get(config.webPaths.superApiPrefix+':auth/system/update', function (req,res){
+    app.all(config.webPaths.superApiPrefix+':auth/system/update', function (req,res){
         s.superAuth(req.params,function(resp){
             s.ffmpegKill()
             s.systemLog('Shinobi ordered to update',{
@@ -96,7 +94,7 @@ module.exports = function(s,config,lang,app){
             res.end(s.prettyPrint(endData))
         },res,req)
     })
-    app.get(config.webPaths.superApiPrefix+':auth/system/restart/:script', function (req,res){
+    app.all(config.webPaths.superApiPrefix+':auth/system/restart/:script', function (req,res){
         s.superAuth(req.params,function(resp){
             var check = function(x){return req.params.script.indexOf(x)>-1}
             var endData = {

@@ -111,25 +111,43 @@ module.exports = function(s,config,lang){
     s.superAuth = function(params,callback,res,req){
         var userFound = false
         var userSelected = false
-        var adminUsersSelected = false
+        var adminUsersSelected = null
         try{
+            var success = function(){
+                if(req && res){
+                    var ip = req.headers['cf-connecting-ip']||req.headers["CF-Connecting-IP"]||req.headers["'x-forwarded-for"]||req.connection.remoteAddress;
+                    var resp = {
+                        ok: userFound,
+                        ip: ip
+                    }
+                    console.log(resp)
+                    if(userFound === false){
+                        resp.msg = lang['Not Authorized']
+                        res.end(s.prettyPrint(resp))
+                    }
+                    if(userSelected){
+                        resp.$user = userSelected
+                    }
+                    if(adminUsersSelected){
+                        resp.users = adminUsersSelected
+                    }
+                }
+                callback({
+                    ip : ip,
+                    $user:userSelected,
+                    users:adminUsersSelected,
+                    config:config,
+                    lang:lang
+                })
+            }
             var foundUser = function(){
                 if(params.users === true){
                     s.sqlQuery('SELECT * FROM Users WHERE details NOT LIKE ?',['%"sub"%'],function(err,r) {
                         adminUsersSelected = r
-                        callback({
-                            $user:userSelected,
-                            users:r,
-                            config:config,
-                            lang:lang
-                        })
+                        success()
                     })
                 }else{
-                    callback({
-                        $user:userSelected,
-                        config:config,
-                        lang:lang
-                    })
+                    success()
                 }
             }
             if(params.auth && s.superUsersApi[params.auth]){
@@ -145,7 +163,7 @@ module.exports = function(s,config,lang){
                             params.auth && superUser.tokens && superUser.tokens[params.auth] || //using API key (object)
                             params.auth && superUser.tokens && superUser.tokens.indexOf && superUser.tokens.indexOf(params.auth) > -1 || //using API key (array)
                             (
-                                params.mail.toLowerCase() === superUser.mail.toLowerCase() && //email matches
+                                params.mail && params.mail.toLowerCase() === superUser.mail.toLowerCase() && //email matches
                                 (
                                     params.pass === superUser.pass || //user give it already hashed
                                     superUser.pass === s.createHash(params.pass) || //hash and check it
@@ -163,21 +181,6 @@ module.exports = function(s,config,lang){
         }catch(err){
             console.log('The following error may mean your super.json is not formatted correctly.')
             console.log(err)
-        }
-        if(req && res){
-            if(!res.notJSON)res.setHeader('Content-Type', 'application/json')
-            resp = req.headers['cf-connecting-ip']||req.headers["CF-Connecting-IP"]||req.headers["'x-forwarded-for"]||req.connection.remoteAddress;
-            var resp = {ok : userFound}
-            if(userFound === false){
-                resp.msg = lang['Not Authorized']
-            }
-            if(userSelected){
-                resp.$user = userSelected
-            }
-            if(adminUsersSelected){
-                resp.users = adminUsersSelected
-            }
-            res.end(s.prettyPrint(resp))
         }
         if(userFound === true){
             return true
