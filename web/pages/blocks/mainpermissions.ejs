@@ -164,20 +164,28 @@ $.aN={e:$('#add_edit')};$.aN.f=$.aN.e.find('form')
 $.aN.modeIsEdit = false
 $.aN.f.submit(function(e){
     e.preventDefault();
-    e.s=$.aN.f.serializeObject()
-    e.cx={f:'accounts',ff:'register',form:e.s};
-    if($.aN.modeIsEdit){
-        e.cx.ff='edit';
-        e.cx.account=$.aN.selected;
+    var formValues = $.aN.f.serializeObject()
+    var postData = {
+        data: JSON.stringify(formValues)
     }
-    $.ccio.cx(e.cx)
-    $.aN.e.modal('hide')
+    var webPath = 'registerAdmin'
+    if($.aN.modeIsEdit){
+        webPath = 'editAdmin'
+        postData.account = $.aN.selected
+    }
+    $.post('<%=originalURL%><%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/accounts/'+webPath,postData,function(data){
+        console.log(data)
+        if(data.ok === true){
+            $.aN.e.modal('hide')
+        }
+    })
     return false;
-});
+})
+//client side email check
 $.aN.e.on('change','[name="mail"]',function(){
     var thisVal = $(this).val()
     $.each(users,function(n,user){
-        if(user.ke !== $.aN.selected.ke && thisVal.toLowerCase() === user.mail.toLowerCase()){
+        if($.aN.selected && user.ke !== $.aN.selected.ke && thisVal.toLowerCase() === user.mail.toLowerCase()){
             new PNotify({text:"<%=lang['Email address is in use.']%>",type:'error'})
         }
     })
@@ -232,7 +240,15 @@ $.aC.e.on('click','.delete',function(e){
     e.html='Do you want to delete <b>'+e.account.mail+'</b>? You cannot recover this account. Files will remain in the filesystem. If you choose to create an account with the same Group Key it will have the previous events activated in that account.'
     $.confirm.body.html(e.html)
     $.confirm.click({title:'Delete',class:'btn-danger'},function(){
-        $.ccio.cx({f:'accounts',ff:'delete',account:e.account})
+        // $.ccio.cx({f:'accounts',ff:'delete',account:e.account})
+        $.post('<%=originalURL%><%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/accounts/deleteAdmin',{
+            account : e.account
+        },function(data){
+            console.log(data)
+            if(data.ok === true){
+                $.aN.e.modal('hide')
+            }
+        })
     });
 })
 $.aC.e.on('click','.permission',function(e){

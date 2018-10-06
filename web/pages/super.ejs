@@ -242,7 +242,7 @@ $.ccio.ws.on('f',function(d){
         case'add_account':
             d.msg='Account Created';
             $.ccio.tm(0,d,'#accounts table')
-            $.aN.selected=$.ccio.accounts[d.ke];
+            $.aN.selected = $.ccio.accounts[d.ke]
         break;
         case'delete_account':
             $('#accounts table tr[ke="'+d.ke+'"]').remove()
@@ -381,7 +381,7 @@ $.conf.e.submit(function(e){
         e.html+='<pre>'+JSON.stringify($.parseJSON($.conf.draw.val()),null,3)+'</pre>'
         $.confirm.body.html(e.html)
         $.confirm.click({title:'Save',class:'btn-success'},function(){
-            $.post('<%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/system/configure',{
+            $.post('<%=originalURL%><%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/system/configure',{
                 data: $.conf.draw.val()
             },function(data){
                 // console.log(data)
@@ -451,7 +451,7 @@ $.system.e.find('[system]').click(function(e){
             $.confirm.body.html(e.html)
             $.confirm.click({title:'Delete',class:'btn-danger'},function(){
                 // $.ccio.cx({f:'logs',ff:'delete',ke:'$'})
-                $.get('<%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/logs/delete',function(data){
+                $.get('<%=originalURL%><%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/logs/delete',function(data){
                     console.log(data)
                 })
                 $.logs.e.find('table').empty()
@@ -463,7 +463,7 @@ $.system.e.find('[system]').click(function(e){
             $.confirm.body.html('Updating Shinobi means overwriting files. If you have modified any files yourself you should update Shinobi manually.')
             $.confirm.click({title:'Update',class:'btn-danger'},function(){
                 // $.ccio.cx({f:'system',ff:'update'})
-                $.get('<%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/system/update',function(data){
+                $.get('<%=originalURL%><%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/system/update',function(data){
                     console.log(data)
                 })
             })
@@ -492,7 +492,7 @@ $.system.e.find('[restart]').click(function(e){
     $.confirm.body.html(e.html)
     $.confirm.click({title:'Restart',class:'btn-danger'},function(){
         // $.ccio.cx({f:'system',ff:'restart',target:e.target})
-        $.get('<%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/system/restart/'+encodeURIComponent(e.target),function(data){
+        $.get('<%=originalURL%><%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/system/restart/'+encodeURIComponent(e.target),function(data){
             console.log(data)
         })
     });
@@ -508,7 +508,7 @@ $.changeSuperPreferences.form.submit(function(e){
     e.preventDefault()
     var formValues = $(this).serializeObject()
     // $.ccio.cx({f:'accounts',ff:'saveSuper',form:formValues})
-    $.post('<%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/accounts/saveSettings',{
+    $.post('<%=originalURL%><%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/accounts/saveSettings',{
         data: JSON.stringify(formValues)
     },function(data){
         console.log(data)

@@ -272,9 +272,6 @@ module.exports = function(s,config,lang,app){
                                 }else{
                                     form.ke = form.ke.replace(/[`~!@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi, '')
                                 }
-                                try{
-                                    form.details = JSON.stringify(form.details)
-                                }catch(err){}
                                 //write user to db
                                 s.sqlQuery(
                                     'INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',
@@ -315,10 +312,9 @@ module.exports = function(s,config,lang,app){
             var close = function(){
                 res.end(s.prettyPrint(endData))
             }
-            var data = s.getPostData(req)
-            if(data){
-                var form = data.form
-                var account = data.account
+            var form = s.getPostData(req)
+            if(form){
+                var account = s.parseJSON(req.body.account)
                 s.sqlQuery('SELECT * FROM Users WHERE mail=?',[account.mail],function(err,r) {
                     if(r && r[0]){
                         r = r[0]
@@ -335,19 +331,19 @@ module.exports = function(s,config,lang,app){
                             delete(form.pass);
                         }
                         delete(form.password_again);
-                        d.keys=Object.keys(form);
-                        d.set=[];
-                        d.values=[];
-                        d.keys.forEach(function(v,n){
-                            if(d.set==='ke'||d.set==='password_again'||!form[v]){return}
-                            d.set.push(v+'=?')
+                        var keys = Object.keys(form)
+                        var set = []
+                        var values = []
+                        keys.forEach(function(v,n){
+                            if(set==='ke'||set==='password_again'||!form[v]){return}
+                            set.push(v+'=?')
                             if(v === 'details'){
                                 form[v] = JSON.stringify(Object.assign(details,JSON.parse(form[v])))
                             }
-                            d.values.push(form[v])
+                            values.push(form[v])
                         })
-                        d.values.push(account.mail)
-                        s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE mail=?',d.values,function(err,r) {
+                        values.push(account.mail)
+                        s.sqlQuery('UPDATE Users SET '+set.join(',')+' WHERE mail=?',values,function(err,r) {
                             if(err){
                                 console.log(err)
                                 endData.error = err
@@ -374,39 +370,33 @@ module.exports = function(s,config,lang,app){
     app.all(config.webPaths.superApiPrefix+':auth/accounts/deleteAdmin', function (req,res){
         s.superAuth(req.params,function(resp){
             var endData = {
-                ok : false
+                ok : true
             }
             var close = function(){
                 res.end(s.prettyPrint(endData))
             }
-            var data = s.getPostData(req)
-            if(data){
-                var form = data.form
-                var account = data.account
-                s.sqlQuery('DELETE FROM Users WHERE uid=? AND ke=? AND mail=?',[account.uid,account.ke,account.mail])
-                s.sqlQuery('DELETE FROM API WHERE uid=? AND ke=?',[account.uid,account.ke])
-                if(req.body.deleteSubAccounts === '1'){
-                    s.sqlQuery('DELETE FROM Users WHERE ke=?',[account.ke])
-                }
-                if(req.body.deleteMonitors === '1'){
-                    s.sqlQuery('SELECT FROM Monitors WHERE ke=?',[account.ke],function(err,monitors){
-                        monitors.forEach(function(monitor){
-                            s.camera('stop',monitor)
-                        })
-                        s.sqlQuery('DELETE FROM Monitors WHERE ke=?',[account.ke])
-                    })
-                }
-                if(req.body.deleteVideos === '1'){
-                    s.sqlQuery('DELETE FROM Videos WHERE ke=?',[account.ke])
-                    fs.unlink(s.dir.videos+account.ke)
-                }
-                if(req.body.deleteEvents === '1'){
-                    s.sqlQuery('DELETE FROM Events WHERE ke=?',[account.ke])
-                }
-                s.tx({f:'delete_account',ke:account.ke,uid:account.uid,mail:account.mail},'$')
-            }else{
-                endData.msg = lang.postDataBroken
+            var account = s.parseJSON(req.body.account)
+            s.sqlQuery('DELETE FROM Users WHERE uid=? AND ke=? AND mail=?',[account.uid,account.ke,account.mail])
+            s.sqlQuery('DELETE FROM API WHERE uid=? AND ke=?',[account.uid,account.ke])
+            if(req.body.deleteSubAccounts === '1'){
+                s.sqlQuery('DELETE FROM Users WHERE ke=?',[account.ke])
             }
+            if(req.body.deleteMonitors === '1'){
+                s.sqlQuery('SELECT FROM Monitors WHERE ke=?',[account.ke],function(err,monitors){
+                    monitors.forEach(function(monitor){
+                        s.camera('stop',monitor)
+                    })
+                    s.sqlQuery('DELETE FROM Monitors WHERE ke=?',[account.ke])
+                })
+            }
+            if(req.body.deleteVideos === '1'){
+                s.sqlQuery('DELETE FROM Videos WHERE ke=?',[account.ke])
+                fs.unlink(s.dir.videos+account.ke)
+            }
+            if(req.body.deleteEvents === '1'){
+                s.sqlQuery('DELETE FROM Events WHERE ke=?',[account.ke])
+            }
+            s.tx({f:'delete_account',ke:account.ke,uid:account.uid,mail:account.mail},'$')
             close()
         },res,req)
     })

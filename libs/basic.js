@@ -24,6 +24,14 @@ module.exports = function(s,config){
         }
         return x
     }
+    s.parseJSON = function(string){
+        try{
+            string = JSON.parse(string)
+        }catch(err){
+
+        }
+        return string
+    }
     s.addUserPassToUrl = function(url,user,pass){
         var splitted = url.split('://')
         splitted[1] = user + ':' + pass + '@' + splitted[1]
