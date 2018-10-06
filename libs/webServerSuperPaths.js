@@ -7,7 +7,9 @@ var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var execSync = require('child_process').execSync;
 module.exports = function(s,config,lang,app){
-    // Get logs json
+    /**
+    * API : Superuser : Get Logs
+    */
     app.all([config.webPaths.supersuperApiPrefix+':auth/logs/:ke',config.webPaths.superApiPrefix+':auth/logs/:ke/:id'], function (req,res){
         req.ret={ok:false};
         s.superAuth(req.params,function(resp){
@@ -64,6 +66,9 @@ module.exports = function(s,config,lang,app){
             })
         },res,req)
     })
+    /**
+    * API : Superuser : Log delete.
+    */
     app.all(config.webPaths.superApiPrefix+':auth/logs/delete', function (req,res){
         s.superAuth(req.params,function(resp){
             s.sqlQuery('DELETE FROM Logs WHERE ke=?',['$'],function(){
@@ -74,6 +79,9 @@ module.exports = function(s,config,lang,app){
             })
         },res,req)
     })
+    /**
+    * API : Superuser : Update Shinobi
+    */
     app.all(config.webPaths.superApiPrefix+':auth/system/update', function (req,res){
         s.superAuth(req.params,function(resp){
             s.ffmpegKill()
@@ -94,6 +102,9 @@ module.exports = function(s,config,lang,app){
             res.end(s.prettyPrint(endData))
         },res,req)
     })
+    /**
+    * API : Superuser : Restart Shinobi
+    */
     app.all(config.webPaths.superApiPrefix+':auth/system/restart/:script', function (req,res){
         s.superAuth(req.params,function(resp){
             var check = function(x){return req.params.script.indexOf(x)>-1}
@@ -116,6 +127,9 @@ module.exports = function(s,config,lang,app){
             res.end(s.prettyPrint(endData))
         },res,req)
     })
+    /**
+    * API : Superuser : Modify Configuration (conf.json)
+    */
     app.all(config.webPaths.superApiPrefix+':auth/system/configure', function (req,res){
         s.superAuth(req.params,function(resp){
             var endData = {
@@ -138,6 +152,39 @@ module.exports = function(s,config,lang,app){
             res.end(s.prettyPrint(endData))
         },res,req)
     })
+    /**
+    * API : Superuser : Get users in system
+    */
+    app.all([
+        config.webPaths.superApiPrefix+':auth/accounts/list',
+        config.webPaths.superApiPrefix+':auth/accounts/list/:type',
+    ], function (req,res){
+        s.superAuth(req.params,function(resp){
+            var endData = {
+                ok : true
+            }
+            searchQuery = 'SELECT ke,uid,auth,mail,details FROM Users'
+            queryVals = []
+            switch(req.params.type){
+                case'admin':case'administrator':
+                    searchQuery += ' WHERE details NOT LIKE ?'
+                    queryVals.push('%"sub"%')
+                break;
+                case'sub':case'subaccount':
+                    searchQuery += ' WHERE details LIKE ?'
+                    queryVals.push('%"sub"%')
+                break;
+            }
+            // ' WHERE details NOT LIKE ?'
+            s.sqlQuery(searchQuery,queryVals,function(err,users) {
+                endData.users = users
+                res.end(s.prettyPrint(endData))
+            })
+        },res,req)
+    })
+    /**
+    * API : Superuser : Save Superuser Preferences
+    */
     app.all(config.webPaths.superApiPrefix+':auth/accounts/saveSettings', function (req,res){
         s.superAuth(req.params,function(resp){
             var endData = {
@@ -193,6 +240,9 @@ module.exports = function(s,config,lang,app){
             res.end(s.prettyPrint(endData))
         },res,req)
     })
+    /**
+    * API : Superuser : Create Admin account (Account to manage cameras)
+    */
     app.all(config.webPaths.superApiPrefix+':auth/accounts/registerAdmin', function (req,res){
         s.superAuth(req.params,function(resp){
             var endData = {
@@ -254,6 +304,9 @@ module.exports = function(s,config,lang,app){
             if(isCallbacking === false)close()
         },res,req)
     })
+    /**
+    * API : Superuser : Edit Admin account (Account to manage cameras)
+    */
     app.all(config.webPaths.superApiPrefix+':auth/accounts/editAdmin', function (req,res){
         s.superAuth(req.params,function(resp){
             var endData = {
@@ -315,6 +368,9 @@ module.exports = function(s,config,lang,app){
             }
         },res,req)
     })
+    /**
+    * API : Superuser : Delete Admin account (Account to manage cameras)
+    */
     app.all(config.webPaths.superApiPrefix+':auth/accounts/deleteAdmin', function (req,res){
         s.superAuth(req.params,function(resp){
             var endData = {

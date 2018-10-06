@@ -115,12 +115,12 @@ module.exports = function(s,config,lang){
         try{
             var success = function(){
                 if(req && res){
+                    res.setHeader('Content-Type', 'application/json');
                     var ip = req.headers['cf-connecting-ip']||req.headers["CF-Connecting-IP"]||req.headers["'x-forwarded-for"]||req.connection.remoteAddress;
                     var resp = {
                         ok: userFound,
                         ip: ip
                     }
-                    console.log(resp)
                     if(userFound === false){
                         resp.msg = lang['Not Authorized']
                         res.end(s.prettyPrint(resp))
