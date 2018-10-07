@@ -123,6 +123,32 @@ switch($user.details.lang){
 
       return base64
     }
+    $.ccio.destroyStream = function(d,user,killElement){
+        if(d.mid && !d.id)d.id = d.mid
+        console.log(d.ke+d.id+user.auth_token)
+        console.log($.ccio.mon[d.ke+d.id+user.auth_token])
+        if($.ccio.mon[d.ke+d.id+user.auth_token]){
+            console.log('destroy')
+            $.ccio.init('closeVideo',{mid:d.id,ke:d.ke},user);
+            $.ccio.init('jpegModeStop',{mid:d.id,ke:d.ke},user);
+            $.ccio.init('clearTimers',d,user)
+            clearInterval($.ccio.mon[d.ke+d.id+user.auth_token].signal);delete($.ccio.mon[d.ke+d.id+user.auth_token].signal);
+            $.ccio.mon[d.ke+d.id+user.auth_token].watch = 0;
+            $.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount = 0
+            if($.ccio.mon[d.ke+d.id+user.auth_token].hls){$.ccio.mon[d.ke+d.id+user.auth_token].hls.destroy()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){$.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.destroy()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].Base64){$.ccio.mon[d.ke+d.id+user.auth_token].Base64.disconnect()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].h265Socket){$.ccio.mon[d.ke+d.id+user.auth_token].h265Socket.disconnect()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].h265Player){$.ccio.mon[d.ke+d.id+user.auth_token].h265Player.stop()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].dash){$.ccio.mon[d.ke+d.id+user.auth_token].dash.reset()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream && $.ccio.mon[d.ke+d.id+user.auth_token].abort){
+                $.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream.abort()
+            }
+            if(killElement){
+                $.grid.data().removeWidget($('#monitor_live_'+d.id+user.auth_token))
+            }
+        }
+    }
     $.ccio.init=function(x,d,user,k){
         if(!k){k={}};k.tmp='';
         if(d&&d.user){
@@ -2049,23 +2075,7 @@ $.ccio.globalWebsocket=function(d,user){
             }
             d.o=$.ccio.op()[d.chosen_set];
             if(!d.o[d.ke]){d.o[d.ke]={}};d.o[d.ke][d.id]=0;$.ccio.op(d.chosen_set,d.o);
-            if($.ccio.mon[d.ke+d.id+user.auth_token]){
-                $.ccio.init('closeVideo',{mid:d.id,ke:d.ke},user);
-                $.ccio.init('jpegModeStop',{mid:d.id,ke:d.ke},user);
-                $.ccio.init('clearTimers',d,user)
-                clearInterval($.ccio.mon[d.ke+d.id+user.auth_token].signal);delete($.ccio.mon[d.ke+d.id+user.auth_token].signal);
-                $.ccio.mon[d.ke+d.id+user.auth_token].watch=0;
-                if($.ccio.mon[d.ke+d.id+user.auth_token].hls){$.ccio.mon[d.ke+d.id+user.auth_token].hls.destroy()}
-                if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){$.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.destroy()}
-                if($.ccio.mon[d.ke+d.id+user.auth_token].Base64){$.ccio.mon[d.ke+d.id+user.auth_token].Base64.disconnect()}
-                if($.ccio.mon[d.ke+d.id+user.auth_token].h265Socket){$.ccio.mon[d.ke+d.id+user.auth_token].h265Socket.disconnect()}
-                if($.ccio.mon[d.ke+d.id+user.auth_token].h265Player){$.ccio.mon[d.ke+d.id+user.auth_token].h265Player.stop()}
-                if($.ccio.mon[d.ke+d.id+user.auth_token].dash){$.ccio.mon[d.ke+d.id+user.auth_token].dash.reset()}
-                if($.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream && $.ccio.mon[d.ke+d.id+user.auth_token].abort){
-                    $.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream.abort()
-                }
-                $.grid.data().removeWidget($('#monitor_live_'+d.id+user.auth_token))
-            }
+            $.ccio.destroyStream(d,user,true)
         break;
         case'monitor_watch_on':
             if(user===$user){
@@ -2171,6 +2181,13 @@ $.ccio.globalWebsocket=function(d,user){
                     case'mp4':
                         setTimeout(function(){
                             var stream = d.e.find('.stream-element');
+                            var onPoseidonError = function(){
+                                setTimeout(function(){
+                                    $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
+                                },2000)
+                            }
+                            if(!$.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount)$.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount = 0
+                            if($.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount >= 5)return
                             if(d.d.stream_flv_type==='ws'){
                                 if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){
                                     $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.destroy()
@@ -2182,14 +2199,13 @@ $.ccio.globalWebsocket=function(d,user){
                                         ke:d.ke,
                                         uid:user.uid,
                                         id:d.id,
-                                        url: url
-                                    });
+                                        url: url,
+                                        onError : onPoseidonError
+                                    })
                                     $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.start();
                                 }catch(err){
-                                    setTimeout(function(){
-                                        $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
-                                    },5000)
-                                    console.log(err)
+                                    // onPoseidonError()
+                                    console.log('onTryPoseidonError',err)
                                 }
                             }else{
                                 stream.attr('src',$.ccio.init('location',user)+user.auth_token+'/mp4/'+d.ke+'/'+d.id+'/s.mp4')
@@ -5320,7 +5336,6 @@ $('#monitors_list_search').keyup(function(){
     monitorBlocks.hide()
     $.each($.ccio.mon,function(n,monitor){
         var searchThis = JSON.stringify($.ccio.init('cleanMon',monitor)).toLowerCase().replace('"','');
-        console.log(searchTerms,searchThis)
         $.each(searchTerms,function(m,term){
             if(searchThis.indexOf(term) >-1 ){
                 $('.monitor_block[ke="'+monitor.ke+'"][mid="'+monitor.mid+'"]').show()

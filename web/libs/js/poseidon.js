@@ -19,7 +19,8 @@ var Poseidon = function () {
             uid: options.uid,
             ke: options.ke,
             id: options.id,
-            channel: options.channel
+            channel: options.channel,
+            errorCallback: options.onError
         };
         _classCallCheck(this, Poseidon);
 
@@ -28,10 +29,11 @@ var Poseidon = function () {
         } else {
             this._callback = function (err, msg) {
                 if (err) {
-                    console.error('Poseidon Error: ' + err);
+                    if(_monitor.errorCallback)_monitor.errorCallback(err)
+                    console.error('Poseidon Error: ' + err,options);
                     return;
                 }
-                console.log('Poseidon Message: ' + msg);
+                console.log('Poseidon Message: ' + msg,options);
             };
         }
         if (!options.video || !(options.video instanceof HTMLVideoElement)) {
@@ -293,6 +295,14 @@ var Poseidon = function () {
     }, {
         key: 'destroy',
         value: function destroy() {
+            if(this._socket){
+                this._socket.disconnect()
+                setTimeout(function(){
+                    this._mediaSource.removeSourceBuffer(this._sourceBuffer)
+                },3000)
+                delete(this._mediaSource)
+                delete(this._sourceBuffer)
+            }
             //todo: possibly strip control buttons and other layers added around video player
             return this;
         }
@@ -467,6 +477,11 @@ var Poseidon = function () {
     }, {
         key: '_onSocketDisconnect',
         value: function _onSocketDisconnect(event) {
+            switch(event){
+                case'ping timeout':
+                    return
+                break;
+            }
             this._callback(null, 'socket disconnect "' + event + '"');
             this.stop();
         }
@@ -502,6 +517,7 @@ var Poseidon = function () {
     }, {
         key: '_onSegment',
         value: function _onSegment(data) {
+            if(!this._mediaSource)this_.socket.disconnect()
             if (this._sourceBuffer.buffered.length) {
                 var lag = this._sourceBuffer.buffered.end(0) - this._video.currentTime;
                 if (lag > 0.5) {
