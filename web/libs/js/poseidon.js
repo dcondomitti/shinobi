@@ -295,14 +295,6 @@ var Poseidon = function () {
     }, {
         key: 'destroy',
         value: function destroy() {
-            if(this._socket){
-                this._socket.disconnect()
-                setTimeout(function(){
-                    this._mediaSource.removeSourceBuffer(this._sourceBuffer)
-                },3000)
-                delete(this._mediaSource)
-                delete(this._sourceBuffer)
-            }
             //todo: possibly strip control buttons and other layers added around video player
             return this;
         }
@@ -477,12 +469,7 @@ var Poseidon = function () {
     }, {
         key: '_onSocketDisconnect',
         value: function _onSocketDisconnect(event) {
-            switch(event){
-                case'ping timeout':
-                    return
-                break;
-            }
-            this._callback(null, 'socket disconnect "' + event + '"');
+            this._callback(true, 'socket disconnect "' + event + '"');
             this.stop();
         }
     }, {

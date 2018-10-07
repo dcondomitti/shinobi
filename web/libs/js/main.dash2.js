@@ -136,7 +136,7 @@ switch($user.details.lang){
             $.ccio.mon[d.ke+d.id+user.auth_token].watch = 0;
             $.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount = 0
             if($.ccio.mon[d.ke+d.id+user.auth_token].hls){$.ccio.mon[d.ke+d.id+user.auth_token].hls.destroy()}
-            if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){$.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.destroy()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){$.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.stop()}
             if($.ccio.mon[d.ke+d.id+user.auth_token].Base64){$.ccio.mon[d.ke+d.id+user.auth_token].Base64.disconnect()}
             if($.ccio.mon[d.ke+d.id+user.auth_token].h265Socket){$.ccio.mon[d.ke+d.id+user.auth_token].h265Socket.disconnect()}
             if($.ccio.mon[d.ke+d.id+user.auth_token].h265Player){$.ccio.mon[d.ke+d.id+user.auth_token].h265Player.stop()}
@@ -514,7 +514,7 @@ switch($user.details.lang){
                         $.ccio.mon[d.ke+d.mid+user.auth_token].Base64.disconnect()
                     }
                     if($.ccio.mon[d.ke+d.mid+user.auth_token].Poseidon){
-                        $.ccio.mon[d.ke+d.mid+user.auth_token].Poseidon.destroy()
+                        $.ccio.mon[d.ke+d.mid+user.auth_token].Poseidon.stop()
                     }
                 }
             break;
@@ -2190,7 +2190,7 @@ $.ccio.globalWebsocket=function(d,user){
                             if($.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount >= 5)return
                             if(d.d.stream_flv_type==='ws'){
                                 if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){
-                                    $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.destroy()
+                                    $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.stop()
                                 }
                                 try{
                                     $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon = new Poseidon({
