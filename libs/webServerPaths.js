@@ -1884,8 +1884,10 @@ module.exports = function(s,config,lang,app){
                             res.write(init);
                             mp4frag.pipe(res);
                             res.on('close', () => {
-                                mp4frag.unpipe(res);
-                            });
+                                try{
+                                    mp4frag.unpipe(res)
+                                }catch(err){}
+                            })
                         }
                     }
             },res,req);
