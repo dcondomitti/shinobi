@@ -109,8 +109,8 @@ module.exports = function(s,config,lang){
                         })
                     })
                     .on('close',function(){
-                        clearTimeout(s.group[e.ke].mon[e.id].checker)
-                        clearTimeout(s.group[e.ke].mon[e.id].checkStream)
+                        clearTimeout(s.group[e.ke].mon[e.id].recordingChecker)
+                        clearTimeout(s.group[e.ke].mon[e.id].streamChecker)
                         s.cx({
                             f:'created_file',
                             mid:e.id,

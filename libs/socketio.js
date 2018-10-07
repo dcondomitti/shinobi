@@ -429,7 +429,7 @@ module.exports = function(s,config,lang,io){
                         cn.join('GRPLOG_'+d.ke)
                     }
                     s.group[d.ke].users[d.auth].lang=s.getLanguageFile(s.group[d.ke].users[d.auth].details.lang)
-                    s.log({ke:d.ke,mid:'$USER'},{type:s.group[d.ke].users[d.auth].lang['Websocket Connected'],msg:{mail:r.mail,id:d.uid,ip:cn.ip}})
+                    s.userLog({ke:d.ke,mid:'$USER'},{type:s.group[d.ke].users[d.auth].lang['Websocket Connected'],msg:{mail:r.mail,id:d.uid,ip:cn.ip}})
                     if(!s.group[d.ke].mon){
                         s.group[d.ke].mon={}
                         if(!s.group[d.ke].mon){s.group[d.ke].mon={}}
@@ -457,7 +457,7 @@ module.exports = function(s,config,lang,io){
                             s.sqlQuery('SELECT * FROM Monitors WHERE ke=?', [d.ke], function(err,r) {
                                 if(r && r[0]){
                                     r.forEach(function(monitor){
-                                        s.camera('snapshot',{mid:monitor.mid,ke:monitor.ke,mon:monitor})
+                                        s.cameraSendSnapshot({mid:monitor.mid,ke:monitor.ke,mon:monitor})
                                     })
                                 }
                             })
@@ -799,7 +799,7 @@ module.exports = function(s,config,lang,io){
                                 }
                             break;
                             case'control':
-                                s.camera('control',d,function(resp){
+                                s.cameraControl(d,function(resp){
                                     tx({f:'control',response:resp})
                                 })
                             break;
@@ -826,7 +826,7 @@ module.exports = function(s,config,lang,io){
                             case'watch_on':
                                 if(!d.ke){d.ke=cn.ke}
                                 s.initiateMonitorObject({mid:d.id,ke:d.ke});
-                                if(!s.group[d.ke]||!s.group[d.ke].mon[d.id]||s.group[d.ke].mon[d.id].started===0){return false}
+                                if(!s.group[d.ke]||!s.group[d.ke].mon[d.id]||s.group[d.ke].mon[d.id].isStarted === false){return false}
                                 s.camera(d.ff,d,cn,tx)
                                 cn.join('MON_'+d.id);
                                 cn.join('DETECTOR_'+d.ke+d.id);
@@ -844,7 +844,8 @@ module.exports = function(s,config,lang,io){
                             break;
                             case'start':case'stop':
                         s.sqlQuery('SELECT * FROM Monitors WHERE ke=? AND mid=?',[cn.ke,d.id],function(err,r) {
-                            if(r&&r[0]){r=r[0]
+                            if(r && r[0]){
+                                r = r[0]
                                 s.camera(d.ff,{type:r.type,url:s.buildMonitorUrl(r),id:d.id,mode:d.ff,ke:cn.ke});
                             }
                         })
@@ -999,7 +1000,7 @@ module.exports = function(s,config,lang,io){
                     if(!data.$user.tokens)data.$user.tokens = {}
                     data.$user.tokens[tempSessionKey] = {}
                     cn.ip=cn.request.connection.remoteAddress
-                    s.log({ke:'$',mid:'$USER'},{type:lang['Websocket Connected'],msg:{for:lang['Superuser'],id:cn.mail,ip:cn.ip}})
+                    s.userLog({ke:'$',mid:'$USER'},{type:lang['Websocket Connected'],msg:{for:lang['Superuser'],id:cn.mail,ip:cn.ip}})
                     cn.init='super';
                     s.tx({f:'init_success',mail:d.mail,superSessionKey:tempSessionKey},cn.id);
                 })
@@ -1297,14 +1298,14 @@ module.exports = function(s,config,lang,io){
                     if(s.group[d.ke].mon[d.mid].allowStdinWrite === true){
                         switch(d.f){
                             case'monitor_chunk':
-                                if(s.group[d.ke].mon[d.mid].started!==1 || !s.group[d.ke].mon[d.mid].spawn || !s.group[d.ke].mon[d.mid].spawn.stdin){
+                                if(s.group[d.ke].mon[d.mid].isStarted !== true || !s.group[d.ke].mon[d.mid].spawn || !s.group[d.ke].mon[d.mid].spawn.stdin){
                                     s.tx({error:'Not Started'},cn.id);
                                     return false
                                 };
                                 s.group[d.ke].mon[d.mid].spawn.stdin.write(new Buffer(d.chunk, "binary"));
                             break;
                             case'monitor_frame':
-                                if(s.group[d.ke].mon[d.mid].started!==1){
+                                if(s.group[d.ke].mon[d.mid].isStarted !== true){
                                     s.tx({error:'Not Started'},cn.id);
                                     return false
                                 };
@@ -1324,7 +1325,7 @@ module.exports = function(s,config,lang,io){
             tx=function(z){if(!z.ke){z.ke=cn.ke;};cn.emit('f',z);}
             switch(d.f){
                 case'init':
-                        if(!s.group[d.ke]||!s.group[d.ke].mon[d.id]||s.group[d.ke].mon[d.id].started===0){return false}
+                        if(!s.group[d.ke]||!s.group[d.ke].mon[d.id]||s.group[d.ke].mon[d.id].isStarted === false){return false}
                     s.auth({auth:d.auth,ke:d.ke,id:d.id,ip:cn.request.connection.remoteAddress},function(user){
                         cn.embedded=1;
                         cn.ke=d.ke;
@@ -1374,7 +1375,7 @@ module.exports = function(s,config,lang,io){
                              s.deleteVideo(d.file)
                          break;
                          case'start':case'end':
-                             d.mid='_cron';s.log(d,{type:'cron',msg:d.msg})
+                             d.mid='_cron';s.userLog(d,{type:'cron',msg:d.msg})
                          break;
                          default:
                              s.systemLog('CRON : ',d)
@@ -1403,7 +1404,7 @@ module.exports = function(s,config,lang,io){
                         if(s.group[cn.ke].users[cn.auth].login_type === 'Dashboard'){
                             s.tx({f:'user_status_change',ke:cn.ke,uid:cn.uid,status:0})
                         }
-                        s.log({ke:cn.ke,mid:'$USER'},{type:lang['Websocket Disconnected'],msg:{mail:s.group[cn.ke].users[cn.auth].mail,id:cn.uid,ip:cn.ip}})
+                        s.userLog({ke:cn.ke,mid:'$USER'},{type:lang['Websocket Disconnected'],msg:{mail:s.group[cn.ke].users[cn.auth].mail,id:cn.uid,ip:cn.ip}})
                         delete(s.group[cn.ke].users[cn.auth]);
                     }
                     if(s.group[cn.ke].dashcamUsers && s.group[cn.ke].dashcamUsers[cn.auth])delete(s.group[cn.ke].dashcamUsers[cn.auth]);

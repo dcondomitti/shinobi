@@ -54,9 +54,9 @@ module.exports = function(s,config,lang){
                             case's.tx':
                                 s.tx(d.data,d.to)
                             break;
-                            case's.log':
+                            case's.userLog':
                                 if(!d.mon || !d.data)return console.log('LOG DROPPED',d.mon,d.data);
-                                s.log(d.mon,d.data)
+                                s.userLog(d.mon,d.data)
                             break;
                             case'created_file_chunk':
                                 if(!s.group[d.ke].mon[d.mid].childNodeStreamWriters[d.filename]){
@@ -86,8 +86,8 @@ module.exports = function(s,config,lang){
                                     size:d.filesize,
                                     end:d.endTime
                                 },'GRP_'+d.ke,'video_view');
-                                clearTimeout(s.group[d.ke].mon[d.mid].checker)
-                                clearTimeout(s.group[d.ke].mon[d.mid].checkStream)
+                                clearTimeout(s.group[d.ke].mon[d.mid].recordingChecker)
+                                clearTimeout(s.group[d.ke].mon[d.mid].streamChecker)
                             break;
                         }
                     }
@@ -116,7 +116,7 @@ module.exports = function(s,config,lang){
         childIO = require('socket.io-client')('ws://'+config.childNodes.host);
         s.cx = function(x){x.socketKey = config.childNodes.key;childIO.emit('c',x)}
         s.tx = function(x,y){s.cx({f:'s.tx',data:x,to:y})}
-        s.log = function(x,y){s.cx({f:'s.log',mon:x,data:y})}
+        s.userLog = function(x,y){s.cx({f:'s.userLog',mon:x,data:y})}
         s.queuedSqlCallbacks = {}
         s.sqlQuery = function(query,values,onMoveOn){
             var callbackId = s.gid()
@@ -155,7 +155,7 @@ module.exports = function(s,config,lang){
                 break;
                 case'kill':
                     s.initiateMonitorObject(d.d);
-                    s.kill(s.group[d.d.ke].mon[d.d.id].spawn,d.d)
+                    s.cameraDestroy(s.group[d.d.ke].mon[d.d.id].spawn,d.d)
                 break;
                 case'sync':
                     s.initiateMonitorObject(d.sync);

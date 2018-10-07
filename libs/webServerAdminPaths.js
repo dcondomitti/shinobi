@@ -212,7 +212,7 @@ module.exports = function(s,config,lang,app){
                                     })
                                     req.set=req.set.join(',');
                                     req.ar.push(req.monitor.ke),req.ar.push(req.monitor.mid);
-                                    s.log(req.monitor,{type:'Monitor Updated',msg:'by user : '+user.uid});
+                                    s.userLog(req.monitor,{type:'Monitor Updated',msg:'by user : '+user.uid});
                                     req.ret.msg=user.lang['Monitor Updated by user']+' : '+user.uid;
                                     s.sqlQuery('UPDATE Monitors SET '+req.set+' WHERE ke=? AND mid=?',req.ar)
                                     req.finish=1;
@@ -227,7 +227,7 @@ module.exports = function(s,config,lang,app){
                                         })
             //                                        req.set.push('ke'),req.st.push('?'),req.ar.push(req.monitor.ke);
                                         req.set=req.set.join(','),req.st=req.st.join(',');
-                                        s.log(req.monitor,{type:'Monitor Added',msg:'by user : '+user.uid});
+                                        s.userLog(req.monitor,{type:'Monitor Added',msg:'by user : '+user.uid});
                                         req.ret.msg=user.lang['Monitor Added by user']+' : '+user.uid;
                                         s.sqlQuery('INSERT INTO Monitors ('+req.set+') VALUES ('+req.st+')',req.ar)
                                         req.finish=1;
@@ -262,7 +262,7 @@ module.exports = function(s,config,lang,app){
                 }
             }else{
                 if(!user.details.sub || user.details.allmonitors === '1' || user.details.monitor_edit.indexOf(req.params.id) > -1 || hasRestrictions && user.details.monitor_create === '1'){
-                    s.log(s.group[req.params.ke].mon_conf[req.params.id],{type:'Monitor Deleted',msg:'by user : '+user.uid});
+                    s.userLog(s.group[req.params.ke].mon_conf[req.params.id],{type:'Monitor Deleted',msg:'by user : '+user.uid});
                     req.params.delete=1;s.camera('stop',req.params);
                     s.tx({f:'monitor_delete',uid:user.uid,mid:req.params.id,ke:req.params.ke},'GRP_'+req.params.ke);
                     s.sqlQuery('DELETE FROM Monitors WHERE ke=? AND mid=?',[req.params.ke,req.params.id])

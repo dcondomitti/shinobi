@@ -32,7 +32,7 @@ module.exports = function(s,config){
         }
     }
     //user log
-    s.log = function(e,x){
+    s.userLog = function(e,x){
         if(!x||!e.mid){return}
         if((e.details&&e.details.sqllog==='1')||e.mid.indexOf('$')>-1){
             s.sqlQuery('INSERT INTO Logs (ke,mid,info) VALUES (?,?,?)',[e.ke,e.mid,s.s(x)]);

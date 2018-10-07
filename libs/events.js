@@ -247,29 +247,29 @@ module.exports = function(s,config,lang){
                     s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd = false;
                     var runRecord = function(){
                         var filename = s.formattedTime()+'.mp4'
-                        s.log(d,{type:"Traditional Recording",msg:"Started"})
+                        s.userLog(d,{type:"Traditional Recording",msg:"Started"})
                         //-t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+'
                         s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i http://'+config.ip+':'+config.port+'/'+d.auth+'/hls/'+d.ke+'/'+d.id+'/detectorStream.m3u8 -t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+' -c:v copy -strftime 1 "'+s.getVideoDirectory(d.mon) + filename + '"').replace(/\s+/g,' ').trim()))
                         var ffmpegError='';
                         var error
                         s.group[d.ke].mon[d.id].eventBasedRecording.process.stderr.on('data',function(data){
-                            s.log(d,{type:"Traditional Recording",msg:data.toString()})
+                            s.userLog(d,{type:"Traditional Recording",msg:data.toString()})
                         })
                         s.group[d.ke].mon[d.id].eventBasedRecording.process.on('close',function(){
                             if(!s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd){
-                                s.log(d,{type:"Traditional Recording",msg:"Detector Recording Process Exited Prematurely. Restarting."})
+                                s.userLog(d,{type:"Traditional Recording",msg:"Detector Recording Process Exited Prematurely. Restarting."})
                                 runRecord()
                                 return
                             }
                             s.insertCompletedVideo(d.mon,{
                                 file : filename
                             })
-                            s.log(d,{type:"Traditional Recording",msg:"Detector Recording Complete"})
+                            s.userLog(d,{type:"Traditional Recording",msg:"Detector Recording Complete"})
                             delete(s.group[d.ke].users[d.auth])
-                            s.log(d,{type:"Traditional Recording",msg:'Clear Recorder Process'})
+                            s.userLog(d,{type:"Traditional Recording",msg:'Clear Recorder Process'})
                             delete(s.group[d.ke].mon[d.id].eventBasedRecording.process)
                             delete(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
-                            clearTimeout(s.group[d.ke].mon[d.id].checker)
+                            clearTimeout(s.group[d.ke].mon[d.id].recordingChecker)
                         })
                     }
                     runRecord()
@@ -326,7 +326,7 @@ module.exports = function(s,config,lang){
                     }
                 request({url:detector_webhook_url,method:'GET',encoding:null},function(err,data){
                     if(err){
-                        s.log(d,{type:lang["Event Webhook Error"],msg:{error:err,data:data}})
+                        s.userLog(d,{type:lang["Event Webhook Error"],msg:{error:err,data:data}})
                     }
                 })
             }

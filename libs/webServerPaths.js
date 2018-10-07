@@ -262,7 +262,7 @@ module.exports = function(s,config,lang,app){
                 }
             }
             if(board==='super'){
-                s.log(logTo,logData)
+                s.userLog(logTo,logData)
             }else{
                 s.sqlQuery('SELECT ke,uid,details FROM Users WHERE mail=?',[req.body.mail],function(err,r) {
                     if(r&&r[0]){
@@ -273,7 +273,7 @@ module.exports = function(s,config,lang,app){
                         logData.type=r.lang['Authentication Failed']
                         logTo.ke = r.ke
                     }
-                    s.log(logTo,logData)
+                    s.userLog(logTo,logData)
                 })
             }
         }
@@ -324,7 +324,7 @@ module.exports = function(s,config,lang,app){
                     renderPage(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.mainDirectory});
                 break;
             }
-            s.log({ke:r.ke,mid:'$USER'},{type:r.lang['New Authentication Token'],msg:{for:req.body.function,mail:r.mail,id:r.uid,ip:req.ip}})
+            s.userLog({ke:r.ke,mid:'$USER'},{type:r.lang['New Authentication Token'],msg:{for:req.body.function,mail:r.mail,id:r.uid,ip:req.ip}})
         //    res.end();
         }
         if(req.body.mail&&req.body.pass){
@@ -452,7 +452,7 @@ module.exports = function(s,config,lang,app){
                                     Object.keys(req.resp).forEach(function(v){
                                         user.post.push(req.resp[v])
                                     })
-                                    s.log({ke:req.body.key,mid:'$USER'},{type:r.lang['LDAP Success'],msg:{user:user}})
+                                    s.userLog({ke:req.body.key,mid:'$USER'},{type:r.lang['LDAP Success'],msg:{user:user}})
                                     s.sqlQuery('SELECT * FROM Users WHERE  ke=? AND mail=?',[req.body.key,user.cn],function(err,rr){
                                         if(rr&&rr[0]){
                                             //already registered
@@ -460,11 +460,11 @@ module.exports = function(s,config,lang,app){
                                             req.resp=rr;
                                             rr.details=JSON.parse(rr.details)
                                             req.resp.lang=s.getLanguageFile(rr.details.lang)
-                                            s.log({ke:req.body.key,mid:'$USER'},{type:r.lang['LDAP User Authenticated'],msg:{user:user,shinobiUID:rr.uid}})
+                                            s.userLog({ke:req.body.key,mid:'$USER'},{type:r.lang['LDAP User Authenticated'],msg:{user:user,shinobiUID:rr.uid}})
                                             s.sqlQuery("UPDATE Users SET auth=? WHERE ke=? AND uid=?",[req.resp.auth,req.resp.ke,rr.uid])
                                         }else{
                                             //new ldap login
-                                            s.log({ke:req.body.key,mid:'$USER'},{type:r.lang['LDAP User is New'],msg:{info:r.lang['Creating New Account'],user:user}})
+                                            s.userLog({ke:req.body.key,mid:'$USER'},{type:r.lang['LDAP User is New'],msg:{info:r.lang['Creating New Account'],user:user}})
                                             req.resp.lang=r.lang
                                             s.sqlQuery('INSERT INTO Users (ke,uid,auth,mail,pass,details) VALUES (?,?,?,?,?,?)',user.post)
                                         }
@@ -475,7 +475,7 @@ module.exports = function(s,config,lang,app){
                                     })
                                     return
                                 }
-                                s.log({ke:req.body.key,mid:'$USER'},{type:r.lang['LDAP Failed'],msg:{err:err}})
+                                s.userLog({ke:req.body.key,mid:'$USER'},{type:r.lang['LDAP Failed'],msg:{err:err}})
                                 //no user
                                 req.default()
                             });
@@ -771,7 +771,7 @@ module.exports = function(s,config,lang,app){
                                 r[n].channels.push(streamURL)
                             })
                         }catch(err){
-                            s.log(req.params,{type:'Broken Monitor Object',msg:'Stream Channels Field is damaged. Skipping.'})
+                            s.userLog(req.params,{type:'Broken Monitor Object',msg:'Stream Channels Field is damaged. Skipping.'})
                         }
                     }
                 })
@@ -855,7 +855,7 @@ module.exports = function(s,config,lang,app){
                 return
             }
             if(s.group[req.params.ke]&&s.group[req.params.ke].mon[req.params.id]){
-                if(s.group[req.params.ke].mon[req.params.id].started===1){
+                if(s.group[req.params.ke].mon[req.params.id].isStarted === true){
                     req.params.uid=user.uid;
                     res.render(config.renderPaths.embed,{data:req.params,baseUrl:req.protocol+'://'+req.hostname,config:config,lang:user.lang,mon:CircularJSON.parse(CircularJSON.stringify(s.group[req.params.ke].mon_conf[req.params.id])),originalURL:s.getOriginalUrl(req)});
                     res.end()
@@ -1360,7 +1360,7 @@ module.exports = function(s,config,lang,app){
                 if(r&&r[0]){
                     req.ar=[];
                     r.forEach(function(v){
-                        if(s.group[req.params.ke]&&s.group[req.params.ke].mon[v.mid]&&s.group[req.params.ke].mon[v.mid].started===1){
+                        if(s.group[req.params.ke]&&s.group[req.params.ke].mon[v.mid]&&s.group[req.params.ke].mon[v.mid].isStarted === true){
                             req.ar.push(v)
                         }
                     })
@@ -1592,7 +1592,7 @@ module.exports = function(s,config,lang,app){
                         fs.writeFileSync(tempScript,script,'utf8')
                         var zipCreate = spawn('sh',(tempScript).split(' '),{detached: true})
                         zipCreate.stderr.on('data',function(data){
-                            s.log({ke:req.params.ke,mid:'$USER'},{title:'Zip Create Error',msg:data.toString()})
+                            s.userLog({ke:req.params.ke,mid:'$USER'},{title:'Zip Create Error',msg:data.toString()})
                         })
                         zipCreate.on('exit',function(data){
                             fs.unlinkSync(tempScript)
@@ -1603,7 +1603,7 @@ module.exports = function(s,config,lang,app){
                             var zipDownload = fs.createReadStream(zippedFile)
                             zipDownload.pipe(res)
                             zipDownload.on('error', function (error) {
-                                s.log({ke:req.params.ke,mid:'$USER'},{title:'Zip Download Error',msg:error.toString()})
+                                s.userLog({ke:req.params.ke,mid:'$USER'},{title:'Zip Download Error',msg:error.toString()})
                                 if(zipDownload && zipDownload.destroy){
                                     zipDownload.destroy()
                                 }
@@ -1731,7 +1731,7 @@ module.exports = function(s,config,lang,app){
     app.get(config.webPaths.apiPrefix+':auth/hookTester/:ke/:id', function (req,res){
         res.setHeader('Content-Type', 'application/json');
         s.auth(req.params,function(user){
-            s.log(req.params,{type:'Test',msg:'Hook Test'})
+            s.userLog(req.params,{type:'Test',msg:'Hook Test'})
             res.end(s.prettyPrint({ok:true}))
         },res,req);
     })
@@ -1742,7 +1742,7 @@ module.exports = function(s,config,lang,app){
         res.setHeader('Content-Type', 'application/json');
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
-            s.camera('control',req.params,function(resp){
+            s.cameraControl(req.params,function(resp){
                 res.end(s.prettyPrint(resp))
             });
         },res,req);
@@ -2087,7 +2087,7 @@ module.exports = function(s,config,lang,app){
                 }else{
                     controlURL = monitorConfig.details.control_base_url
                 }
-                var controlURLOptions = s.camera('buildOptionsFromUrl',controlURL,monitorConfig)
+                var controlURLOptions = s.cameraControlOptionsFromUrl(controlURL,monitorConfig)
                 //create onvif connection
                 s.group[req.params.ke].mon[req.params.id].onvifConnection = new onvif.OnvifDevice({
                     xaddr : 'http://' + controlURLOptions.host + ':' + controlURLOptions.port + '/onvif/device_service',

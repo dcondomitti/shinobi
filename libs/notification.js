@@ -7,7 +7,7 @@ module.exports = function(s,config,lang){
                 if(!data)data = {};
                 var bot = s.group[groupKey].discordBot
                 if(!bot){
-                    s.log({ke:groupKey,mid:'$USER'},{type:lang.DiscordFailedText,msg:lang.DiscordNotEnabledText})
+                    s.userLog({ke:groupKey,mid:'$USER'},{type:lang.DiscordFailedText,msg:lang.DiscordNotEnabledText})
                     return
                 }
                 var sendBody = Object.assign({
@@ -26,7 +26,7 @@ module.exports = function(s,config,lang){
                     files: files
                 }).catch(err => {
                     if(err){
-                        s.log({ke:groupKey,mid:'$USER'},{type:lang.DiscordErrorText,msg:err})
+                        s.userLog({ke:groupKey,mid:'$USER'},{type:lang.DiscordErrorText,msg:err})
                         s.group[groupKey].discordBot = null
                         s.loadGroupApps({ke:groupKey})
                     }
