@@ -531,7 +531,7 @@ module.exports = function(s,config,lang){
         }
         return host
     }
-    s.resetRecordingCheck = function(e,launchMonitorProcesses){
+    s.resetRecordingCheck = function(e){
         clearTimeout(s.group[e.ke].mon[e.id].recordingChecker)
         var cutoff = e.cutoff + 0
         if(e.type === 'dashcam'){
@@ -539,17 +539,17 @@ module.exports = function(s,config,lang){
         }
         s.group[e.ke].mon[e.id].recordingChecker = setTimeout(function(){
             if(s.group[e.ke].mon[e.id].isStarted === true && s.group[e.ke].mon_conf[e.id].mode === 'record'){
-                launchMonitorProcesses();
+                e.launchMonitorProcesses();
                 s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Restarting});
                 s.userLog(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
             }
         },60000 * cutoff * 1.1);
     }
-    s.resetStreamCheck = function(e,launchMonitorProcesses){
+    s.resetStreamCheck = function(e){
         clearTimeout(s.group[e.ke].mon[e.id].streamChecker)
         s.group[e.ke].mon[e.id].streamChecker = setTimeout(function(){
             if(s.group[e.ke].mon[e.id].isStarted === true){
-                launchMonitorProcesses();
+                e.launchMonitorProcesses();
                 s.userLog(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
             }
         },60000*1);
@@ -638,7 +638,7 @@ module.exports = function(s,config,lang){
                 }
                 if(e.details.fatal_max !== 0 && e.errorCount > e.details.fatal_max){
                     clearTimeout(s.group[e.ke].mon[e.id].recordingSnapper)
-                    launchMonitorProcesses()
+                    e.launchMonitorProcesses()
                 }
             })
         }
@@ -665,9 +665,9 @@ module.exports = function(s,config,lang){
         })
         s.userLog(e,{type:lang['Process Started'],msg:{cmd:s.group[e.ke].mon[e.id].ffmpeg}});
     }
-    s.createCameraStreamHandlers = function(e,launchMonitorProcesses){
+    s.createCameraStreamHandlers = function(e){
         s.group[e.ke].mon[e.id].spawn.stdio[5].on('data',function(data){
-            s.resetStreamCheck(e,launchMonitorProcesses)
+            s.resetStreamCheck(e)
         })
         //emitter for mjpeg
         if(!e.details.stream_mjpeg_clients||e.details.stream_mjpeg_clients===''||isNaN(e.details.stream_mjpeg_clients)===false){e.details.stream_mjpeg_clients=20;}else{e.details.stream_mjpeg_clients=parseInt(e.details.stream_mjpeg_clients)}
@@ -705,7 +705,7 @@ module.exports = function(s,config,lang){
                e.frameToStream = function(d){
                    if(!s.group[e.ke].mon[e.id].firstStreamChunk['MAIN'])s.group[e.ke].mon[e.id].firstStreamChunk['MAIN'] = d;
                    e.frameToStream = function(d){
-                       s.resetStreamCheck(e,launchMonitorProcesses)
+                       s.resetStreamCheck(e)
                        s.group[e.ke].mon[e.id].emitter.emit('data',d)
                    }
                    e.frameToStream(d)
@@ -713,20 +713,20 @@ module.exports = function(s,config,lang){
            break;
            case'mjpeg':
                e.frameToStream = function(d){
-                   s.resetStreamCheck(e,launchMonitorProcesses)
+                   s.resetStreamCheck(e)
                    s.group[e.ke].mon[e.id].emitter.emit('data',d)
                }
            break;
            case'h265':
                e.frameToStream = function(d){
-                   s.resetStreamCheck(e,launchMonitorProcesses)
+                   s.resetStreamCheck(e)
                    s.group[e.ke].mon[e.id].emitter.emit('data',d)
                }
            break;
            case'b64':case undefined:case null:case'':
                var buffer
                e.frameToStream = function(d){
-                  s.resetStreamCheck(e,launchMonitorProcesses)
+                  s.resetStreamCheck(e)
                   if(!buffer){
                       buffer=[d]
                   }else{
@@ -781,7 +781,7 @@ module.exports = function(s,config,lang){
             e.details.stream_channels.forEach(createStreamEmitter)
         }
     }
-    s.cameraFilterFfmpegLog = function(e,launchMonitorProcesses){
+    s.cameraFilterFfmpegLog = function(e){
         var checkLog = function(d,x){return d.indexOf(x)>-1}
         s.group[e.ke].mon[e.id].spawn.stderr.on('data',function(d){
             d=d.toString();
@@ -813,7 +813,7 @@ module.exports = function(s,config,lang){
                 case checkLog(d,'mjpeg_decode_dc'):
                 case checkLog(d,'bad vlc'):
                 case checkLog(d,'error dc'):
-                    launchMonitorProcesses()
+                    e.launchMonitorProcesses()
                 break;
                 case /T[0-9][0-9]-[0-9][0-9]-[0-9][0-9]./.test(d):
                     var filename = d.split('.')[0]+'.'+e.ext
@@ -840,7 +840,7 @@ module.exports = function(s,config,lang){
                         }
                         s.group[e.ke].mon[e.id].detector_motion_count = 0
                     })
-                    s.resetRecordingCheck(e,launchMonitorProcesses)
+                    s.resetRecordingCheck(e)
                     return;
                 break;
             }
@@ -1010,7 +1010,7 @@ module.exports = function(s,config,lang){
                 if(!e.details.cutoff||e.details.cutoff===''){e.cutoff=15}else{e.cutoff=parseFloat(e.details.cutoff)};
                 if(isNaN(e.cutoff)===true){e.cutoff=15}
                 //set master based process launcher
-                var launchMonitorProcesses = function(){
+                e.launchMonitorProcesses = function(){
                     s.group[e.ke].mon[e.id].allowStdinWrite = false
                     s.txToDashcamUsers({
                         f : 'disable_stream',
@@ -1044,7 +1044,7 @@ module.exports = function(s,config,lang){
                                 if(s.group[e.ke].mon[e.id].isStarted === true){
                                     fs.stat(e.sdir+'s.jpg',function(err,snap){
                                         var notStreaming = function(){
-                                            launchMonitorProcesses()
+                                            e.launchMonitorProcesses()
                                             s.userLog(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
                                         }
                                         if(err){
@@ -1072,7 +1072,7 @@ module.exports = function(s,config,lang){
                                     s.group[e.ke].mon[e.id].open = filename.split('.')[0]
                                 break;
                                 case'change':
-                                    s.resetRecordingCheck(e,launchMonitorProcesses)
+                                    s.resetRecordingCheck(e)
                                 break;
                             }
                         });
@@ -1090,7 +1090,7 @@ module.exports = function(s,config,lang){
                         )
                     ){
                         s.group[e.ke].mon[e.id].fswatchStream = fs.watch(e.sdir, {encoding : 'utf8'}, () => {
-                            s.resetStreamCheck(e,launchMonitorProcesses)
+                            s.resetStreamCheck(e)
                         })
                     }
                     s.cameraSendSnapshot({mid:e.id,ke:e.ke,mon:e})
@@ -1105,7 +1105,7 @@ module.exports = function(s,config,lang){
                             if(o.success === true){
                                 s.group[e.ke].mon[e.id].isRecording = true
                                 s.createCameraFfmpegProcess(e)
-                                s.createCameraStreamHandlers(e,launchMonitorProcesses)
+                                s.createCameraStreamHandlers(e)
                                 if(e.type === 'dashcam'){
                                     setTimeout(function(){
                                         s.group[e.ke].mon[e.id].allowStdinWrite = true
@@ -1122,7 +1122,7 @@ module.exports = function(s,config,lang){
                                     e.type === 'h264' ||
                                     e.type === 'local'
                                 ){
-                                    s.cameraFilterFfmpegLog(e,launchMonitorProcesses)
+                                    s.cameraFilterFfmpegLog(e)
                                 }
                               }else{
                                   s.userLog(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
@@ -1150,7 +1150,7 @@ module.exports = function(s,config,lang){
                     var childNodeList = Object.keys(s.childNodes)
                     if(childNodeList.length > 0){
                         e.childNodeFound = false
-                        launchMonitorProcesses = function(){
+                        e.launchMonitorProcesses = function(){
                             startVideoProcessor = function(){
                                 s.cx({
                                     //function
@@ -1187,14 +1187,14 @@ module.exports = function(s,config,lang){
                                 s.group[e.ke].mon[e.id].childNode = ip
                                 s.group[e.ke].mon[e.id].childNodeId = s.childNodes[ip].cnid;
                                 s.cx({f:'sync',sync:s.group[e.ke].mon_conf[e.id],ke:e.ke,mid:e.id},s.group[e.ke].mon[e.id].childNodeId);
-                                launchMonitorProcesses();
+                                e.launchMonitorProcesses();
                             }
                         })
                     }else{
-                        launchMonitorProcesses();
+                        e.launchMonitorProcesses();
                     }
                 }else{
-                    launchMonitorProcesses();
+                    e.launchMonitorProcesses();
                 }
             break;
             default:
