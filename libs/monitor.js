@@ -197,6 +197,13 @@ module.exports = function(s,config,lang){
             delete(s.group[e.ke].mon[e.id].watchdog_stop);
             delete(s.group[e.ke].mon[e.id].lastJpegDetectorFrame);
             clearTimeout(s.group[e.ke].mon[e.id].recordingSnapper);
+            if(s.group[e.ke].mon[e.id].mp4frag){
+                var mp4FragChannels = Object.keys(s.group[e.ke].mon[e.id].mp4frag)
+                mp4FragChannels.forEach(function(channel){
+                    s.group[e.ke].mon[e.id].mp4frag[channel].removeAllListeners()
+                    delete(s.group[e.ke].mon[e.id].mp4frag[channel])
+                })
+            }
             if(s.group[e.ke].mon[e.id].childNode){
                 s.cx({f:'kill',d:s.cleanMonitorObject(e)},s.group[e.ke].mon[e.id].childNodeId)
             }else{
@@ -648,13 +655,13 @@ module.exports = function(s,config,lang){
                 if(e.details.loglevel!=='quiet'){
                     s.userLog(e,{type:lang['Process Unexpected Exit'],msg:{msg:lang['Process Crashed for Monitor'],cmd:s.group[e.ke].mon[e.id].ffmpeg}});
                 }
-                errorFatal('Process Unexpected Exit');
+                s.fatalCameraError(e,'Process Unexpected Exit');
             }
         }
         s.group[e.ke].mon[e.id].spawn.on('end',s.group[e.ke].mon[e.id].spawn_exit)
         s.group[e.ke].mon[e.id].spawn.on('exit',s.group[e.ke].mon[e.id].spawn_exit)
         s.group[e.ke].mon[e.id].spawn.on('error',function(er){
-            s.userLog(e,{type:'Spawn Error',msg:er});errorFatal('Spawn Error')
+            s.userLog(e,{type:'Spawn Error',msg:er});s.fatalCameraError(e,'Spawn Error')
         })
         s.userLog(e,{type:lang['Process Started'],msg:{cmd:s.group[e.ke].mon[e.id].ffmpeg}});
     }
@@ -688,7 +695,7 @@ module.exports = function(s,config,lang){
         //frames to stream
        switch(e.details.stream_type){
            case'mp4':
-               s.group[e.ke].mon[e.id].mp4frag['MAIN'] = new Mp4Frag();
+               s.group[e.ke].mon[e.id].mp4frag['MAIN'] = new Mp4Frag()
                s.group[e.ke].mon[e.id].mp4frag['MAIN'].on('error',function(error){
                    s.userLog(e,{type:lang['Mp4Frag'],msg:{error:error}})
                })
@@ -799,7 +806,7 @@ module.exports = function(s,config,lang){
                     //restart
                     setTimeout(function(){
                         s.userLog(e,{type:lang['Connection timed out'],msg:lang['Retrying...']});
-                        errorFatal('Connection timed out');
+                        s.fatalCameraError(e,'Connection timed out');
                     },1000)
                 break;
                 case checkLog(d,'Immediate exit requested'):
@@ -839,6 +846,23 @@ module.exports = function(s,config,lang){
             }
             s.userLog(e,{type:"FFMPEG STDERR",msg:d})
         })
+    }
+    s.fatalCameraError = function(e,errorMessage){
+        s.debugLog(errorMessage)
+        clearTimeout(s.group[e.ke].mon[e.id].err_fatal_timeout);
+        ++e.errorFatalCount;
+        if(s.group[e.ke].mon[e.id].isStarted === true){
+            s.group[e.ke].mon[e.id].err_fatal_timeout=setTimeout(function(){
+                if(e.details.fatal_max !== 0 && e.errorFatalCount > e.details.fatal_max){
+                    s.camera('stop',{id:e.id,ke:e.ke})
+                }else{
+                    e.launchMonitorProcesses()
+                };
+            },5000);
+        }else{
+            s.cameraDestroy(s.group[e.ke].mon[e.id].spawn,e)
+        }
+        s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Died});
     }
     s.camera = function(x,e,cn,tx){
         var ee = s.cleanMonitorObject(e);
@@ -882,14 +906,14 @@ module.exports = function(s,config,lang){
                if(cn.monitor_watching){delete(cn.monitor_watching[e.id])}
                 if(s.group[e.ke].mon[e.id]&&s.group[e.ke].mon[e.id].watch){
                     delete(s.group[e.ke].mon[e.id].watch[cn.id]),e.ob=Object.keys(s.group[e.ke].mon[e.id].watch).length
-                    if(e.ob===0){
+                    if(e.ob === 0){
                        delete(s.group[e.ke].mon[e.id].watch)
                     }
                 }else{
-                    e.ob=0;
+                    e.ob = 0;
                 }
-                if(tx){tx({f:'monitor_watch_off',ke:e.ke,id:e.id,cnid:cn.id})};
-                s.tx({viewers:e.ob,ke:e.ke,id:e.id},'MON_'+e.id);
+                if(tx){tx({f:'monitor_watch_off',ke:e.ke,id:e.id,cnid:cn.id})}
+                s.tx({viewers:e.ob,ke:e.ke,id:e.id},'MON_'+e.id)
             break;
             case'restart'://restart monitor
                 s.sendMonitorStatus({id:e.id,ke:e.ke,status:'Restarting'});
@@ -981,24 +1005,7 @@ module.exports = function(s,config,lang){
                 }else{
                     e.details.fatal_max = parseFloat(e.details.fatal_max)
                 }
-                var errorFatal = function(errorMessage){
-                    s.debugLog(errorMessage)
-                    clearTimeout(s.group[e.ke].mon[e.id].err_fatal_timeout);
-                    ++errorFatalCount;
-                    if(s.group[e.ke].mon[e.id].isStarted === true){
-                        s.group[e.ke].mon[e.id].err_fatal_timeout=setTimeout(function(){
-                            if(e.details.fatal_max!==0&&errorFatalCount>e.details.fatal_max){
-                                s.camera('stop',{id:e.id,ke:e.ke})
-                            }else{
-                                launchMonitorProcesses()
-                            };
-                        },5000);
-                    }else{
-                        s.cameraDestroy(s.group[e.ke].mon[e.id].spawn,e)
-                    }
-                    s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Died});
-                }
-                var errorFatalCount = 0;
+                e.errorFatalCount = 0;
                 //cutoff time and recording check interval
                 if(!e.details.cutoff||e.details.cutoff===''){e.cutoff=15}else{e.cutoff=parseFloat(e.details.cutoff)};
                 if(isNaN(e.cutoff)===true){e.cutoff=15}
@@ -1119,7 +1126,7 @@ module.exports = function(s,config,lang){
                                 }
                               }else{
                                   s.userLog(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
-                                  errorFatal("Ping Failed");return;
+                                  s.fatalCameraError(e,"Ping Failed");return;
                             }
                         }
                         if(
@@ -1166,7 +1173,7 @@ module.exports = function(s,config,lang){
                                         startVideoProcessor()
                                     }else{
                                         s.userLog(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
-                                        errorFatal("Ping Failed");return;
+                                        s.fatalCameraError(e,"Ping Failed");return;
                                     }
                                 })
                             }else{
