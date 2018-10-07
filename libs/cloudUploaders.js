@@ -120,7 +120,7 @@ module.exports = function(s,config,lang){
                                    msg : lang.WebdavErrorTextTryCreatingDir,
                                    dir : stitchPieces,
                                }
-                               s.log(e,{type:lang['Webdav Error'],msg:reply})
+                               s.userLog(e,{type:lang['Webdav Error'],msg:reply})
                                wfs.mkdir(stitchPieces, function(error) {
                                    if(error){
                                        reply = {
@@ -128,7 +128,7 @@ module.exports = function(s,config,lang){
                                            msg : lang.WebdavErrorTextCreatingDir,
                                            dir : stitchPieces,
                                        }
-                                       s.log(e,{type:lang['Webdav Error'],msg:reply})
+                                       s.userLog(e,{type:lang['Webdav Error'],msg:reply})
                                    }else{
                                        lastParentCheck()
                                    }
@@ -230,7 +230,7 @@ module.exports = function(s,config,lang){
                 ACL:'public-read'
             },function(err,data){
                 if(err){
-                    s.log(e,{type:lang['Amazon S3 Upload Error'],msg:err})
+                    s.userLog(e,{type:lang['Amazon S3 Upload Error'],msg:err})
                 }
                 if(s.group[e.ke].init.aws_s3_log === '1' && data && data.Location){
                     var save = [
@@ -295,7 +295,7 @@ module.exports = function(s,config,lang){
                 s.group[e.ke].bb_b2 = b2
                 var backblazeErr = function(err){
                     // console.log(err)
-                    s.log({mid:'$USER',ke:e.ke},{type:lang['Backblaze Error'],msg:err.data})
+                    s.userLog({mid:'$USER',ke:e.ke},{type:lang['Backblaze Error'],msg:err.data})
                 }
                 b2.authorize().then(function(resp){
                     s.group[e.ke].bb_b2_downloadUrl = resp.data.downloadUrl
@@ -351,7 +351,7 @@ module.exports = function(s,config,lang){
         if(s.group[e.ke].bb_b2 && s.group[e.ke].init.use_bb_b2 !== '0' && s.group[e.ke].init.bb_b2_save === '1'){
             var backblazeErr = function(err){
                 // console.log(err)
-                s.log({mid:'$USER',ke:e.ke},{type:lang['Backblaze Error'],msg:err.data})
+                s.userLog({mid:'$USER',ke:e.ke},{type:lang['Backblaze Error'],msg:err.data})
             }
             fs.readFile(k.dir+k.filename,function(err,data){
                 var backblazeSavePath = s.group[e.ke].init.bb_b2_dir+e.ke+'/'+e.mid+'/'+k.filename
@@ -397,6 +397,121 @@ module.exports = function(s,config,lang){
             })
         }
     }
+    //SFTP
+    // var beforeAccountSaveForSftp = function(d){
+    //     //d = save event
+    //     d.form.details.use_sftp = d.d.use_sftp
+    // }
+    // var cloudDiskUseStartupForSftp = function(group,userDetails){
+    //     group.cloudDiskUse['sftp'].name = 'SFTP'
+    //     group.cloudDiskUse['sftp'].sizeLimitCheck = (userDetails.use_aws_s3_size_limit === '1')
+    //     if(!userDetails.aws_s3_size_limit || userDetails.aws_s3_size_limit === ''){
+    //         group.cloudDiskUse['sftp'].sizeLimit = 10000
+    //     }else{
+    //         group.cloudDiskUse['sftp'].sizeLimit = parseFloat(userDetails.aws_s3_size_limit)
+    //     }
+    // }
+    // var loadSftpForUser = function(e){
+    //     // e = user
+    //     var ar = JSON.parse(e.details);
+    //     //SFTP
+    //     if(!s.group[e.ke].sftp &&
+    //        !s.group[e.ke].sftp &&
+    //        ar.sftp !== '0' &&
+    //        ar.sftp_accessKeyId !== ''&&
+    //        ar.sftp_secretAccessKey &&
+    //        ar.sftp_secretAccessKey !== ''&&
+    //        ar.sftp_region &&
+    //        ar.sftp_region !== ''&&
+    //        ar.sftp_bucket !== ''
+    //       ){
+    //         if(!ar.sftp_dir || ar.sftp_dir === '/'){
+    //             ar.sftp_dir = ''
+    //         }
+    //         if(ar.sftp_dir !== ''){
+    //             ar.sftp_dir = s.checkCorrectPathEnding(ar.sftp_dir)
+    //         }
+    //         s.group[e.ke].sftp = new s.group[e.ke].sftp.S3();
+    //         s.group[e.ke].sftp = new require('ssh2-sftp-client')();
+    //         var connectionDetails = {
+    //             host: ar.sftp_host,
+    //             port: ar.sftp_port
+    //         }
+    //         if(!ar.sftp_port)ar.sftp_port = 22
+    //         if(ar.sftp_username)connectionDetails.username = ar.sftp_username
+    //         if(ar.sftp_password)connectionDetails.password = ar.sftp_password
+    //         if(ar.sftp_privateKey)connectionDetails.privateKey = ar.sftp_privateKey
+    //         sftp.connect(connectionDetails).then(() => {
+    //             return sftp.list('/pathname');
+    //         }).then((data) => {
+    //             console.log(data, 'the data info');
+    //         }).catch((err) => {
+    //             console.log(err, 'catch error');
+    //         });
+    //     }
+    // }
+    // var unloadSftpForUser = function(user){
+    //     s.group[user.ke].sftp = null
+    // }
+    // var deleteVideoFromSftp = function(e,video,callback){
+    //     // e = user
+    //     try{
+    //         var videoDetails = JSON.parse(video.details)
+    //     }catch(err){
+    //         var videoDetails = video.details
+    //     }
+    //     s.group[e.ke].sftp.deleteObject({
+    //         Bucket: s.group[e.ke].init.sftp_bucket,
+    //         Key: videoDetails.location,
+    //     }, function(err, data) {
+    //         if (err) console.log(err);
+    //         callback()
+    //     });
+    // }
+    // var uploadVideoToSftp = function(e,k){
+    //     //e = video object
+    //     //k = temporary values
+    //     if(!k)k={};
+    //     //cloud saver - SFTP
+    //     if(s.group[e.ke].sftp && s.group[e.ke].init.use_sftp !== '0' && s.group[e.ke].init.sftp_save === '1'){
+    //         var fileStream = fs.createReadStream(k.dir+k.filename);
+    //         fileStream.on('error', function (err) {
+    //             console.error(err)
+    //         })
+    //         var saveLocation = s.group[e.ke].init.sftp_dir+e.ke+'/'+e.mid+'/'+k.filename
+    //         s.group[e.ke].sftp.upload({
+    //             Bucket: s.group[e.ke].init.sftp_bucket,
+    //             Key: saveLocation,
+    //             Body:fileStream,
+    //             ACL:'public-read'
+    //         },function(err,data){
+    //             if(err){
+    //                 s.userLog(e,{type:lang['SFTP Upload Error'],msg:err})
+    //             }
+    //             if(s.group[e.ke].init.sftp_log === '1' && data && data.Location){
+    //                 var save = [
+    //                     e.mid,
+    //                     e.ke,
+    //                     k.startTime,
+    //                     1,
+    //                     s.s({
+    //                         type : 'sftp',
+    //                         location : saveLocation
+    //                     }),
+    //                     k.filesize,
+    //                     k.endTime,
+    //                     data.Location
+    //                 ]
+    //                 s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end,href) VALUES (?,?,?,?,?,?,?,?)',save)
+    //                 s.setCloudDiskUsedForGroup(e,{
+    //                     amount : k.filesizeMB,
+    //                     storageType : 'sftp'
+    //                 })
+    //                 s.purgeCloudDiskForGroup(e,'sftp')
+    //             }
+    //         })
+    //     }
+    // }
     //add the extenders
     //webdav
     s.loadGroupAppExtender(loadWebDavForUser)
@@ -425,4 +540,13 @@ module.exports = function(s,config,lang){
     s.beforeAccountSave(beforeAccountSaveForBackblazeB2)
     s.onAccountSave(cloudDiskUseStartupForBackblazeB2)
     s.cloudDisksLoader('b2')
+    //SFTP
+    // s.loadGroupAppExtender(loadSftpForUser)
+    // s.unloadGroupAppExtender(unloadSftpForUser)
+    // s.insertCompletedVideoExtender(uploadVideoToSftp)
+    // s.deleteVideoFromCloudExtensions['sftp'] = deleteVideoFromSftp
+    // s.cloudDiskUseStartupExtensions['sftp'] = cloudDiskUseStartupForSftp
+    // s.beforeAccountSave(beforeAccountSaveForSftp)
+    // s.onAccountSave(cloudDiskUseStartupForSftp)
+    // s.cloudDisksLoader('sftp')
 }
