@@ -24,6 +24,12 @@ module.exports = function(s,config){
         }
         return x
     }
+    s.checkDetails = function(e){
+        if(!e.id && e.mid){e.id = e.mid}
+        if(e.details&&(e.details instanceof Object)===false){
+            try{e.details=JSON.parse(e.details)}catch(err){}
+        }
+    }
     s.parseJSON = function(string){
         try{
             string = JSON.parse(string)

@@ -220,12 +220,6 @@ module.exports = function(s,config,lang){
             }
         }
     }
-    s.cameraCheckDetails = function(e){
-        if(!e.id && e.mid){e.id = e.mid}
-        if(e.details&&(e.details instanceof Object)===false){
-            try{e.details=JSON.parse(e.details)}catch(err){}
-        }
-    }
     s.cameraCheckObjectsInDetails = function(e){
         //parse Objects
         (['detector_cascades','cords','detector_filters','input_map_choices']).forEach(function(v){
@@ -253,7 +247,7 @@ module.exports = function(s,config,lang){
         });
     }
     s.cameraControl = function(e,callback){
-        s.cameraCheckDetails(e)
+        s.checkDetails(e)
         if(!s.group[e.ke]||!s.group[e.ke].mon[e.id]){return}
         var monitorConfig = s.group[e.ke].mon_conf[e.id];
         if(monitorConfig.details.control!=="1"){s.userLog(e,{type:lang['Control Error'],msg:lang.ControlErrorText1});return}
@@ -429,7 +423,7 @@ module.exports = function(s,config,lang){
         }
     }
     s.cameraControlOptionsFromUrl = function(e,monitorConfig){
-        s.cameraCheckDetails(e)
+        s.checkDetails(e)
         URLobject = URL.parse(e)
         if(monitorConfig.details.control_url_method === 'ONVIF' && monitorConfig.details.control_base_url === ''){
             if(monitorConfig.details.onvif_port === ''){
@@ -461,7 +455,7 @@ module.exports = function(s,config,lang){
         return options
     }
     s.cameraSendSnapshot = function(e){
-        s.cameraCheckDetails(e)
+        s.checkDetails(e)
         if(config.doSnapshot===true){
             if(e.mon.mode!=='stop'){
                 var pathDir = s.dir.streams+e.ke+'/'+e.mid+'/'
@@ -1130,7 +1124,7 @@ module.exports = function(s,config,lang){
         if(cn && cn.ke && !e.ke){e.ke = cn.ke}
         e.functionMode = x
         if(!e.mode){e.mode = x}
-        s.cameraCheckDetails(e)
+        s.checkDetails(e)
         s.cameraCheckObjectsInDetails(e)
         s.initiateMonitorObject({ke:e.ke,mid:e.id})
         switch(e.functionMode){

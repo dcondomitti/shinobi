@@ -4,9 +4,7 @@ var spawn = require('child_process').spawn;
 module.exports = function(s,config,lang){
     s.getVideoDirectory = function(e){
         if(e.mid&&!e.id){e.id=e.mid};
-        if(e.details&&(e.details instanceof Object)===false){
-            try{e.details=JSON.parse(e.details)}catch(err){}
-        }
+        s.checkDetails(e)
         if(e.details&&e.details.dir&&e.details.dir!==''){
             return s.checkCorrectPathEnding(e.details.dir)+e.ke+'/'+e.id+'/'
         }else{
@@ -54,7 +52,7 @@ module.exports = function(s,config,lang){
     s.insertCompletedVideo = function(e,k,callback){
         //e = video object
         //k = temporary values
-        if(!e.id && e.mid)e.id = e.mid
+        s.checkDetails(e)
         if(!k)k={};
         e.dir = s.getVideoDirectory(e)
         k.dir = e.dir.toString()
@@ -169,8 +167,8 @@ module.exports = function(s,config,lang){
     }
     s.deleteVideo = function(e){
         //e = video object
+        s.checkDetails(e)
         e.dir = s.getVideoDirectory(e)
-        if(!e.id && e.mid)e.id = e.mid
         if(!e.filename && e.time){
             e.filename = s.formattedTime(e.time)
         }
@@ -192,29 +190,24 @@ module.exports = function(s,config,lang){
             if(r && r[0]){
                 r = r[0]
                 fs.chmod(e.dir+filename,0o777,function(err){
-                    var deleteRow = function(){
-                        s.tx({
-                            f: 'video_delete',
-                            filename: filename,
-                            mid: e.id,
-                            ke: e.ke,
-                            time: s.nameToTime(filename),
-                            end: s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')
-                        },'GRP_'+e.ke);
-                        s.setDiskUsedForGroup(e,-(r.size / 1000000))
-                        s.sqlQuery('DELETE FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',queryValues,function(err){
-                            if(err){
-                                s.systemLog(lang['File Delete Error'] + ' : '+e.ke+' : '+' : '+e.id,err)
-                            }
-                        })
+                    if(err){
+                        console.log('chmod error',err)
                     }
-                    fs.unlink(e.dir+filename,function(err){
+                    s.tx({
+                        f: 'video_delete',
+                        filename: filename,
+                        mid: e.id,
+                        ke: e.ke,
+                        time: s.nameToTime(filename),
+                        end: s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')
+                    },'GRP_'+e.ke);
+                    s.setDiskUsedForGroup(e,-(r.size / 1000000))
+                    s.sqlQuery('DELETE FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',queryValues,function(err){
                         if(err){
                             s.systemLog(lang['File Delete Error'] + ' : '+e.ke+' : '+' : '+e.id,err)
-                        }else{
-                            deleteRow()
                         }
                     })
+                    s.file('delete',e.dir+filename)
                 })
             }else{
                 console.log(lang['Database row does not exist'],queryValues)
@@ -242,7 +235,7 @@ module.exports = function(s,config,lang){
     }
     s.deleteVideoFromCloud = function(e){
         //e = video object
-        if(!e.id && e.mid)e.id = e.mid
+        s.checkDetails(e)
         var videoSelector = [e.id,e.ke,new Date(e.time)]
         s.sqlQuery('SELECT * FROM `Cloud Videos` WHERE `mid`=? AND `ke`=? AND `time`=?',videoSelector,function(err,r){
             if(r&&r[0]){
