@@ -530,6 +530,9 @@ module.exports = function(s,config,lang){
                 fs.mkdirSync(e.dir);
             }
         }
+        exec('chmod -R 777 '+e.dir,function(err){
+
+        })
         //set the temporary files directory
         var setStreamDir = function(){
             //stream dir
@@ -545,6 +548,9 @@ module.exports = function(s,config,lang){
             }
         }
         setStreamDir()
+        exec('chmod -R 777 '+e.sdir,function(err){
+
+        })
         return setStreamDir
     }
     s.stripAuthFromHost = function(e){

@@ -184,23 +184,37 @@ module.exports = function(s,config,lang){
             time = e.time
         }
         time = new Date(time)
-        e.save=[e.id,e.ke,time];
-        s.sqlQuery('SELECT * FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',e.save,function(err,r){
+        var queryValues = [e.id,e.ke,time];
+        s.sqlQuery('SELECT * FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',queryValues,function(err,r){
             if(r && r[0]){
                 r = r[0]
-                s.sqlQuery('DELETE FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',e.save,function(){
-                    fs.stat(e.dir+filename,function(err,file){
+                exec('chmod -R 777 '+e.dir+filename,function(err){
+                    var deleteRow = function(){
+                        s.tx({
+                            f: 'video_delete',
+                            filename: filename,
+                            mid: e.id,
+                            ke: e.ke,
+                            time: s.nameToTime(filename),
+                            end: s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')
+                        },'GRP_'+e.ke);
+                        s.setDiskUsedForGroup(e,-(r.size / 1000000))
+                        s.sqlQuery('DELETE FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',queryValues,function(err){
+                            if(err){
+                                s.systemLog(lang['File Delete Error'] + ' : '+e.ke+' : '+' : '+e.id,err)
+                            }
+                        })
+                    }
+                    exec('rm '+e.dir+filename,function(err){
                         if(err){
-                            s.systemLog('File Delete Error : '+e.ke+' : '+' : '+e.id,err)
+                            s.systemLog(lang['File Delete Error'] + ' : '+e.ke+' : '+' : '+e.id,err)
+                        }else{
+                            deleteRow()
                         }
-                        s.setDiskUsedForGroup(e,-(r.size/1000000))
                     })
-                    s.tx({f:'video_delete',filename:filename,mid:e.id,ke:e.ke,time:s.nameToTime(filename),end:s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+e.ke);
-                    s.file('delete',e.dir+filename)
                 })
             }else{
-                console.log('Delete Failed',e.save)
-//                    console.error(err)
+                console.log(lang['Database row does not exist'],queryValues)
             }
         })
     }
