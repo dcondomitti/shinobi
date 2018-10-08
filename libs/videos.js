@@ -156,6 +156,9 @@ module.exports = function(s,config,lang){
                 ]
                 s.sqlQuery('INSERT INTO Videos (mid,ke,time,ext,status,details,size,end) VALUES (?,?,?,?,?,?,?,?)',save,function(err){
                     if(callback)callback(err)
+                    fs.chmod(k.dir+k.file,0o777,function(err){
+
+                    })
                 })
                 //purge over max
                 s.purgeDiskForGroup(e)
@@ -188,7 +191,7 @@ module.exports = function(s,config,lang){
         s.sqlQuery('SELECT * FROM Videos WHERE `mid`=? AND `ke`=? AND `time`=?',queryValues,function(err,r){
             if(r && r[0]){
                 r = r[0]
-                exec('chmod -R 777 '+e.dir+filename,function(err){
+                fs.chmod(e.dir+filename,0o777,function(err){
                     var deleteRow = function(){
                         s.tx({
                             f: 'video_delete',
@@ -205,7 +208,7 @@ module.exports = function(s,config,lang){
                             }
                         })
                     }
-                    exec('rm '+e.dir+filename,function(err){
+                    fs.unlink(e.dir+filename,function(err){
                         if(err){
                             s.systemLog(lang['File Delete Error'] + ' : '+e.ke+' : '+' : '+e.id,err)
                         }else{

@@ -333,8 +333,10 @@ module.exports = function(s,config,lang,io){
                     cn.emit('segment', data);
                 };
                 cn.closeSocketVideoStream = function(){
-                    mp4frag.removeListener('segment', onSegment)
-                    mp4frag.removeListener('initialized', onInitialized)
+                    if(mp4frag){
+                        mp4frag.removeListener('segment', onSegment)
+                        mp4frag.removeListener('initialized', onInitialized)
+                    }
                 }
                 cn.on('MP4Command',function(msg){
                     switch (msg) {
