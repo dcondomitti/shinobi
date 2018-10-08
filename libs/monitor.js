@@ -539,7 +539,7 @@ module.exports = function(s,config,lang){
         }
         s.group[e.ke].mon[e.id].recordingChecker = setTimeout(function(){
             if(s.group[e.ke].mon[e.id].isStarted === true && s.group[e.ke].mon_conf[e.id].mode === 'record'){
-                e.launchMonitorProcesses();
+                s.launchMonitorProcesses(e);
                 s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Restarting});
                 s.userLog(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
             }
@@ -549,7 +549,7 @@ module.exports = function(s,config,lang){
         clearTimeout(s.group[e.ke].mon[e.id].streamChecker)
         s.group[e.ke].mon[e.id].streamChecker = setTimeout(function(){
             if(s.group[e.ke].mon[e.id].isStarted === true){
-                e.launchMonitorProcesses();
+                s.launchMonitorProcesses(e);
                 s.userLog(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
             }
         },60000*1);
@@ -638,7 +638,7 @@ module.exports = function(s,config,lang){
                 }
                 if(e.details.fatal_max !== 0 && e.errorCount > e.details.fatal_max){
                     clearTimeout(s.group[e.ke].mon[e.id].recordingSnapper)
-                    e.launchMonitorProcesses()
+                    s.launchMonitorProcesses(e)
                 }
             })
         }
@@ -813,7 +813,7 @@ module.exports = function(s,config,lang){
                 case checkLog(d,'mjpeg_decode_dc'):
                 case checkLog(d,'bad vlc'):
                 case checkLog(d,'error dc'):
-                    e.launchMonitorProcesses()
+                    s.launchMonitorProcesses(e)
                 break;
                 case /T[0-9][0-9]-[0-9][0-9]-[0-9][0-9]./.test(d):
                     var filename = d.split('.')[0]+'.'+e.ext
@@ -847,16 +847,215 @@ module.exports = function(s,config,lang){
             s.userLog(e,{type:"FFMPEG STDERR",msg:d})
         })
     }
+    //set master based process launcher
+    s.launchMonitorProcesses = function(e){
+        //create host string without username and password
+        var strippedHost = s.stripAuthFromHost(e)
+        var doOnThisMachine = function(){
+            var setStreamDir = s.createCameraFolders(e)
+            s.group[e.ke].mon[e.id].allowStdinWrite = false
+            s.txToDashcamUsers({
+                f : 'disable_stream',
+                ke : e.ke,
+                mid : e.id
+            },e.ke)
+            if(e.details.detector_trigger === '1'){
+                s.group[e.ke].mon[e.id].motion_lock=setTimeout(function(){
+                    clearTimeout(s.group[e.ke].mon[e.id].motion_lock);
+                    delete(s.group[e.ke].mon[e.id].motion_lock);
+                },15000)
+            }
+            //start "no motion" checker
+            if(e.details.detector === '1' && e.details.detector_notrigger === '1'){
+                if(!e.details.detector_notrigger_timeout || e.details.detector_notrigger_timeout === ''){
+                    e.details.detector_notrigger_timeout = 10
+                }
+                e.detector_notrigger_timeout = parseFloat(e.details.detector_notrigger_timeout)*1000*60;
+                s.group[e.ke].mon[e.id].detector_notrigger_timeout_function = function(){
+                    s.onDetectorNoTriggerTimeoutExtensions.forEach(function(extender){
+                        extender(r,e)
+                    })
+                }
+                clearInterval(s.group[e.ke].mon[e.id].detector_notrigger_timeout)
+                s.group[e.ke].mon[e.id].detector_notrigger_timeout=setInterval(s.group[e.ke].mon[e.id].detector_notrigger_timeout_function,s.group[e.ke].mon[e.id].detector_notrigger_timeout)
+            }
+            if(e.details.snap === '1'){
+                var resetSnapCheck = function(){
+                    clearTimeout(s.group[e.ke].mon[e.id].checkSnap)
+                    s.group[e.ke].mon[e.id].checkSnap = setTimeout(function(){
+                        if(s.group[e.ke].mon[e.id].isStarted === true){
+                            fs.stat(e.sdir+'s.jpg',function(err,snap){
+                                var notStreaming = function(){
+                                    s.launchMonitorProcesses(e)
+                                    s.userLog(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
+                                }
+                                if(err){
+                                    notStreaming()
+                                }else{
+                                    if(!e.checkSnapTime)e.checkSnapTime = snap.mtime
+                                    if(err || e.checkSnapTime === snap.mtime){
+                                        e.checkSnapTime = snap.mtime
+                                        notStreaming()
+                                    }else{
+                                        resetSnapCheck()
+                                    }
+                                }
+                            })
+                        }
+                    },60000*1);
+                }
+                resetSnapCheck()
+            }
+            if(config.childNodes.mode !== 'child' && s.platform!=='darwin' && (x==='record' || (x==='start'&&e.details.detector_record_method==='sip'))){
+                //check if ffmpeg is recording
+                s.group[e.ke].mon[e.id].fswatch = fs.watch(e.dir, {encoding : 'utf8'}, (event, filename) => {
+                    switch(event){
+                        case'rename':
+                            s.group[e.ke].mon[e.id].open = filename.split('.')[0]
+                        break;
+                        case'change':
+                            s.resetRecordingCheck(e)
+                        break;
+                    }
+                });
+            }
+            if(
+                //is MacOS
+                s.platform !== 'darwin' &&
+                //is Watch-Only or Record
+                (x === 'start' || x === 'record') &&
+                //if JPEG API enabled or Stream Type is HLS
+                (
+                    e.details.stream_type === 'jpeg' ||
+                    e.details.stream_type === 'hls' ||
+                    e.details.snap === '1'
+                )
+            ){
+                s.group[e.ke].mon[e.id].fswatchStream = fs.watch(e.sdir, {encoding : 'utf8'}, () => {
+                    s.resetStreamCheck(e)
+                })
+            }
+            s.cameraSendSnapshot({mid:e.id,ke:e.ke,mon:e})
+            //check host to see if has password and user in it
+            setStreamDir()
+            clearTimeout(s.group[e.ke].mon[e.id].recordingChecker)
+            if(s.group[e.ke].mon[e.id].isStarted === true){
+                e.errorCount = 0;
+                s.group[e.ke].mon[e.id].errorSocketTimeoutCount = 0;
+                s.cameraDestroy(s.group[e.ke].mon[e.id].spawn,e)
+                startVideoProcessor = function(err,o){
+                    if(o.success === true){
+                        s.group[e.ke].mon[e.id].isRecording = true
+                        s.createCameraFfmpegProcess(e)
+                        s.createCameraStreamHandlers(e)
+                        if(e.type === 'dashcam'){
+                            setTimeout(function(){
+                                s.group[e.ke].mon[e.id].allowStdinWrite = true
+                                s.txToDashcamUsers({
+                                    f : 'enable_stream',
+                                    ke : e.ke,
+                                    mid : e.id
+                                },e.ke)
+                            },30000)
+                        }
+                        if(
+                            x === 'record' ||
+                            e.type === 'mjpeg' ||
+                            e.type === 'h264' ||
+                            e.type === 'local'
+                        ){
+                            s.cameraFilterFfmpegLog(e)
+                        }
+                      }else{
+                          s.userLog(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
+                          s.fatalCameraError(e,"Ping Failed");return;
+                    }
+                }
+                if(
+                    e.type !== 'socket' &&
+                    e.type !== 'dashcam' &&
+                    e.protocol !== 'udp' &&
+                    e.type !== 'local' &&
+                    e.details.skip_ping !== '1'
+                ){
+                    connectionTester.test(strippedHost,e.port,2000,startVideoProcessor);
+                }else{
+                    startVideoProcessor(null,{success:true})
+                }
+            }else{
+                s.cameraDestroy(s.group[e.ke].mon[e.id].spawn,e)
+            }
+        }
+        var doOnChildMachine = function(){
+            startVideoProcessor = function(){
+                s.cx({
+                    //function
+                    f : 'cameraStart',
+                    //mode
+                    mode : x,
+                    //data, options
+                    d : s.group[e.ke].mon_conf[e.id]
+                },s.group[e.ke].mon[e.id].childNodeId)
+            }
+            if(
+                e.type !== 'socket' &&
+                e.type !== 'dashcam' &&
+                e.protocol !== 'udp' &&
+                e.type !== 'local' &&
+                e.details.skip_ping !== '1'
+            ){
+                connectionTester.test(strippedHost,e.port,2000,function(err,o){
+                    if(o.success === true){
+                        startVideoProcessor()
+                    }else{
+                        s.userLog(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
+                        s.fatalCameraError(e,"Ping Failed");return;
+                    }
+                })
+            }else{
+                startVideoProcessor()
+            }
+        }
+        try{
+            if(config.childNodes.enabled === true && config.childNodes.mode === 'master'){
+                var childNodeList = Object.keys(s.childNodes)
+                if(childNodeList.length > 0){
+                    e.childNodeFound = false
+                    childNodeList.forEach(function(ip){
+                        if(e.childNodeFound === false && s.childNodes[ip].cpu < 80){
+                            e.childNodeFound = true
+                            e.childNodeSelected = ip
+                        }
+                    })
+                    if(e.childNodeFound === true){
+                        s.childNodes[e.childNodeSelected].activeCameras[e.ke+e.id] = s.cleanMonitorObject(s.group[e.ke].mon_conf[e.id]);
+                        s.group[e.ke].mon[e.id].childNode = e.childNodeSelected
+                        s.group[e.ke].mon[e.id].childNodeId = s.childNodes[e.childNodeSelected].cnid;
+                        s.cx({f:'sync',sync:s.group[e.ke].mon_conf[e.id],ke:e.ke,mid:e.id},s.group[e.ke].mon[e.id].childNodeId);
+                        doOnChildMachine()
+                    }else{
+                        doOnThisMachine()
+                    }
+                }else{
+                    doOnThisMachine()
+                }
+            }else{
+                doOnThisMachine()
+            }
+        }catch(err){
+            console.log(err)
+        }
+    }
     s.fatalCameraError = function(e,errorMessage){
         s.debugLog(errorMessage)
         clearTimeout(s.group[e.ke].mon[e.id].err_fatal_timeout);
         ++e.errorFatalCount;
         if(s.group[e.ke].mon[e.id].isStarted === true){
-            s.group[e.ke].mon[e.id].err_fatal_timeout=setTimeout(function(){
+            s.group[e.ke].mon[e.id].err_fatal_timeout = setTimeout(function(){
                 if(e.details.fatal_max !== 0 && e.errorFatalCount > e.details.fatal_max){
                     s.camera('stop',{id:e.id,ke:e.ke})
                 }else{
-                    e.launchMonitorProcesses()
+                    s.launchMonitorProcesses(e)
                 };
             },5000);
         }else{
@@ -988,8 +1187,6 @@ module.exports = function(s,config,lang){
                 //lock this function
                 s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Starting});
                 s.group[e.ke].mon[e.id].isStarted = true
-                //create host string without username and password
-                var strippedHost = s.stripAuthFromHost(e)
                 //set recording status
                 e.wantedStatus = lang.Watching
                 if(x==='record'){
@@ -998,7 +1195,6 @@ module.exports = function(s,config,lang){
                 }else{
                     s.group[e.ke].mon[e.mid].isRecording = false
                 }
-                var setStreamDir = s.createCameraFolders(e)
                 //set up fatal error handler
                 if(e.details.fatal_max===''){
                     e.details.fatal_max = 10
@@ -1009,193 +1205,9 @@ module.exports = function(s,config,lang){
                 //cutoff time and recording check interval
                 if(!e.details.cutoff||e.details.cutoff===''){e.cutoff=15}else{e.cutoff=parseFloat(e.details.cutoff)};
                 if(isNaN(e.cutoff)===true){e.cutoff=15}
-                //set master based process launcher
-                e.launchMonitorProcesses = function(){
-                    s.group[e.ke].mon[e.id].allowStdinWrite = false
-                    s.txToDashcamUsers({
-                        f : 'disable_stream',
-                        ke : e.ke,
-                        mid : e.id
-                    },e.ke)
-                    if(e.details.detector_trigger === '1'){
-                        s.group[e.ke].mon[e.id].motion_lock=setTimeout(function(){
-                            clearTimeout(s.group[e.ke].mon[e.id].motion_lock);
-                            delete(s.group[e.ke].mon[e.id].motion_lock);
-                        },15000)
-                    }
-                    //start "no motion" checker
-                    if(e.details.detector === '1' && e.details.detector_notrigger === '1'){
-                        if(!e.details.detector_notrigger_timeout || e.details.detector_notrigger_timeout === ''){
-                            e.details.detector_notrigger_timeout = 10
-                        }
-                        e.detector_notrigger_timeout = parseFloat(e.details.detector_notrigger_timeout)*1000*60;
-                        s.group[e.ke].mon[e.id].detector_notrigger_timeout_function = function(){
-                            s.onDetectorNoTriggerTimeoutExtensions.forEach(function(extender){
-                                extender(r,e)
-                            })
-                        }
-                        clearInterval(s.group[e.ke].mon[e.id].detector_notrigger_timeout)
-                        s.group[e.ke].mon[e.id].detector_notrigger_timeout=setInterval(s.group[e.ke].mon[e.id].detector_notrigger_timeout_function,s.group[e.ke].mon[e.id].detector_notrigger_timeout)
-                    }
-                    if(e.details.snap === '1'){
-                        var resetSnapCheck = function(){
-                            clearTimeout(s.group[e.ke].mon[e.id].checkSnap)
-                            s.group[e.ke].mon[e.id].checkSnap = setTimeout(function(){
-                                if(s.group[e.ke].mon[e.id].isStarted === true){
-                                    fs.stat(e.sdir+'s.jpg',function(err,snap){
-                                        var notStreaming = function(){
-                                            e.launchMonitorProcesses()
-                                            s.userLog(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
-                                        }
-                                        if(err){
-                                            notStreaming()
-                                        }else{
-                                            if(!e.checkSnapTime)e.checkSnapTime = snap.mtime
-                                            if(err || e.checkSnapTime === snap.mtime){
-                                                e.checkSnapTime = snap.mtime
-                                                notStreaming()
-                                            }else{
-                                                resetSnapCheck()
-                                            }
-                                        }
-                                    })
-                                }
-                            },60000*1);
-                        }
-                        resetSnapCheck()
-                    }
-                    if(config.childNodes.mode !== 'child' && s.platform!=='darwin' && (x==='record' || (x==='start'&&e.details.detector_record_method==='sip'))){
-                        //check if ffmpeg is recording
-                        s.group[e.ke].mon[e.id].fswatch = fs.watch(e.dir, {encoding : 'utf8'}, (event, filename) => {
-                            switch(event){
-                                case'rename':
-                                    s.group[e.ke].mon[e.id].open = filename.split('.')[0]
-                                break;
-                                case'change':
-                                    s.resetRecordingCheck(e)
-                                break;
-                            }
-                        });
-                    }
-                    if(
-                        //is MacOS
-                        s.platform !== 'darwin' &&
-                        //is Watch-Only or Record
-                        (x === 'start' || x === 'record') &&
-                        //if JPEG API enabled or Stream Type is HLS
-                        (
-                            e.details.stream_type === 'jpeg' ||
-                            e.details.stream_type === 'hls' ||
-                            e.details.snap === '1'
-                        )
-                    ){
-                        s.group[e.ke].mon[e.id].fswatchStream = fs.watch(e.sdir, {encoding : 'utf8'}, () => {
-                            s.resetStreamCheck(e)
-                        })
-                    }
-                    s.cameraSendSnapshot({mid:e.id,ke:e.ke,mon:e})
-                    //check host to see if has password and user in it
-                    setStreamDir()
-                    clearTimeout(s.group[e.ke].mon[e.id].recordingChecker)
-                    if(s.group[e.ke].mon[e.id].isStarted === true){
-                        e.errorCount = 0;
-                        s.group[e.ke].mon[e.id].errorSocketTimeoutCount = 0;
-                        s.cameraDestroy(s.group[e.ke].mon[e.id].spawn,e)
-                        startVideoProcessor = function(err,o){
-                            if(o.success === true){
-                                s.group[e.ke].mon[e.id].isRecording = true
-                                s.createCameraFfmpegProcess(e)
-                                s.createCameraStreamHandlers(e)
-                                if(e.type === 'dashcam'){
-                                    setTimeout(function(){
-                                        s.group[e.ke].mon[e.id].allowStdinWrite = true
-                                        s.txToDashcamUsers({
-                                            f : 'enable_stream',
-                                            ke : e.ke,
-                                            mid : e.id
-                                        },e.ke)
-                                    },30000)
-                                }
-                                if(
-                                    x === 'record' ||
-                                    e.type === 'mjpeg' ||
-                                    e.type === 'h264' ||
-                                    e.type === 'local'
-                                ){
-                                    s.cameraFilterFfmpegLog(e)
-                                }
-                              }else{
-                                  s.userLog(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
-                                  s.fatalCameraError(e,"Ping Failed");return;
-                            }
-                        }
-                        if(
-                            e.type !== 'socket' &&
-                            e.type !== 'dashcam' &&
-                            e.protocol !== 'udp' &&
-                            e.type !== 'local' &&
-                            e.details.skip_ping !== '1'
-                        ){
-                            connectionTester.test(strippedHost,e.port,2000,startVideoProcessor);
-                        }else{
-                            startVideoProcessor(null,{success:true})
-                        }
-                    }else{
-                        s.cameraDestroy(s.group[e.ke].mon[e.id].spawn,e)
-                    }
-                }
                 //start drawing files
                 delete(s.group[e.ke].mon[e.id].childNode)
-                if(config.childNodes.enabled === true && config.childNodes.mode === 'master'){
-                    var childNodeList = Object.keys(s.childNodes)
-                    if(childNodeList.length > 0){
-                        e.childNodeFound = false
-                        e.launchMonitorProcesses = function(){
-                            startVideoProcessor = function(){
-                                s.cx({
-                                    //function
-                                    f : 'cameraStart',
-                                    //mode
-                                    mode : x,
-                                    //data, options
-                                    d : s.group[e.ke].mon_conf[e.id]
-                                },s.group[e.ke].mon[e.id].childNodeId)
-                            }
-                            if(
-                                e.type !== 'socket' &&
-                                e.type !== 'dashcam' &&
-                                e.protocol !== 'udp' &&
-                                e.type !== 'local' &&
-                                e.details.skip_ping !== '1'
-                            ){
-                                connectionTester.test(strippedHost,e.port,2000,function(err,o){
-                                    if(o.success === true){
-                                        startVideoProcessor()
-                                    }else{
-                                        s.userLog(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
-                                        s.fatalCameraError(e,"Ping Failed");return;
-                                    }
-                                })
-                            }else{
-                                startVideoProcessor()
-                            }
-                        }
-                        childNodeList.forEach(function(ip){
-                            if(e.childNodeFound === false && s.childNodes[ip].cpu < 80){
-                                e.childNodeFound = true
-                                s.childNodes[ip].activeCameras[e.ke+e.id] = s.cleanMonitorObject(s.group[e.ke].mon_conf[e.id]);
-                                s.group[e.ke].mon[e.id].childNode = ip
-                                s.group[e.ke].mon[e.id].childNodeId = s.childNodes[ip].cnid;
-                                s.cx({f:'sync',sync:s.group[e.ke].mon_conf[e.id],ke:e.ke,mid:e.id},s.group[e.ke].mon[e.id].childNodeId);
-                                e.launchMonitorProcesses();
-                            }
-                        })
-                    }else{
-                        e.launchMonitorProcesses();
-                    }
-                }else{
-                    e.launchMonitorProcesses();
-                }
+                s.launchMonitorProcesses(e)
             break;
             default:
                 console.log(x)
