@@ -6,7 +6,7 @@
    position: relative;
    min-height: 1px;
    padding-right: 15px;
-   padding-left: 15px; 
+   padding-left: 15px;
 }
 
 .col-5ths {
@@ -24,7 +24,7 @@
       -ms-flex: 0 0 20%;
       flex: 0 0 20%;
       max-width: 20%;
-   } 
+   }
 }
 
 @media (min-width: 768px) {
@@ -34,7 +34,7 @@
       -ms-flex: 0 0 20%;
       flex: 0 0 20%;
       max-width: 20%;
-   } 
+   }
 }
 ::-webkit-scrollbar-thumb:hover {
     background-color:#bd9565;
@@ -114,8 +114,7 @@ img{max-width:100%}
 .monitor_item.fullscreen img.stream-element{height:100%;width:auto}
 .monitor_item.fullscreen canvas.stream-element{height:auto;width:auto;background-color:black;}
 .monitor_item .stream-element{border: 0;object-fit: fill;height: 100%;width:100%}
-.monitor_item{position:relative;padding:0;}
-.monitor_item{transition:none;}
+.monitor_item{position:relative;padding:0;transition:none;background:#000}
 .monitor_item .mdl-card{min-height:auto;border:1px solid #272727;border-radius:0px;overflow:hidden}
 .monitor_item .mdl-card__media{position:relative;padding:0!important;display:block!important;background:#000;}
 .monitor_item.selected .stream-element{height:600px}
@@ -456,7 +455,7 @@ ul.msg_list li .message {
 .nav>li>a:focus, .nav>li>a:hover,.nav .open>a, .nav .open>a:focus, .nav .open>a:hover{background:#867560}
 
 .mdl-js-layout.hide-side:not(.is-small-screen){
-    
+
 }
 @media screen and (min-width: 1025px){
     .mdl-js-layout.hide-side:not(.is-small-screen)>.mdl-layout__drawer {
@@ -639,7 +638,7 @@ ul.msg_list li .message {
 }
 
 /*animations*/
-@keyframes blink {  
+@keyframes blink {
   0% { opacity:1 }
   50% { opacity:0 }
   100% { opacity:1 }

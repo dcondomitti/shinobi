@@ -240,8 +240,8 @@ module.exports = function(s,config,lang){
                 if(!s.group[d.ke].users[d.auth]){
                     s.group[d.ke].users[d.auth]={system:1,details:{},lang:lang}
                 }
-                d.urlQuery=[]
-                d.url='http://'+config.ip+':'+config.port+'/'+d.auth+'/monitor/'+d.ke+'/'+d.id+'/record/'+detector_timeout+'/min';
+                d.urlQuery = []
+                d.url = 'http://'+config.ip+':'+config.port+'/'+d.auth+'/monitor/'+d.ke+'/'+d.id+'/record/'+detector_timeout+'/min';
                 if(currentConfig.watchdog_reset!=='0'){
                     d.urlQuery.push('reset=1')
                 }
