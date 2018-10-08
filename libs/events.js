@@ -232,48 +232,7 @@ module.exports = function(s,config,lang){
                 detector_timeout = parseFloat(currentConfig.detector_timeout)
             }
             if(filter.record && d.mon.mode=='start'&&currentConfig.detector_trigger==='1'&&currentConfig.detector_record_method==='sip'){
-                //s.group[d.ke].mon[d.id].eventBasedRecording.timeout
-//                clearTimeout(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
-                s.group[d.ke].mon[d.id].eventBasedRecording.timeout = setTimeout(function(){
-                    s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd=true;
-                },detector_timeout * 950 * 60)
-                if(!s.group[d.ke].mon[d.id].eventBasedRecording.process){
-                    if(!d.auth){
-                        d.auth=s.gid();
-                    }
-                    if(!s.group[d.ke].users[d.auth]){
-                        s.group[d.ke].users[d.auth]={system:1,details:{},lang:lang}
-                    }
-                    s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd = false;
-                    var runRecord = function(){
-                        var filename = s.formattedTime()+'.mp4'
-                        s.userLog(d,{type:"Traditional Recording",msg:"Started"})
-                        //-t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+'
-                        s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i http://'+config.ip+':'+config.port+'/'+d.auth+'/hls/'+d.ke+'/'+d.id+'/detectorStream.m3u8 -t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+' -c:v copy -strftime 1 "'+s.getVideoDirectory(d.mon) + filename + '"').replace(/\s+/g,' ').trim()))
-                        var ffmpegError='';
-                        var error
-                        s.group[d.ke].mon[d.id].eventBasedRecording.process.stderr.on('data',function(data){
-                            s.userLog(d,{type:"Traditional Recording",msg:data.toString()})
-                        })
-                        s.group[d.ke].mon[d.id].eventBasedRecording.process.on('close',function(){
-                            if(!s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd){
-                                s.userLog(d,{type:"Traditional Recording",msg:"Detector Recording Process Exited Prematurely. Restarting."})
-                                runRecord()
-                                return
-                            }
-                            s.insertCompletedVideo(d.mon,{
-                                file : filename
-                            })
-                            s.userLog(d,{type:"Traditional Recording",msg:"Detector Recording Complete"})
-                            delete(s.group[d.ke].users[d.auth])
-                            s.userLog(d,{type:"Traditional Recording",msg:'Clear Recorder Process'})
-                            delete(s.group[d.ke].mon[d.id].eventBasedRecording.process)
-                            delete(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
-                            clearTimeout(s.group[d.ke].mon[d.id].recordingChecker)
-                        })
-                    }
-                    runRecord()
-                }
+                s.createEventBasedRecording(d)
             }else if(filter.record && d.mon.mode!=='stop'&&currentConfig.detector_trigger=='1'&&currentConfig.detector_record_method==='hot'){
                 if(!d.auth){
                     d.auth=s.gid();
@@ -360,5 +319,55 @@ module.exports = function(s,config,lang){
         //show client machines the event
         d.cx={f:'detector_trigger',id:d.id,ke:d.ke,details:d.details,doObjectDetection:d.doObjectDetection};
         s.tx(d.cx,'DETECTOR_'+d.ke+d.id);
+    }
+    s.createEventBasedRecording = function(d){
+        var currentConfig = s.group[d.ke].mon[d.id].details
+        var detector_timeout
+        if(!currentConfig.detector_timeout||currentConfig.detector_timeout===''){
+            detector_timeout = 10
+        }else{
+            detector_timeout = parseFloat(currentConfig.detector_timeout)
+        }
+        s.group[d.ke].mon[d.id].eventBasedRecording.timeout = setTimeout(function(){
+            s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd=true;
+        },detector_timeout * 950 * 60)
+        if(!s.group[d.ke].mon[d.id].eventBasedRecording.process){
+            s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd = false;
+            var runRecord = function(){
+                var filename = s.formattedTime()+'.mp4'
+                s.userLog(d,{type:"Traditional Recording",msg:"Started"})
+                //-t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+'
+                s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i "'+s.dir.streams+d.ke+'/'+d.id+'/detectorStream.m3u8" -t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+' -c:v copy -strftime 1 "'+s.getVideoDirectory(d.mon) + filename + '"').replace(/\s+/g,' ').trim()))
+                var ffmpegError='';
+                var error
+                s.group[d.ke].mon[d.id].eventBasedRecording.process.stderr.on('data',function(data){
+                    s.userLog(d,{type:"Traditional Recording",msg:data.toString()})
+                })
+                s.group[d.ke].mon[d.id].eventBasedRecording.process.on('close',function(){
+                    if(!s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd){
+                        s.userLog(d,{type:"Traditional Recording",msg:"Detector Recording Process Exited Prematurely. Restarting."})
+                        runRecord()
+                        return
+                    }
+                    s.insertCompletedVideo(d.mon,{
+                        file : filename
+                    })
+                    s.userLog(d,{type:"Traditional Recording",msg:"Detector Recording Complete"})
+                    delete(s.group[d.ke].users[d.auth])
+                    s.userLog(d,{type:"Traditional Recording",msg:'Clear Recorder Process'})
+                    delete(s.group[d.ke].mon[d.id].eventBasedRecording.process)
+                    delete(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
+                    clearTimeout(s.group[d.ke].mon[d.id].recordingChecker)
+                })
+            }
+            runRecord()
+        }
+    }
+    s.closeEventBasedRecording = function(e){
+        if(s.group[e.ke].mon[e.id].eventBasedRecording.process){
+            clearTimeout(s.group[e.ke].mon[e.id].eventBasedRecording.timeout)
+            s.group[e.ke].mon[e.id].eventBasedRecording.allowEnd = true;
+            s.group[e.ke].mon[e.id].eventBasedRecording.process.kill('SIGTERM');
+        }
     }
 }

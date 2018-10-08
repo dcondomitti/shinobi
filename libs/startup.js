@@ -81,9 +81,9 @@ module.exports = function(s,config,lang,io){
                     var countFinished = 0
                     users.forEach(function(user){
                         loadedAccounts.push(user.ke)
-                        s.loadGroup(user)
-                        s.loadGroupApps(user)
                         loadDiskUseForUser(user,function(){
+                            s.loadGroup(user)
+                            s.loadGroupApps(user)
                             ++countFinished
                             if(countFinished === count){
                                 callback()

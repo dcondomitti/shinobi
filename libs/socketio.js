@@ -805,9 +805,9 @@ module.exports = function(s,config,lang,io){
                             break;
                             case'jpeg_off':
                               delete(cn.jpeg_on);
-                                if(cn.monitor_watching){
-                                  Object.keys(cn.monitor_watching).forEach(function(n,v){
-                                      v=cn.monitor_watching[n];
+                                if(cn.monitorsCurrentlyWatching){
+                                  Object.keys(cn.monitorsCurrentlyWatching).forEach(function(n,v){
+                                      v=cn.monitorsCurrentlyWatching[n];
                                       cn.join('MON_STREAM_'+n);
                                   });
                                 }
@@ -815,9 +815,9 @@ module.exports = function(s,config,lang,io){
                             break;
                             case'jpeg_on':
                               cn.jpeg_on=true;
-                                if(cn.monitor_watching){
-                                  Object.keys(cn.monitor_watching).forEach(function(n,v){
-                                      v=cn.monitor_watching[n];
+                                if(cn.monitorsCurrentlyWatching){
+                                  Object.keys(cn.monitorsCurrentlyWatching).forEach(function(n,v){
+                                      v=cn.monitorsCurrentlyWatching[n];
                                       cn.leave('MON_STREAM_'+n);
                                   })
                                 }
@@ -1395,11 +1395,11 @@ module.exports = function(s,config,lang,io){
                 return
             }
             if(cn.ke){
-                if(cn.monitor_watching){
-                    cn.monitor_count=Object.keys(cn.monitor_watching)
+                if(cn.monitorsCurrentlyWatching){
+                    cn.monitor_count=Object.keys(cn.monitorsCurrentlyWatching)
                     if(cn.monitor_count.length>0){
                         cn.monitor_count.forEach(function(v){
-                            s.camera('watch_off',{id:v,ke:cn.monitor_watching[v].ke},{id:cn.id,ke:cn.ke,uid:cn.uid})
+                            s.camera('watch_off',{id:v,ke:cn.monitorsCurrentlyWatching[v].ke},{id:cn.id,ke:cn.ke,uid:cn.uid})
                         })
                     }
                 }else if(!cn.embedded){
