@@ -816,10 +816,10 @@ module.exports = function(s,config,lang,io){
                             case'jpeg_on':
                               cn.jpeg_on=true;
                                 if(cn.monitor_watching){
-                              Object.keys(cn.monitor_watching).forEach(function(n,v){
-                                  v=cn.monitor_watching[n];
-                                  cn.leave('MON_STREAM_'+n);
-                              });
+                                  Object.keys(cn.monitor_watching).forEach(function(n,v){
+                                      v=cn.monitor_watching[n];
+                                      cn.leave('MON_STREAM_'+n);
+                                  })
                                 }
                               tx({f:'mode_jpeg_on'})
                             break;
@@ -827,28 +827,31 @@ module.exports = function(s,config,lang,io){
                                 if(!d.ke){d.ke=cn.ke}
                                 s.initiateMonitorObject({mid:d.id,ke:d.ke});
                                 if(!s.group[d.ke]||!s.group[d.ke].mon[d.id]||s.group[d.ke].mon[d.id].isStarted === false){return false}
-                                s.camera(d.ff,d,cn,tx)
                                 cn.join('MON_'+d.id);
                                 cn.join('DETECTOR_'+d.ke+d.id);
-                                if(cn.jpeg_on!==true){
+                                if(cn.jpeg_on !== true){
                                     cn.join('MON_STREAM_'+d.id);
-                                } if(s.group[d.ke]&&s.group[d.ke].mon&&s.group[d.ke].mon[d.id]&&s.group[d.ke].mon[d.id].watch){
-
-                                    tx({f:'monitor_watch_on',id:d.id,ke:d.ke})
-                                    s.tx({viewers:Object.keys(s.group[d.ke].mon[d.id].watch).length,ke:d.ke,id:d.id},'MON_'+d.id)
-                               }
+                                }
+                                tx({f:'monitor_watch_on',id:d.id,ke:d.ke})
+                                if(s.isWatchCountable(d)){
+                                    s.camera('watch_on',d,cn)
+                                }
                             break;
                             case'watch_off':
-                                if(!d.ke){d.ke=cn.ke;};cn.leave('MON_'+d.id);s.camera(d.ff,d,cn,tx);
-                                s.tx({viewers:d.ob,ke:d.ke,id:d.id},'MON_'+d.id)
+                                if(!d.ke){d.ke=cn.ke;};
+                                cn.leave('MON_'+d.id);
+                                if(s.isWatchCountable(d)){
+                                    s.camera('watch_off',d,cn);
+                                }
+                                tx({f:'monitor_watch_off',ke:d.ke,id:d.id,cnid:cn.id})
                             break;
                             case'start':case'stop':
-                        s.sqlQuery('SELECT * FROM Monitors WHERE ke=? AND mid=?',[cn.ke,d.id],function(err,r) {
-                            if(r && r[0]){
-                                r = r[0]
-                                s.camera(d.ff,{type:r.type,url:s.buildMonitorUrl(r),id:d.id,mode:d.ff,ke:cn.ke});
-                            }
-                        })
+                                s.sqlQuery('SELECT * FROM Monitors WHERE ke=? AND mid=?',[cn.ke,d.id],function(err,r) {
+                                    if(r && r[0]){
+                                        r = r[0]
+                                        s.camera(d.ff,{type:r.type,url:s.buildMonitorUrl(r),id:d.id,mode:d.ff,ke:cn.ke});
+                                    }
+                                })
                             break;
                         }
                     break;

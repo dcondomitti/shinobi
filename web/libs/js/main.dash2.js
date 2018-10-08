@@ -2075,7 +2075,7 @@ $.ccio.globalWebsocket=function(d,user){
             }
             d.o=$.ccio.op()[d.chosen_set];
             if(!d.o[d.ke]){d.o[d.ke]={}};d.o[d.ke][d.id]=0;$.ccio.op(d.chosen_set,d.o);
-            $.ccio.destroyStream(d,user,true)
+            $.ccio.destroyStream(d,user,(d.f === 'monitor_watch_off'))
         break;
         case'monitor_watch_on':
             if(user===$user){

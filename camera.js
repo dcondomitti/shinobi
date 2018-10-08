@@ -51,8 +51,10 @@ loadLib('ffmpeg')(s,config,function(){
     loadLib('auth')(s,config,lang)
     //express web server with ejs
     var app = loadLib('webServer')(s,config,lang,io)
-    //web server routes : page handling, streams..
+    //web server routes : page handling..
     loadLib('webServerPaths')(s,config,lang,app)
+    //web server routes for streams : streams..
+    loadLib('webServerStreamPaths')(s,config,lang,app)
     //web server admin routes : create sub accounts, share monitors, share videos
     loadLib('webServerAdminPaths')(s,config,lang,app)
     //web server superuser routes : create admin accounts and manage system functions

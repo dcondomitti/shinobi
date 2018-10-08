@@ -1043,6 +1043,7 @@ module.exports = function(s,config,lang){
                 doOnThisMachine()
             }
         }catch(err){
+            doOnThisMachine()
             console.log(err)
         }
     }
@@ -1063,6 +1064,28 @@ module.exports = function(s,config,lang){
         }
         s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Died});
     }
+    s.isWatchCountable = function(d){
+        try{
+            var variableMethodsToAllow = [
+                'mp4ws', //Poseidon over Websocket
+                'flvws',
+                'h265ws',
+            ];
+            var indefiniteIgnore = [
+                'mjpeg',
+                'h264',
+            ];
+            var monConfig = s.group[d.ke].mon_conf[d.id]
+            if(
+                variableMethodsToAllow.indexOf(monConfig.details.stream_type + monConfig.details.stream_flv_type) > -1 &&
+                indefiniteIgnore.indexOf(monConfig.details.stream_type) === -1
+            ){
+                return true
+            }
+        }catch(err){}
+        return false
+    }
+
     s.camera = function(x,e,cn,tx){
         var ee = s.cleanMonitorObject(e);
         if(!e){e={}};
@@ -1100,19 +1123,25 @@ module.exports = function(s,config,lang){
                if(!cn.monitor_watching){cn.monitor_watching={}}
                if(!cn.monitor_watching[e.id]){cn.monitor_watching[e.id]={ke:e.ke}}
                s.group[e.ke].mon[e.id].watch[cn.id]={};
+               var numberOfViewers = Object.keys(s.group[e.ke].mon[e.id].watch).length
+               s.tx({
+                   viewers: numberOfViewers,
+                   ke: e.ke,
+                   id: e.id
+               },'MON_'+e.id)
             break;
             case'watch_off'://live streamers - leave
-               if(cn.monitor_watching){delete(cn.monitor_watching[e.id])}
+                if(cn.monitor_watching){delete(cn.monitor_watching[e.id])}
+                var numberOfViewers = 0
                 if(s.group[e.ke].mon[e.id]&&s.group[e.ke].mon[e.id].watch){
-                    delete(s.group[e.ke].mon[e.id].watch[cn.id]),e.ob=Object.keys(s.group[e.ke].mon[e.id].watch).length
-                    if(e.ob === 0){
-                       delete(s.group[e.ke].mon[e.id].watch)
-                    }
-                }else{
-                    e.ob = 0;
+                    delete(s.group[e.ke].mon[e.id].watch[cn.id]);
+                    numberOfViewers = Object.keys(s.group[e.ke].mon[e.id].watch).length
                 }
-                if(tx){tx({f:'monitor_watch_off',ke:e.ke,id:e.id,cnid:cn.id})}
-                s.tx({viewers:e.ob,ke:e.ke,id:e.id},'MON_'+e.id)
+                s.tx({
+                    viewers: numberOfViewers,
+                    ke: e.ke,
+                    id: e.id
+                },'MON_'+e.id)
             break;
             case'restart'://restart monitor
                 s.sendMonitorStatus({id:e.id,ke:e.ke,status:'Restarting'});
