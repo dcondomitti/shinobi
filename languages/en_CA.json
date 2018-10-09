@@ -715,6 +715,7 @@
    "Get Logs to Client": "Get Logs to Client",
    "Hardware Accelerated": "Hardware Accelerated",
    "Accelerator": "Accelerator",
+   "drm": "DRM object sharing",
    "qsv": "qsv",
    "dxva2": "dxva2 (DirectX Video, Windows)",
    "vdpau": "vdpau",

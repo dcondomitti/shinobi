@@ -1456,14 +1456,25 @@ switch($user.details.lang){
                         default:'',
                         type:'selector',
                         choices:[
-                            {label:'<%-cleanLang(lang['Auto'])%>',value:''},
-                            {label:'<%-cleanLang(lang['cuvid'])%>',value:'cuvid'},
-                            {label:'<%-cleanLang(lang['vaapi'])%>',value:'vaapi'},
-                            {label:'<%-cleanLang(lang['qsv'])%>',value:'qsv'},
-                            {label:'<%-cleanLang(lang['vdpau'])%>',value:'vdpau'},
-                            {label:'<%-cleanLang(lang['dxva2'])%>',value:'dxva2'},
-                            {label:'<%-cleanLang(lang['vdpau'])%>',value:'vdpau'},
-                            {label:'<%-cleanLang(lang['videotoolbox'])%>',value:'videotoolbox'},
+                            <% if(config.availableHWAccels) {
+                                    var methods = {
+                                        auto: {label:lang['Auto'],value:'auto'},
+                                        drm: {label:lang['drm'],value:'drm'},
+                                        cuvid: {label:lang['cuvid'],value:'cuvid'},
+                                        vaapi: {label:lang['vaapi'],value:'vaapi'},
+                                        qsv: {label:lang['qsv'],value:'qsv'},
+                                        vdpau: {label:lang['vdpau'],value:'vdpau'},
+                                        dxva2: {label:lang['dxva2'],value:'dxva2'},
+                                        vdpau: {label:lang['vdpau'],value:'vdpau'},
+                                        videotoolbox: {label:lang['videotoolbox'],value:'videotoolbox'}
+                                    }
+                                    config.availableHWAccels.forEach(function(availibleMethod){
+                                        if(methods[availibleMethod]){ %>
+                                            <%- JSON.stringify(methods[availibleMethod]) %>,
+                                        <% }
+                                    })
+                                }
+                             %>
                         ]
                     },
                     {

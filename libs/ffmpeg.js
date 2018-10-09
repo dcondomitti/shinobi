@@ -1,22 +1,8 @@
 var fs = require('fs');
 var spawn = require('child_process').spawn;
 var execSync = require('child_process').execSync;
-module.exports = function(s,config,callback){
+module.exports = function(s,config,onFinish){
     var downloadingFfmpeg = false;
-    var completeFfmpegCheck = function(){
-        //ffmpeg version
-        try{
-            s.ffmpegVersion = execSync(config.ffmpegDir+" -version").toString().split('Copyright')[0].replace('ffmpeg version','').trim()
-            if(s.ffmpegVersion.indexOf(': 2.')>-1){
-                s.systemLog('FFMPEG is too old : '+s.ffmpegVersion+', Needed : 3.2+',err)
-                throw (new Error())
-            }
-            callback()
-        }catch(err){
-            console.log('No FFmpeg found.')
-            // process.exit()
-        }
-    }
     //check local ffmpeg
     var windowsFfmpegCheck = function(failback){
         if (s.isWin && fs.existsSync(s.mainDirectory+'/ffmpeg/ffmpeg.exe')) {
@@ -84,6 +70,41 @@ module.exports = function(s,config,callback){
             failback()
         }
     }
+    //ffmpeg version
+    var checkFfmpegVersion = function(callback){
+        try{
+            s.ffmpegVersion = execSync(config.ffmpegDir+" -version").toString().split('Copyright')[0].replace('ffmpeg version','').trim()
+            if(s.ffmpegVersion.indexOf(': 2.')>-1){
+                s.systemLog('FFMPEG is too old : '+s.ffmpegVersion+', Needed : 3.2+',err)
+                throw (new Error())
+            }
+        }catch(err){
+            console.log('No FFmpeg found.')
+            // process.exit()
+        }
+        callback()
+    }
+    //check available hardware acceleration methods
+    var checkFfmpegHwAccelMethods = function(callback){
+        hwAccels = execSync(config.ffmpegDir+" -loglevel quiet -hwaccels").toString().split('\n')
+        hwAccels.shift()
+        availableHWAccels = []
+        hwAccels.forEach(function(method){
+            if(method && method !== '')availableHWAccels.push(method.trim())
+        })
+        config.availableHWAccels = availableHWAccels
+        config.availableHWAccels = ['auto'].concat(config.availableHWAccels)
+        console.log('Available Hardware Acceleration Methods : ',availableHWAccels.join(', '))
+        callback()
+    }
+    var completeFfmpegCheck = function(){
+        checkFfmpegVersion(function(){
+            checkFfmpegHwAccelMethods(function(){
+                onFinish()
+            })
+        })
+    }
+    //ffmpeg string cleaner, splits for use with spawn()
     s.splitForFFPMEG = function (ffmpegCommandAsString) {
         //this function ignores spaces inside quotes.
         return ffmpegCommandAsString.match(/\\?.|^$/g).reduce((p, c) => {
@@ -225,7 +246,8 @@ module.exports = function(s,config,callback){
         if(channel.stream_type !== 'h265' && channel.preset_stream && channel.preset_stream!==''){x.preset_stream=' -preset '+channel.preset_stream;}else{x.preset_stream=''}
         //hardware acceleration
         if(e.details.accelerator&&e.details.accelerator==='1'){
-            if(e.details.hwaccel&&e.details.hwaccel!==''){
+            if(e.details.hwaccel === 'auto')e.details.hwaccel = ''
+            if(e.details.hwaccel && e.details.hwaccel!==''){
                 x.hwaccel+=' -hwaccel '+e.details.hwaccel;
             }
             if(e.details.hwaccel_vcodec&&e.details.hwaccel_vcodec!==''){
