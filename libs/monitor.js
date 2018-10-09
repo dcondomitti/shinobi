@@ -524,7 +524,7 @@ module.exports = function(s,config,lang){
                 fs.mkdirSync(e.dir);
             }
         }
-        fs.chmod(e.dir,0o777,function(err){
+        exec('chmod -R 777 '+e.dir,function(err){
 
         })
         //set the temporary files directory
@@ -542,7 +542,7 @@ module.exports = function(s,config,lang){
             }
         }
         setStreamDir()
-        fs.chmod(e.sdir,0o777,function(err){
+        exec('chmod -R 777 '+e.sdir,function(err){
 
         })
         return setStreamDir
