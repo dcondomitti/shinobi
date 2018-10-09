@@ -999,7 +999,9 @@ switch($user.details.lang){
                 tmp+='<div id="monitor_live_'+d.mid+user.auth_token+'" auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" mode="'+k.mode+'" class="grid-stack-item monitor_item glM'+d.mid+user.auth_token+'"><div class="grid-stack-item-content">';
                 tmp+='<div class="stream-block no-padding mdl-card__media mdl-color-text--grey-50">';
                 tmp+='<div class="stream-objects"></div>';
-                tmp+='<div class="stream-hud"><div class="lamp" title="'+k.mode+'"><i class="fa fa-eercast"></i></div><div class="controls"><span title="<%-cleanLang(lang['Currently viewing'])%>" class="label label-default"><span class="viewers"></span></span> <a class="btn-xs btn-danger btn" monitor="mode" mode="record"><i class="fa fa-circle"></i> <%-cleanLang(lang['Start Recording'])%></a> <a class="btn-xs btn-primary btn" monitor="mode" mode="start"><i class="fa fa-eye"></i> <%-cleanLang(lang['Set to Watch Only'])%></a></div><div class="bottom-text monospace "><div class="detector-fade">'
+                tmp+='<div class="stream-hud">'
+                tmp+='<div class="camera_cpu_usage"><div class="progress"><div class="progress-bar progress-bar-danger" role="progressbar"><span></span></div></div></div>';
+                tmp+='<div class="lamp" title="'+k.mode+'"><i class="fa fa-eercast"></i></div><div class="controls"><span title="<%-cleanLang(lang['Currently viewing'])%>" class="label label-default"><span class="viewers"></span></span> <a class="btn-xs btn-danger btn" monitor="mode" mode="record"><i class="fa fa-circle"></i> <%-cleanLang(lang['Start Recording'])%></a> <a class="btn-xs btn-primary btn" monitor="mode" mode="start"><i class="fa fa-eye"></i> <%-cleanLang(lang['Set to Watch Only'])%></a></div><div class="bottom-text monospace "><div class="detector-fade">'
                     $.each([
                         {label:'Currently Detected',tag:'stream-detected-count'}
                     ],function(n,v){
@@ -1985,6 +1987,12 @@ $.ccio.globalWebsocket=function(d,user){
         case'log':
             var attr = '[mid="'+d.mid+'"][ke="'+d.ke+'"][auth="'+user.auth_token+'"]'
             $.ccio.tm(4,d,'#logs,'+attr+'.monitor_item .logs:visible,'+attr+'#add_monitor:visible .logs',user)
+        break;
+        case'camera_cpu_usage':
+            var el = $('.monitor_item[auth="'+user.auth_token+'"][ke="'+d.ke+'"][mid="'+d.id+'"] .camera_cpu_usage')
+            .attr('title',d.percent + '% ' + lang['CPU used by this stream'])
+            el.find('.progress-bar').css('width',d.percent)
+            el.find('.percent').html(d.percent + '%')
         break;
         case'os'://indicator
             //cpu

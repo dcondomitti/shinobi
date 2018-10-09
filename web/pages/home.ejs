@@ -1,6 +1,7 @@
-<% var details=JSON.parse($user.details) %>
+<% var details = JSON.parse($user.details) %>
 <% include blocks/header %>
-<script>var $user=<%- JSON.stringify($user) %>;</script>
+<script>var $user = <%- JSON.stringify($user) %>;</script>
+<script>var lang = <%- JSON.stringify(lang) %>;</script>
 <link rel="stylesheet" href="<%-originalURL%>libs/css/pnotify.custom.min.css">
 <link rel="stylesheet" href="<%-originalURL%>libs/css/vbox.css">
 <link rel="stylesheet" href="<%-originalURL%>libs/css/daterangepicker.css">

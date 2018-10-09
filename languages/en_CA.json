@@ -596,6 +596,7 @@
    "monSavedButNotCopied": "Your monitor was saved but not copied to any other monitor.",
    "No Monitor Found, Ignoring Request": "No Monitor Found, Ignoring Request",
    "Event": "Event",
+   "CPU used by this stream": "CPU used by this stream",
    "Detector Buffer": "Detector Buffer",
    "EventText1": "Triggered a motion event at",
    "EventText2": "Could not email image, file was not accessible",

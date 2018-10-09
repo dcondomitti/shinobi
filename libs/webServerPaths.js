@@ -848,10 +848,9 @@ module.exports = function(s,config,lang,app){
             }
             s.sqlQuery(req.sql,req.ar,function(err,r){
                 r.forEach(function(v,n){
-                    if(s.group[v.ke]&&s.group[v.ke].mon[v.mid]&&s.group[v.ke].mon[v.mid].watch){
-                        r[n].currentlyWatching=Object.keys(s.group[v.ke].mon[v.mid].watch).length
-                    }
-                    if(s.group[v.ke]&&s.group[v.ke].mon[v.mid]&&s.group[v.ke].mon[v.mid].watch){
+                    if(s.group[v.ke] && s.group[v.ke].mon[v.mid]){
+                        r[n].currentlyWatching = Object.keys(s.group[v.ke].mon[v.mid].watch).length
+                        r[n].currentCpuUsage = s.group[v.ke].mon[v.mid].currentCpuUsage
                         r[n].status = s.group[v.ke].mon[v.mid].monitorStatus
                     }
                     var buildStreamURL = function(type,channelNumber){

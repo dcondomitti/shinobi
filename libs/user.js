@@ -175,6 +175,7 @@ module.exports = function(s,config){
                                                 s.sqlQuery('SELECT * FROM Videos WHERE status != 0 AND details NOT LIKE \'%"archived":"1"%\' AND ke=? ORDER BY `time` ASC LIMIT 2',[e.ke],function(err,videos){
                                                     var videosToDelete = []
                                                     var queryValues = [e.ke]
+                                                    var completedCheck = 0
                                                     if(!videos)return console.log(err)
                                                     videos.forEach(function(video){
                                                         video.dir = s.getVideoDirectory(video) + s.formattedTime(video.time) + '.' + video.ext
@@ -183,11 +184,18 @@ module.exports = function(s,config){
                                                         queryValues.push(video.time)
                                                         fs.chmod(video.dir,0o777,function(err){
                                                             fs.unlink(video.dir,function(err){
+                                                                ++completedCheck
                                                                 if(err){
                                                                     fs.stat(video.dir,function(err){
                                                                         if(!err){
                                                                             s.file('delete',video.dir)
                                                                         }
+                                                                    })
+                                                                }
+                                                                if(videosToDelete.length === completedCheck){
+                                                                    videosToDelete = videosToDelete.join(' OR ')
+                                                                    s.sqlQuery('DELETE FROM Videos WHERE ke =? AND ('+videosToDelete+')',queryValues,function(){
+                                                                        deleteVideos()
                                                                     })
                                                                 }
                                                             })
@@ -203,12 +211,7 @@ module.exports = function(s,config){
                                                             end: s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')
                                                         },'GRP_'+e.ke)
                                                     })
-                                                    if(videosToDelete.length > 0){
-                                                        videosToDelete = videosToDelete.join(' OR ')
-                                                        s.sqlQuery('DELETE FROM Videos WHERE ke =? AND ('+videosToDelete+')',queryValues,function(){
-                                                            deleteVideos()
-                                                        })
-                                                    }else{
+                                                    if(videosToDelete.length === 0){
                                                         finish()
                                                     }
                                                 })

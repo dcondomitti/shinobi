@@ -29,6 +29,34 @@ module.exports = function(s,config,lang){
         s.group[e.ke].mon[e.id].monitorStatus = e.status
         s.tx(Object.assign(e,{f:'monitor_status'}),'GRP_'+e.ke)
     }
+    s.getMonitorCpuUsage = function(e,callback){
+        if(s.group[e.ke].mon[e.mid].spawn){
+            var getUsage = function(callback2){
+                fs.readFile("/proc/" + s.group[e.ke].mon[e.mid].spawn.pid + "/stat", function(err, data){
+                    if(!err){
+                        var elems = data.toString().split(' ');
+                        var utime = parseInt(elems[13]);
+                        var stime = parseInt(elems[14]);
+
+                        callback2(utime + stime);
+                    }else{
+                        clearInterval(s.group[e.ke].mon[e.mid].getMonitorCpuUsage)
+                    }
+                })
+            }
+            getUsage(function(startTime){
+                setTimeout(function(){
+                    getUsage(function(endTime){
+                        var delta = endTime - startTime;
+                        var percentage = 100 * (delta / 10000);
+                        callback(percentage)
+                    });
+                }, 1000)
+            })
+        }else{
+            callback(0)
+        }
+    }
     s.buildMonitorUrl = function(e,noPath){
         var authd = ''
         var url
@@ -200,6 +228,7 @@ module.exports = function(s,config,lang){
             delete(s.group[e.ke].mon[e.id].watchdog_stop);
             delete(s.group[e.ke].mon[e.id].lastJpegDetectorFrame);
             clearTimeout(s.group[e.ke].mon[e.id].recordingSnapper);
+            clearInterval(s.group[e.ke].mon[e.id].getMonitorCpuUsage);
             if(s.group[e.ke].mon[e.id].mp4frag){
                 var mp4FragChannels = Object.keys(s.group[e.ke].mon[e.id].mp4frag)
                 mp4FragChannels.forEach(function(channel){
@@ -528,9 +557,9 @@ module.exports = function(s,config,lang){
                 fs.mkdirSync(e.dir);
             }
         }
-        exec('chmod -R 777 '+e.dir,function(err){
-
-        })
+        // exec('chmod -R 777 '+e.dir,function(err){
+        //
+        // })
         //set the temporary files directory
         var setStreamDir = function(){
             //stream dir
@@ -546,9 +575,9 @@ module.exports = function(s,config,lang){
             }
         }
         setStreamDir()
-        exec('chmod -R 777 '+e.sdir,function(err){
-
-        })
+        // exec('chmod -R 777 '+e.sdir,function(err){
+        //
+        // })
         return setStreamDir
     }
     s.stripAuthFromHost = function(e){
@@ -699,7 +728,20 @@ module.exports = function(s,config,lang){
         s.group[e.ke].mon[e.id].spawn.on('error',function(er){
             s.userLog(e,{type:'Spawn Error',msg:er});s.fatalCameraError(e,'Spawn Error')
         })
-        s.userLog(e,{type:lang['Process Started'],msg:{cmd:s.group[e.ke].mon[e.id].ffmpeg}});
+        s.userLog(e,{type:lang['Process Started'],msg:{cmd:s.group[e.ke].mon[e.id].ffmpeg}})
+        if(s.isWin === false){
+            s.group[e.ke].mon[e.id].getMonitorCpuUsage = setInterval(function(){
+                s.getMonitorCpuUsage(e,function(percent){
+                    s.group[e.ke].mon[e.id].currentCpuUsage = percent
+                    s.tx({
+                        f: 'camera_cpu_usage',
+                        ke: e.ke,
+                        id: e.id,
+                        percent: percent
+                    },'MON_STREAM_'+e.ke+e.id)
+                })
+            },1000 * 60)
+        }
     }
     s.createCameraStreamHandlers = function(e){
         s.group[e.ke].mon[e.id].spawn.stdio[5].on('data',function(data){
@@ -1141,20 +1183,18 @@ module.exports = function(s,config,lang){
                    viewers: numberOfViewers,
                    ke: e.ke,
                    id: e.id
-               },'MON_'+e.id)
+               },'MON_'+e.ke+e.id)
             break;
             case'watch_off'://live streamers - leave
                 if(cn.monitorsCurrentlyWatching){delete(cn.monitorsCurrentlyWatching[e.id])}
                 var numberOfViewers = 0
-                if(s.group[e.ke].mon[e.id]&&s.group[e.ke].mon[e.id].watch){
-                    delete(s.group[e.ke].mon[e.id].watch[cn.id]);
-                    numberOfViewers = Object.keys(s.group[e.ke].mon[e.id].watch).length
-                }
+                delete(s.group[e.ke].mon[e.id].watch[cn.id]);
+                numberOfViewers = Object.keys(s.group[e.ke].mon[e.id].watch).length
                 s.tx({
                     viewers: numberOfViewers,
                     ke: e.ke,
                     id: e.id
-                },'MON_'+e.id)
+                },'MON_'+e.ke+e.id)
             break;
             case'restart'://restart monitor
                 s.sendMonitorStatus({id:e.id,ke:e.ke,status:'Restarting'});

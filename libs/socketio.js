@@ -829,22 +829,18 @@ module.exports = function(s,config,lang,io){
                                 if(!d.ke){d.ke=cn.ke}
                                 s.initiateMonitorObject({mid:d.id,ke:d.ke});
                                 if(!s.group[d.ke]||!s.group[d.ke].mon[d.id]||s.group[d.ke].mon[d.id].isStarted === false){return false}
-                                cn.join('MON_'+d.id);
+                                cn.join('MON_'+d.ke+d.id);
                                 cn.join('DETECTOR_'+d.ke+d.id);
                                 if(cn.jpeg_on !== true){
-                                    cn.join('MON_STREAM_'+d.id);
+                                    cn.join('MON_STREAM_'+d.ke+d.id);
                                 }
                                 tx({f:'monitor_watch_on',id:d.id,ke:d.ke})
-                                if(s.isWatchCountable(d)){
-                                    s.camera('watch_on',d,cn)
-                                }
+                                s.camera('watch_on',d,cn)
                             break;
                             case'watch_off':
                                 if(!d.ke){d.ke=cn.ke;};
-                                cn.leave('MON_'+d.id);
-                                if(s.isWatchCountable(d)){
-                                    s.camera('watch_off',d,cn);
-                                }
+                                cn.leave('MON_'+d.ke+d.id);
+                                s.camera('watch_off',d,cn);
                                 tx({f:'monitor_watch_off',ke:d.ke,id:d.id,cnid:cn.id})
                             break;
                             case'start':case'stop':
@@ -1341,14 +1337,14 @@ module.exports = function(s,config,lang,io){
     //                    s.group[d.ke].embed[d.mid][cn.id]={}
 
                         s.camera('watch_on',d,cn,tx)
-                        cn.join('MON_'+d.id);
-                        cn.join('MON_STREAM_'+d.id);
+                        cn.join('MON_'+d.ke+d.id);
+                        cn.join('MON_STREAM_'+d.ke+d.id);
                         cn.join('DETECTOR_'+d.ke+d.id);
                         cn.join('STR_'+d.ke);
                         if(s.group[d.ke]&&s.group[d.ke].mon[d.id]&&s.group[d.ke].mon[d.id].watch){
 
-                            tx({f:'monitor_watch_on',id:d.id,ke:d.ke},'MON_'+d.id)
-                            s.tx({viewers:Object.keys(s.group[d.ke].mon[d.id].watch).length,ke:d.ke,id:d.id},'MON_'+d.id)
+                            tx({f:'monitor_watch_on',id:d.id,ke:d.ke},'MON_'+d.ke+d.id)
+                            s.tx({viewers:Object.keys(s.group[d.ke].mon[d.id].watch).length,ke:d.ke,id:d.id},'MON_'+d.ke+d.id)
                        }
                     });
                 break;
