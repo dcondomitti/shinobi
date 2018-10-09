@@ -86,15 +86,17 @@ module.exports = function(s,config,onFinish){
     }
     //check available hardware acceleration methods
     var checkFfmpegHwAccelMethods = function(callback){
-        hwAccels = execSync(config.ffmpegDir+" -loglevel quiet -hwaccels").toString().split('\n')
-        hwAccels.shift()
-        availableHWAccels = []
-        hwAccels.forEach(function(method){
-            if(method && method !== '')availableHWAccels.push(method.trim())
-        })
-        config.availableHWAccels = availableHWAccels
-        config.availableHWAccels = ['auto'].concat(config.availableHWAccels)
-        console.log('Available Hardware Acceleration Methods : ',availableHWAccels.join(', '))
+        if(config.availableHWAccels === undefined){
+            hwAccels = execSync(config.ffmpegDir+" -loglevel quiet -hwaccels").toString().split('\n')
+            hwAccels.shift()
+            availableHWAccels = []
+            hwAccels.forEach(function(method){
+                if(method && method !== '')availableHWAccels.push(method.trim())
+            })
+            config.availableHWAccels = availableHWAccels
+            config.availableHWAccels = ['auto'].concat(config.availableHWAccels)
+            console.log('Available Hardware Acceleration Methods : ',availableHWAccels.join(', '))
+        }
         callback()
     }
     var completeFfmpegCheck = function(){
