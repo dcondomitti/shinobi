@@ -190,9 +190,6 @@ module.exports = function(s,config,lang){
             if(r && r[0]){
                 r = r[0]
                 fs.chmod(e.dir+filename,0o777,function(err){
-                    if(err){
-                        console.log('chmod error',err)
-                    }
                     s.tx({
                         f: 'video_delete',
                         filename: filename,
@@ -207,7 +204,13 @@ module.exports = function(s,config,lang){
                             s.systemLog(lang['File Delete Error'] + ' : '+e.ke+' : '+' : '+e.id,err)
                         }
                     })
-                    s.file('delete',e.dir+filename)
+                    fs.unlink(e.dir+filename,function(err){
+                        fs.stat(e.dir+filename,function(err){
+                            if(!err){
+                                s.file('delete',e.dir+filename)
+                            }
+                        })
+                    })
                 })
             }else{
                 console.log(lang['Database row does not exist'],queryValues)

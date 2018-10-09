@@ -59,13 +59,16 @@ module.exports = function(s,config,lang){
         var url
         var runExtraction = function(){
             var snapBuffer = []
-            var snapProcess = spawn(config.ffmpegDir,('-loglevel quiet -re -i '+url+options+' -frames:v 1 -f singlejpeg pipe:1').split(' '),{detached: true})
+            var snapProcess = spawn(config.ffmpegDir,('-loglevel quiet -re -i '+url+options+' -frames:v 1 -f mjpeg pipe:1').split(' '),{detached: true})
             snapProcess.stdout.on('data',function(data){
                 snapBuffer.push(data)
             });
+            snapProcess.stderr.on('data',function(data){
+                console.log(data.toString())
+            });
             snapProcess.on('close',function(data){
                 snapBuffer = Buffer.concat(snapBuffer)
-                callback(snapBuffer)
+                callback(snapBuffer,false)
             })
         }
         var checkExists = function(localStream,callback){
@@ -97,7 +100,7 @@ module.exports = function(s,config,lang){
                 })
             }else{
                 fs.readFile(localStream+'s.jpg',function(err,snapBuffer){
-                    callback(snapBuffer)
+                    callback(snapBuffer,true)
                 })
             }
         })
@@ -469,8 +472,9 @@ module.exports = function(s,config,lang){
                     switch(e.mon.type){
                         case'mjpeg':case'h264':case'local':
                             if(e.mon.type==='local'){e.url=e.mon.path;}
-                             s.getRawSnapshotFromMonitor(e.mon,'-s 400x400',function(data){
+                             s.getRawSnapshotFromMonitor(e.mon,'-s 200x200',function(data,isStaticFile){
                                  if((data[data.length-2] === 0xFF && data[data.length-1] === 0xD9)){
+                                     if(!isStaticFile)fs.writeFile(s.dir.streams+e.ke+'/'+e.mid+'/s.jpg',data,function(){})
                                      s.tx({
                                          f:'monitor_snapshot',
                                          snapshot:data.toString('base64'),

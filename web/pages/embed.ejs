@@ -254,9 +254,9 @@ $(document).ready(function(){
                         if($.shinobi.mon[d.id].details.stream_flv_type==='ws'){
                             var createPoseidon = function(){
                                 var onPoseidonError = function(){
-                                    setTimeout(function(){
-                                        $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
-                                    },2000)
+                                    // setTimeout(function(){
+                                    //     $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
+                                    // },2000)
                                 }
                                 $.shinobi.mon[d.id].Poseidon = new Poseidon({
                                     video: stream[0],

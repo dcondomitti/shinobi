@@ -2182,9 +2182,9 @@ $.ccio.globalWebsocket=function(d,user){
                         setTimeout(function(){
                             var stream = d.e.find('.stream-element');
                             var onPoseidonError = function(){
-                                setTimeout(function(){
-                                    $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
-                                },2000)
+                                // setTimeout(function(){
+                                    // $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
+                                // },5000)
                             }
                             if(!$.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount)$.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount = 0
                             if($.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount >= 5)return

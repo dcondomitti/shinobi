@@ -10,7 +10,7 @@ module.exports = function(s,config){
     }
     s.setDiskUsedForGroup = function(e,bytes){
         //`bytes` will be used as the value to add or substract
-        if(s.group[e.ke].diskUsedEmitter){
+        if(s.group[e.ke] && s.group[e.ke].diskUsedEmitter){
             s.group[e.ke].diskUsedEmitter.emit('set',bytes)
         }
     }
@@ -181,7 +181,17 @@ module.exports = function(s,config){
                                                         videosToDelete.push('(mid=? AND `time`=?)')
                                                         queryValues.push(video.mid)
                                                         queryValues.push(video.time)
-                                                        s.file('delete',video.dir)
+                                                        fs.chmod(video.dir,0o777,function(err){
+                                                            fs.unlink(video.dir,function(err){
+                                                                if(err){
+                                                                    fs.stat(video.dir,function(err){
+                                                                        if(!err){
+                                                                            s.file('delete',video.dir)
+                                                                        }
+                                                                    })
+                                                                }
+                                                            })
+                                                        })
                                                         s.setDiskUsedForGroup(e,-(video.size/1000000))
                                                         s.tx({
                                                             f: 'video_delete',
