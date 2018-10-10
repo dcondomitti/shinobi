@@ -54,7 +54,7 @@ echo "Shinobi - Do you want to Install FFMPEG?"
 echo "(y)es or (N)o"
 read ffmpeginstall
 if [ "$ffmpeginstall" = "y" ] || [ "$ffmpeginstall" = "Y" ]; then
-    echo "Shinobi - Do you want to Install FFMPEG with `apt` or download a static version provided with `npm`?"
+    echo "Shinobi - Do you want to Install FFMPEG with apt or download a static version provided with npm?"
     echo "(a)pt or (N)pm"
     echo "Press [ENTER] for default (npm)"
     read ffmpegstaticinstall
