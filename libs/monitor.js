@@ -606,6 +606,7 @@ module.exports = function(s,config,lang){
                 s.launchMonitorProcesses(e);
                 s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Restarting});
                 s.userLog(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
+                s.orphanedVideoCheck(e,2,null,true)
             }
         },60000 * cutoff * 1.1);
     }
@@ -615,6 +616,7 @@ module.exports = function(s,config,lang){
             if(s.group[e.ke].mon[e.id].isStarted === true){
                 s.launchMonitorProcesses(e);
                 s.userLog(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
+                s.orphanedVideoCheck(e,2,null,true)
             }
         },60000*1);
     }
@@ -725,6 +727,7 @@ module.exports = function(s,config,lang){
                     s.userLog(e,{type:lang['Process Unexpected Exit'],msg:{msg:lang['Process Crashed for Monitor'],cmd:s.group[e.ke].mon[e.id].ffmpeg}});
                 }
                 s.fatalCameraError(e,'Process Unexpected Exit');
+                s.orphanedVideoCheck(e,2,null,true)
             }
         }
         s.group[e.ke].mon[e.id].spawn.on('end',s.group[e.ke].mon[e.id].spawn_exit)
@@ -969,7 +972,8 @@ module.exports = function(s,config,lang){
                             fs.stat(e.sdir+'s.jpg',function(err,snap){
                                 var notStreaming = function(){
                                     s.launchMonitorProcesses(e)
-                                    s.userLog(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}});
+                                    s.userLog(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}})
+                                    s.orphanedVideoCheck(e,2,null,true)
                                 }
                                 if(err){
                                     notStreaming()

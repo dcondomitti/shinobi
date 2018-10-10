@@ -21,7 +21,6 @@ module.exports = function(s){
     if(config.cron === undefined)config.cron={};
     if(config.cron.enabled === undefined)config.cron.enabled=true;
     if(config.cron.deleteOld === undefined)config.cron.deleteOld=true;
-    if(config.cron.deleteOrphans === undefined)config.cron.deleteOrphans=false;
     if(config.cron.deleteNoVideo === undefined)config.cron.deleteNoVideo=true;
     if(config.cron.deleteNoVideoRecursion === undefined)config.cron.deleteNoVideoRecursion=false;
     if(config.cron.deleteOverMax === undefined)config.cron.deleteOverMax=true;
@@ -37,6 +36,8 @@ module.exports = function(s){
     if(config.iconURL === undefined){config.iconURL = "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"}
     if(config.pipeAddition === undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
     if(config.hideCloudSaveUrls === undefined){config.hideCloudSaveUrls = true}
+    if(config.insertOrphans === undefined){config.insertOrphans = true}
+    if(config.orphanedVideoCheckMax === undefined){config.orphanedVideoCheckMax = 20}
     //Child Nodes
     if(config.childNodes === undefined)config.childNodes = {};
         //enabled

@@ -1,3 +1,4 @@
+var fs = require('fs');
 var moment = require('moment');
 var crypto = require('crypto');
 var exec = require('child_process').exec;
@@ -18,11 +19,14 @@ module.exports = function(s,config,lang,io){
             if(monitors && monitors[0]){
                 monitors.forEach(function(monitor){
                     s.initiateMonitorObject(monitor)
-                    monitor.details = JSON.parse(monitor.details)
-                    s.group[monitor.ke].mon_conf[monitor.mid] = monitor
-                    var monObj = Object.assign(monitor,{id : monitor.mid})
-                    s.camera(monitor.mode,monObj)
-                });
+                    s.orphanedVideoCheck(monitor,null,function(orphanedFilesCount){
+                        if(orphanedFilesCount)s.systemLog(monitor.ke+' : '+monitor.mid+' : '+lang.startUpText6+' : '+orphanedFilesCount)
+                        monitor.details = monitor.details
+                        s.group[monitor.ke].mon_conf[monitor.mid] = monitor
+                        var monObj = Object.assign(monitor,{id : monitor.mid})
+                        s.camera(monitor.mode,monObj)
+                    })
+                })
             }
             callback()
         })

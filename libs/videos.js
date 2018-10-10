@@ -50,8 +50,8 @@ module.exports = function(s,config,lang){
     }
     //on video completion
     s.insertCompletedVideo = function(e,k,callback){
-        //e = video object
-        //k = temporary values
+        //e = monitor object
+        //k = video insertion object
         s.checkDetails(e)
         if(!k)k={};
         e.dir = s.getVideoDirectory(e)
@@ -251,5 +251,55 @@ module.exports = function(s,config,lang){
 //                    console.error(err)
             }
         })
+    }
+    s.orphanedVideoCheck = function(monitor,checkMax,callback,forceCheck){
+        var finish = function(orphanedFilesCount){
+            if(callback)callback(orphanedFilesCount)
+        }
+        if(forceCheck === true || config.insertOrphans === true){
+            if(!checkMax){
+                checkMax = config.orphanedVideoCheckMax
+            }
+            var videosDirectory = s.getVideoDirectory(monitor)// + s.formattedTime(video.time) + '.' + video.ext
+            fs.readdir(videosDirectory,function(err,files){
+                if(files && files.length > 0){
+                    var fiveRecentFiles = files.sort().slice(0,config.orphanedVideoCheckMax)
+                    var completedFile = 0
+                    var orphanedFilesCount = 0
+                    var fileComplete = function(){
+                        ++completedFile
+                        if(fiveRecentFiles.length === completedFile){
+                            finish(orphanedFilesCount)
+                        }
+                    }
+                    fiveRecentFiles.forEach(function(filename){
+                        if(/T[0-9][0-9]-[0-9][0-9]-[0-9][0-9]./.test(filename)){
+                            var queryValues = [
+                                monitor.ke,
+                                monitor.mid,
+                                s.nameToTime(filename)
+                            ]
+                            s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND time=? LIMIT 1',queryValues,function(err,rows){
+                                if(!err && (!rows || !rows[0])){
+                                    ++orphanedFilesCount
+                                    var video = rows[0]
+                                    s.insertCompletedVideo(monitor,{
+                                        file : filename
+                                    },function(){
+                                        fileComplete()
+                                    })
+                                }else{
+                                    fileComplete()
+                                }
+                            })
+                        }
+                    })
+                }else{
+                    finish()
+                }
+            })
+        }else{
+            finish()
+        }
     }
 }
