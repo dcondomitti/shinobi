@@ -4,8 +4,83 @@ var spawn = require('child_process').spawn;
 var exec = require('child_process').exec;
 module.exports = function(s,config){
     s.purgeDiskForGroup = function(e){
-        if(s.group[e.ke].diskUsedEmitter){
-            s.group[e.ke].diskUsedEmitter.emit('purge')
+        if(config.cron.deleteOverMax === true){
+                s.group[e.ke].sizePurgeQueue.push(1)
+                if(s.group[e.ke].sizePurging !== true){
+                    s.group[e.ke].sizePurging = true
+                    var finish = function(){
+                        //remove value just used from queue
+                        s.group[e.ke].sizePurgeQueue.shift()
+                        //do next one
+                        if(s.group[e.ke].sizePurgeQueue.length > 0){
+                            checkQueue()
+                        }else{
+                            s.group[e.ke].sizePurging=false
+                            s.sendDiskUsedAmountToClients(e)
+                        }
+                    }
+                    var checkQueue = function(){
+                        //get first in queue
+                        var currentPurge = s.group[e.ke].sizePurgeQueue[0]
+                        var deleteVideos = function(){
+                            //run purge command
+                            if(s.group[e.ke].usedSpace > (s.group[e.ke].sizeLimit*config.cron.deleteOverMaxOffset)){
+                                s.sqlQuery('SELECT * FROM Videos WHERE status != 0 AND details NOT LIKE \'%"archived":"1"%\' AND ke=? ORDER BY `time` ASC LIMIT 3',[e.ke],function(err,videos){
+                                    var videosToDelete = []
+                                    var queryValues = [e.ke]
+                                    var completedCheck = 0
+                                    if(videos){
+                                        videos.forEach(function(video){
+                                            video.dir = s.getVideoDirectory(video) + s.formattedTime(video.time) + '.' + video.ext
+                                            videosToDelete.push('(mid=? AND `time`=?)')
+                                            queryValues.push(video.mid)
+                                            queryValues.push(video.time)
+                                            fs.chmod(video.dir,0o777,function(err){
+                                                fs.unlink(video.dir,function(err){
+                                                    ++completedCheck
+                                                    if(err){
+                                                        fs.stat(video.dir,function(err){
+                                                            if(!err){
+                                                                s.file('delete',video.dir)
+                                                            }
+                                                        })
+                                                    }
+                                                    if(videosToDelete.length === completedCheck){
+                                                        videosToDelete = videosToDelete.join(' OR ')
+                                                        s.sqlQuery('DELETE FROM Videos WHERE ke =? AND ('+videosToDelete+')',queryValues,function(){
+                                                            deleteVideos()
+                                                        })
+                                                    }
+                                                })
+                                            })
+                                            s.setDiskUsedForGroup(e,-(video.size/1000000))
+                                            s.tx({
+                                                f: 'video_delete',
+                                                ff: 'over_max',
+                                                filename: s.formattedTime(video.time)+'.'+video.ext,
+                                                mid: video.mid,
+                                                ke: video.ke,
+                                                time: video.time,
+                                                end: s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')
+                                            },'GRP_'+e.ke)
+                                        })
+                                    }else{
+                                        console.log(err)
+                                    }
+                                    if(videosToDelete.length === 0){
+                                        finish()
+                                    }
+                                })
+                        }else{
+                            finish()
+                        }
+                    }
+                    deleteVideos()
+                }
+                checkQueue()
+            }
+        }else{
+            s.sendDiskUsedAmountToClients(e)
         }
     }
     s.setDiskUsedForGroup = function(e,bytes){
@@ -146,86 +221,9 @@ module.exports = function(s,config){
                             s.group[e.ke].usedSpace=0
                         }
                         //change global size value
-                        s.group[e.ke].usedSpace=s.group[e.ke].usedSpace+currentChange
+                        s.group[e.ke].usedSpace += currentChange
                         //remove value just used from queue
                         s.sendDiskUsedAmountToClients(e)
-                    })
-                    s.group[e.ke].diskUsedEmitter.on('purge',function(){
-                        if(config.cron.deleteOverMax === true){
-                                s.group[e.ke].sizePurgeQueue.push(1)
-                                if(s.group[e.ke].sizePurging !== true){
-                                    s.group[e.ke].sizePurging = true
-                                    var finish = function(){
-                                        //remove value just used from queue
-                                        s.group[e.ke].sizePurgeQueue.shift()
-                                        //do next one
-                                        if(s.group[e.ke].sizePurgeQueue.length > 0){
-                                            checkQueue()
-                                        }else{
-                                            s.group[e.ke].sizePurging=false
-                                            s.sendDiskUsedAmountToClients(e)
-                                        }
-                                    }
-                                    var checkQueue=function(){
-                                        //get first in queue
-                                        var currentPurge = s.group[e.ke].sizePurgeQueue[0]
-                                        var deleteVideos = function(){
-                                            //run purge command
-                                            if(s.group[e.ke].usedSpace > (s.group[e.ke].sizeLimit*config.cron.deleteOverMaxOffset)){
-                                                s.sqlQuery('SELECT * FROM Videos WHERE status != 0 AND details NOT LIKE \'%"archived":"1"%\' AND ke=? ORDER BY `time` ASC LIMIT 2',[e.ke],function(err,videos){
-                                                    var videosToDelete = []
-                                                    var queryValues = [e.ke]
-                                                    var completedCheck = 0
-                                                    if(!videos)return console.log(err)
-                                                    videos.forEach(function(video){
-                                                        video.dir = s.getVideoDirectory(video) + s.formattedTime(video.time) + '.' + video.ext
-                                                        videosToDelete.push('(mid=? AND `time`=?)')
-                                                        queryValues.push(video.mid)
-                                                        queryValues.push(video.time)
-                                                        fs.chmod(video.dir,0o777,function(err){
-                                                            fs.unlink(video.dir,function(err){
-                                                                ++completedCheck
-                                                                if(err){
-                                                                    fs.stat(video.dir,function(err){
-                                                                        if(!err){
-                                                                            s.file('delete',video.dir)
-                                                                        }
-                                                                    })
-                                                                }
-                                                                if(videosToDelete.length === completedCheck){
-                                                                    videosToDelete = videosToDelete.join(' OR ')
-                                                                    s.sqlQuery('DELETE FROM Videos WHERE ke =? AND ('+videosToDelete+')',queryValues,function(){
-                                                                        deleteVideos()
-                                                                    })
-                                                                }
-                                                            })
-                                                        })
-                                                        s.setDiskUsedForGroup(e,-(video.size/1000000))
-                                                        s.tx({
-                                                            f: 'video_delete',
-                                                            ff: 'over_max',
-                                                            filename: s.formattedTime(video.time)+'.'+video.ext,
-                                                            mid: video.mid,
-                                                            ke: video.ke,
-                                                            time: video.time,
-                                                            end: s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')
-                                                        },'GRP_'+e.ke)
-                                                    })
-                                                    if(videosToDelete.length === 0){
-                                                        finish()
-                                                    }
-                                                })
-                                        }else{
-                                            finish()
-                                        }
-                                    }
-                                    deleteVideos()
-                                }
-                                checkQueue()
-                            }
-                        }else{
-                            s.sendDiskUsedAmountToClients(e)
-                        }
                     })
                 }
                 Object.keys(ar).forEach(function(v){

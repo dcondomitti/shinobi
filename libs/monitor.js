@@ -491,42 +491,46 @@ module.exports = function(s,config,lang){
         if(config.doSnapshot===true){
             if(e.mon.mode!=='stop'){
                 var pathDir = s.dir.streams+e.ke+'/'+e.mid+'/'
-                if(fs.existsSync(pathDir+'s.jpg') === true){
-                    fs.readFile(pathDir+'s.jpg',function(err,data){
-                        if(err){s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke);return};
-                        s.tx({f:'monitor_snapshot',snapshot:data,snapshot_format:'ab',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
-                    })
-                }else{
-                    e.url = s.buildMonitorUrl(e.mon)
-                    switch(e.mon.type){
-                        case'mjpeg':case'h264':case'local':
-                            if(e.mon.type==='local'){e.url=e.mon.path;}
-                             s.getRawSnapshotFromMonitor(e.mon,'-s 200x200',function(data,isStaticFile){
-                                 if((data[data.length-2] === 0xFF && data[data.length-1] === 0xD9)){
-                                     if(!isStaticFile)fs.writeFile(s.dir.streams+e.ke+'/'+e.mid+'/s.jpg',data,function(){})
-                                     s.tx({
-                                         f:'monitor_snapshot',
-                                         snapshot:data.toString('base64'),
-                                         snapshot_format:'b64',
-                                         mid:e.mid,
-                                         ke:e.ke
-                                     },'GRP_'+e.ke)
-                                 }else{
-                                     s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
-                                }
-                             })
-                        break;
-                        case'jpeg':
-                            request({url:e.url,method:'GET',encoding:null},function(err,data){
-                                if(err){s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke);return};
-                                s.tx({f:'monitor_snapshot',snapshot:data.body,snapshot_format:'ab',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
-                            })
-                        break;
-                        default:
-                            s.tx({f:'monitor_snapshot',snapshot:'...',snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
-                        break;
+                fs.stat(pathDir+'icon.jpg',function(err){
+                    if(!err){
+                        fs.readFile(pathDir+'icon.jpg',function(err,data){
+                            if(err){s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke);return};
+                            s.tx({f:'monitor_snapshot',snapshot:data,snapshot_format:'ab',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
+                        })
+                    }else{
+                        e.url = s.buildMonitorUrl(e.mon)
+                        switch(e.mon.type){
+                            case'mjpeg':case'h264':case'local':
+                                if(e.mon.type==='local'){e.url=e.mon.path;}
+                                 s.getRawSnapshotFromMonitor(e.mon,'-s 200x200',function(data,isStaticFile){
+                                     if((data[data.length-2] === 0xFF && data[data.length-1] === 0xD9)){
+                                         if(!isStaticFile){
+                                             fs.writeFile(s.dir.streams+e.ke+'/'+e.mid+'/icon.jpg',data,function(){})
+                                         }
+                                         s.tx({
+                                             f:'monitor_snapshot',
+                                             snapshot:data.toString('base64'),
+                                             snapshot_format:'b64',
+                                             mid:e.mid,
+                                             ke:e.ke
+                                         },'GRP_'+e.ke)
+                                     }else{
+                                         s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
+                                    }
+                                 })
+                            break;
+                            case'jpeg':
+                                request({url:e.url,method:'GET',encoding:null},function(err,data){
+                                    if(err){s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke);return};
+                                    s.tx({f:'monitor_snapshot',snapshot:data.body,snapshot_format:'ab',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
+                                })
+                            break;
+                            default:
+                                s.tx({f:'monitor_snapshot',snapshot:'...',snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
+                            break;
+                        }
                     }
-                }
+                })
             }else{
                 s.tx({f:'monitor_snapshot',snapshot:'Disabled',snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
             }
