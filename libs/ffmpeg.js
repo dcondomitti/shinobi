@@ -31,15 +31,16 @@ module.exports = function(s,config,onFinish){
     var ffmpegStaticCheck = function(failback){
         try{
             var staticFFmpeg = require('ffmpeg-static').path;
-            if (!fs.existsSync(staticFFmpeg)) {
+            if (fs.statSync(staticFFmpeg)) {
+                config.ffmpegDir = staticFFmpeg
+            }else{
                 console.log('"ffmpeg-static" from NPM has failed to provide a compatible library or has been corrupted.')
                 console.log('Run "npm uninstall ffmpeg-static" to remove it.')
                 console.log('Run "npm install ffbinaries" to get a different static FFmpeg downloader.')
-            }else{
-                config.ffmpegDir = staticFFmpeg
             }
         }catch(err){
             console.log('No "ffmpeg-static".')
+            failback()
         }
     }
     //check node module : ffbinaries

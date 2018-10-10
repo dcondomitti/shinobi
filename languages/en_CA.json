@@ -635,7 +635,7 @@
    "startUpText1": "Completed Checking Disk Used.",
    "startUpText2": "all users checked, wait to close open files and remove files over user limit",
    "startUpText3": "waiting to give unfinished video check some time. 3 seconds.",
-   "startUpText4": "Starting Monitors",
+   "startUpText4": "Starting Monitors... Please Wait...",
    "startUpText5": "Shinobi is ready.",
    "startUpText6": "Orphaned Videos Found and Inserted",
    "Migrator": "Migrator",

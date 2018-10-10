@@ -1,3 +1,4 @@
+
 var fs = require('fs');
 var moment = require('moment');
 var crypto = require('crypto');
@@ -17,18 +18,31 @@ module.exports = function(s,config,lang,io){
         s.sqlQuery('SELECT * FROM Monitors', function(err,monitors) {
             if(err){s.systemLog(err)}
             if(monitors && monitors[0]){
-                monitors.forEach(function(monitor){
+                var loadCompleted = 0
+                var orphanedVideosForMonitors = {}
+                var loadMonitor = function(monitor){
+                    if(!orphanedVideosForMonitors[monitor.ke])orphanedVideosForMonitors[monitor.ke] = {}
+                    if(!orphanedVideosForMonitors[monitor.ke][monitor.mid])orphanedVideosForMonitors[monitor.ke][monitor.mid] = 0
                     s.initiateMonitorObject(monitor)
                     s.orphanedVideoCheck(monitor,null,function(orphanedFilesCount){
-                        if(orphanedFilesCount)s.systemLog(monitor.ke+' : '+monitor.mid+' : '+lang.startUpText6+' : '+orphanedFilesCount)
+                        if(orphanedFilesCount){
+                            orphanedVideosForMonitors[monitor.ke][monitor.mid] += orphanedFilesCount
+                        }
                         monitor.details = monitor.details
                         s.group[monitor.ke].mon_conf[monitor.mid] = monitor
                         var monObj = Object.assign(monitor,{id : monitor.mid})
                         s.camera(monitor.mode,monObj)
+                        ++loadCompleted
+                        if(monitors[loadCompleted]){
+                            loadMonitor(monitors[loadCompleted])
+                        }else{
+                            s.systemLog(lang.startUpText6+' : '+s.s(orphanedVideosForMonitors))
+                            callback()
+                        }
                     })
-                })
+                }
+                loadMonitor(monitors[loadCompleted])
             }
-            callback()
         })
     }
     var loadDiskUseForUser = function(user,callback){
