@@ -5834,7 +5834,9 @@ $('body')
         break;
         case'control_toggle':
             e.e=e.p.find('.PTZ_controls');
-            if(e.e.length>0){e.e.remove()}else{
+            if(e.e.length>0){
+                e.e.remove()
+            }else{
                 var html = '<div class="PTZ_controls">'
                 html += '<div class="pad">'
                     html += '<div class="control top" monitor="control" control="up"></div>'
@@ -5852,7 +5854,7 @@ $('body')
                         html += '<a title="'+lang['Disable Nightvision']+'" class="nv_disable btn btn-default" monitor="control" control="disable_nv"><i class="fa fa-sun-o"></i></a>'
                     html += '</div>'
                 html += '</div>'
-                e.p.append()
+                e.p.append(html)
             }
         break;
         case'watch':
