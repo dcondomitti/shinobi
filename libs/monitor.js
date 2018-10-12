@@ -934,6 +934,7 @@ module.exports = function(s,config,lang){
     }
     //set master based process launcher
     s.launchMonitorProcesses = function(e){
+        // e = monitor object
         //create host string without username and password
         var strippedHost = s.stripAuthFromHost(e)
         var doOnThisMachine = function(){

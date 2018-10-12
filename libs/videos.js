@@ -2,6 +2,11 @@ var fs = require('fs');
 var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 module.exports = function(s,config,lang){
+    /**
+     * Gets the video directory of the supplied video or monitor database row.
+     * @constructor
+     * @param {object} e - Monitor object or Video object. Object is a database row.
+     */
     s.getVideoDirectory = function(e){
         if(e.mid&&!e.id){e.id=e.mid};
         s.checkDetails(e)
@@ -11,6 +16,14 @@ module.exports = function(s,config,lang){
             return s.dir.videos+e.ke+'/'+e.id+'/';
         }
     }
+    /**
+     * Creates available API based URLs for streaming
+     * @constructor
+     * @param {object} videos - Array of video objects
+     * @param {object} options - Contains middle parameter of URL and auth key
+     * @param [options.auth] {string} - API Key
+     * @param [options.videoParam] {string} - currently only `videos` and `cloudVideos` available.
+     */
     s.buildVideoLinks = function(videos,options){
         videos.forEach(function(v){
             var details = JSON.parse(v.details)
@@ -237,7 +250,7 @@ module.exports = function(s,config,lang){
         }
     }
     s.deleteVideoFromCloud = function(e){
-        //e = video object
+        // e = video object
         s.checkDetails(e)
         var videoSelector = [e.id,e.ke,new Date(e.time)]
         s.sqlQuery('SELECT * FROM `Cloud Videos` WHERE `mid`=? AND `ke`=? AND `time`=?',videoSelector,function(err,r){

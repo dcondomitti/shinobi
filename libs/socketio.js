@@ -4,6 +4,7 @@ var execSync = require('child_process').execSync;
 var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var jsonfile = require("jsonfile");
+var onvif = require("node-onvif");
 module.exports = function(s,config,lang,io){
     //send data to detector plugin
     s.ocvTx=function(data){
