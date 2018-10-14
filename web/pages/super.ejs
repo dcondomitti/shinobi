@@ -100,13 +100,8 @@
                                                 <div class="collapse navbar-collapse">
                                                     <ul class="navbar-nav">
                                                         <li class="nav-item">
-                                                            <a class="nav-link add" href="javascript:$.conf.e.submit()">
+                                                            <a class="nav-link submit">
                                                                 <p><i class="fa fa-check"></i> <%-lang.Save%></p>
-                                                            </a>
-                                                        </li>
-                                                        <li class="nav-item">
-                                                            <a class="nav-link add" href="javascript:$.conf.e.submit()">
-                                                                <p class="msg"></p>
                                                             </a>
                                                         </li>
                                                     </ul>
@@ -342,10 +337,10 @@ $.logs={e:$('#logs')}
     var stringedConfig = JSON.stringify(plainConfig)
 %>
 var config = <%- JSON.stringify(plainConfig) || [] %>
-$.conf={e:$('#conf_json')};
+$.conf={e:$('#config')};
+$.conf.f = $.conf.e.find('form')
 $.conf.configForHumans=$('#configForHumans')
 $.conf.draw=$.conf.e.find('[name="json"]')
-$.conf.msg=$.conf.e.find('.msg')
 $.conf.valid=1;
 $.conf.jsonToFields = function(){
 //    var tmp = ''
@@ -372,7 +367,10 @@ $.conf.draw.keyup(function(){
     }
     new PNotify({text:msg,type:color})
 })
-$.conf.e.submit(function(e){
+$.conf.e.find('.submit').click(function(e){
+    $.conf.f.submit()
+})
+$.conf.f.submit(function(e){
     e.preventDefault()
     if($.conf.valid===1){
         $.confirm.e.modal('show');
@@ -437,7 +435,7 @@ $.conf.e.on('keyup','.config-row input',function(){
     $.conf.draw.val(JSON.stringify(newConfig,null,3))
     console.log(newConfig)
 })
-$.conf.e.ready(function(){
+$.conf.f.ready(function(){
     $.conf.jsonToFields()
 })
 //sys controls
