@@ -65,7 +65,7 @@ module.exports = function(s,config,lang,io){
         	    k.cmd = "echo \"scale=4; $(vmstat -H | tail -1 | awk '{print $5}')*1024*100/$(sysctl hw.physmem | awk '{print $2}')\" | bc"
             break;
             default:
-                k.cmd = "LANG=C free | grep Mem | awk '{print $4/$2 * 100.0}'";
+                k.cmd = "LANG=C free | grep Mem | awk '{print $7/$2 * 100.0}'";
             break;
         }
         if(k.cmd){
