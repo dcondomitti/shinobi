@@ -75,13 +75,17 @@ module.exports = function(s,config,lang,app){
     //get post data
     s.getPostData = function(req){
         var postData = false
+        var selected = false
         try{
-            if(req.query.data){
+            if(req.query && req.query.data){
+                selected = req.query.data
                 postData = JSON.parse(req.query.data)
             }else{
+                selected = req.body.data
                 postData = JSON.parse(req.body.data)
             }
         }catch(er){
+            postData = selected
         }
         return postData
     }

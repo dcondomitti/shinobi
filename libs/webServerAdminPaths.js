@@ -299,6 +299,140 @@ module.exports = function(s,config,lang,app){
                     res.end(s.prettyPrint(req.ret))
                 }
             }
-        })
+        },res,req)
+    })
+    /**
+    * API : Add API Key, binded to the user who created it
+    */
+    app.all([
+        config.webPaths.adminApiPrefix+':auth/api/:ke/add',
+        config.webPaths.apiPrefix+':auth/api/:ke/add',
+    ],function (req,res){
+        var endData = {ok:false}
+        res.setHeader('Content-Type', 'application/json');
+        res.header("Access-Control-Allow-Origin",req.headers.origin);
+        s.auth(req.params,function(user){
+            var endData = {
+                ok : false
+            }
+            var form = s.getPostData(req)
+            if(form){
+                var insert = {
+                    ke : req.params.ke,
+                    uid : user.uid,
+                    code : s.gid(30),
+                    ip : form.ip,
+                    details : s.stringJSON(form.details)
+                }
+                var escapes = []
+                Object.keys(insert).forEach(function(column){
+                    escapes.push('?')
+                });
+                s.sqlQuery('INSERT INTO API ('+Object.keys(insert).join(',')+') VALUES ('+escapes.join(',')+')',Object.values(insert),function(err,r){
+                    insert.time = s.formattedTime(new Date,'YYYY-DD-MM HH:mm:ss');
+                    if(!err){
+                        s.tx({
+                            f: 'api_key_added',
+                            uid: user.uid,
+                            form: insert
+                        },'GRP_' + req.params.ke)
+                        endData.ok = true
+                    }
+                    closeResponse(res,endData)
+                })
+            }else{
+                endData.msg = lang.postDataBroken
+                closeResponse(res,endData)
+            }
+        },res,req)
+    })
+    /**
+    * API : Delete API Key
+    */
+    app.all([
+        config.webPaths.adminApiPrefix+':auth/api/:ke/delete',
+        config.webPaths.apiPrefix+':auth/api/:ke/delete',
+    ],function (req,res){
+        var endData = {ok:false}
+        res.setHeader('Content-Type', 'application/json');
+        res.header("Access-Control-Allow-Origin",req.headers.origin);
+        s.auth(req.params,function(user){
+            var endData = {
+                ok : false
+            }
+            var form = s.getPostData(req)
+            if(form){
+                if(!form.code){
+                    s.tx({
+                        f:'form_incomplete',
+                        uid: user.uid,
+                        form:'APIs'
+                    },'GRP_' + req.params.ke)
+                    endData.msg = lang.postDataBroken
+                    closeResponse(res,endData)
+                    return
+                }
+                var row = {
+                    ke : req.params.ke,
+                    uid : user.uid,
+                    code : form.code
+                }
+                var where = []
+                Object.keys(row).forEach(function(column){
+                    where.push(column+'=?')
+                })
+                s.sqlQuery('DELETE FROM API WHERE '+where.join(' AND '),Object.values(row),function(err,r){
+                    if(!err){
+                        s.tx({
+                            f: 'api_key_deleted',
+                            uid: user.uid,
+                            form: row
+                        },'GRP_' + req.params.ke)
+                        endData.ok = true
+                        delete(s.api[row.code])
+                    }
+                    closeResponse(res,endData)
+                })
+            }else{
+                endData.msg = lang.postDataBroken
+                closeResponse(res,endData)
+            }
+        },res,req)
+    })
+    /**
+    * API : List API Keys for Authenticated user
+    */
+    app.get([
+        config.webPaths.adminApiPrefix+':auth/api/:ke/list',
+        config.webPaths.apiPrefix+':auth/api/:ke/list',
+    ],function (req,res){
+        var endData = {ok:false}
+        res.setHeader('Content-Type', 'application/json');
+        res.header("Access-Control-Allow-Origin",req.headers.origin);
+        s.auth(req.params,function(user){
+            var endData = {
+                ok : false
+            }
+            var row = {
+                ke : req.params.ke,
+                uid : user.uid
+            }
+            var where = []
+            Object.keys(row).forEach(function(column){
+                where.push(column+'=?')
+            })
+            s.sqlQuery('SELECT * FROM API WHERE '+where.join(' AND '),Object.values(row),function(err,rows){
+                if(rows && rows[0]){
+                    rows.forEach(function(row){
+                        row.details = JSON.parse(row.details)
+                    })
+                    endData.ok = true
+                    endData.uid = user.uid
+                    endData.ke = user.ke
+                    endData.keys = rows
+                }
+                closeResponse(res,endData)
+            })
+        },res,req)
     })
 }

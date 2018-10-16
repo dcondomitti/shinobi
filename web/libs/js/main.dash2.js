@@ -2674,12 +2674,16 @@ $user.ws.on('f',function (d){
     $.ccio.globalWebsocket(d)
     switch(d.f){
         case'api_key_deleted':
-            $.ccio.init('note',{title:lang['API Key Deleted'],text:lang.APIKeyDeletedText,type:'notice'});
-            $('[api_key="'+d.form.code+'"]').remove();
+            if($user.uid === d.uid){
+                $.ccio.init('note',{title:lang['API Key Deleted'],text:lang.APIKeyDeletedText,type:'notice'});
+                $('[api_key="'+d.form.code+'"]').remove()
+            }
         break;
         case'api_key_added':
-            $.ccio.init('note',{title:lang['API Key Added'],text:lang.FiltersUpdatedText,type:'success'});
-            $.ccio.tm(3,d.form,'#api_list')
+            if($user.uid === d.uid){
+                $.ccio.init('note',{title:lang['API Key Added'],text:lang.FiltersUpdatedText,type:'success'});
+                $.ccio.tm(3,d.form,'#api_list')
+            }
         break;
         case'filters_change':
             $.ccio.init('note',{title:lang['Filters Updated'],text:lang.FiltersUpdatedText,type:'success'});
@@ -4192,7 +4196,9 @@ $.apM.f.submit(function(e){
     if(!e.s.ip||e.s.ip.length<7){e.er.push('Enter atleast one IP')}
     if(e.er.length>0){$.apM.e.find('.msg').html(e.er.join('<br>'));return;}
     $.each(e.s,function(n,v){e.s[n]=v.trim()})
-    $.ccio.cx({f:'api',ff:'add',form:e.s})
+    $.post($.ccio.init('location',$user)+$user.auth_token+'/api/'+$user.ke+'/add',{data:JSON.stringify(e.s)},function(d){
+        $.ccio.log(d)
+    })
 });
 $.apM.e.on('click','.delete',function(e){
     e.e=$(this);e.p=e.e.parents('[api_key]'),e.code=e.p.attr('api_key');
@@ -4201,7 +4207,9 @@ $.apM.e.on('click','.delete',function(e){
     e.html='Do you want to delete this API key? You cannot recover it.';
     $.confirm.body.html(e.html);
     $.confirm.click({title:'Delete',class:'btn-danger'},function(){
-        $.ccio.cx({f:'api',ff:'delete',form:{code:e.code}})
+        $.post($.ccio.init('location',$user)+$user.auth_token+'/api/'+$user.ke+'/delete',{data:JSON.stringify({code:e.code})},function(d){
+            $.ccio.log(d)
+        })
     });
 })
 //filters window

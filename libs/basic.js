@@ -38,6 +38,16 @@ module.exports = function(s,config){
         }
         return string
     }
+    s.stringJSON = function(json){
+        try{
+            if(json instanceof Object){
+                json = JSON.stringify(json)
+            }
+        }catch(err){
+
+        }
+        return json
+    }
     s.addUserPassToUrl = function(url,user,pass){
         var splitted = url.split('://')
         splitted[1] = user + ':' + pass + '@' + splitted[1]

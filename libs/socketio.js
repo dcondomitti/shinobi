@@ -55,7 +55,7 @@ module.exports = function(s,config,lang,io){
 
     ////socket controller
     io.on('connection', function (cn) {
-    var tx;
+        var tx;
         //set "client" detector plugin event function
         cn.on('ocv',function(d){
             if(!cn.pluginEngine&&d.f==='init'){
@@ -534,14 +534,14 @@ module.exports = function(s,config,lang,io){
                             case'delete':
                                 d.set=[],d.ar=[];
                                 d.form.ke=cn.ke;d.form.uid=cn.uid;delete(d.form.ip);
-                                if(!d.form.code){tx({f:'form_incomplete',form:'APIs'});return}
+                                if(!d.form.code){tx({f:'form_incomplete',form:'APIs',uid:cn.uid});return}
                                 d.for=Object.keys(d.form);
                                 d.for.forEach(function(v){
                                     d.set.push(v+'=?'),d.ar.push(d.form[v]);
                                 });
                                 s.sqlQuery('DELETE FROM API WHERE '+d.set.join(' AND '),d.ar,function(err,r){
                                     if(!err){
-                                        tx({f:'api_key_deleted',form:d.form});
+                                        tx({f:'api_key_deleted',form:d.form,uid:cn.uid});
                                         delete(s.api[d.form.code]);
                                     }else{
                                         s.systemLog('API Delete Error : '+e.ke+' : '+' : '+e.mid,err)
@@ -557,7 +557,7 @@ module.exports = function(s,config,lang,io){
                                 });
                                 s.sqlQuery('INSERT INTO API ('+d.set.join(',')+') VALUES ('+d.qu.join(',')+')',d.ar,function(err,r){
                                     d.form.time=s.formattedTime(new Date,'YYYY-DD-MM HH:mm:ss');
-                                    if(!err){tx({f:'api_key_added',form:d.form});}else{s.systemLog(err)}
+                                    if(!err){tx({f:'api_key_added',form:d.form,uid:cn.uid});}else{s.systemLog(err)}
                                 });
                             break;
                         }
