@@ -24,7 +24,7 @@ module.exports = function(s,config,lang,io){
                     if(!orphanedVideosForMonitors[monitor.ke])orphanedVideosForMonitors[monitor.ke] = {}
                     if(!orphanedVideosForMonitors[monitor.ke][monitor.mid])orphanedVideosForMonitors[monitor.ke][monitor.mid] = 0
                     s.initiateMonitorObject(monitor)
-                    s.orphanedVideoCheck(monitor,null,function(orphanedFilesCount){
+                    s.orphanedVideoCheck(monitor,4,function(orphanedFilesCount){
                         if(orphanedFilesCount){
                             orphanedVideosForMonitors[monitor.ke][monitor.mid] += orphanedFilesCount
                         }
@@ -42,6 +42,8 @@ module.exports = function(s,config,lang,io){
                     })
                 }
                 loadMonitor(monitors[loadCompleted])
+            }else{
+                callback()
             }
         })
     }

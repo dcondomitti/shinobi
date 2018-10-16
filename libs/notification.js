@@ -184,6 +184,7 @@ module.exports = function(s,config,lang){
             }
         }
         var onTwoFactorAuthCodeNotificationForEmail = function(r){
+            // r = user object
             if(r.details.factor_mail !== '0'){
                 var mailOptions = {
                     from: config.mail.from,

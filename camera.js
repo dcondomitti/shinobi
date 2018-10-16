@@ -76,7 +76,7 @@ loadLib('ffmpeg')(s,config,function(){
     //health : cpu and ram trackers..
     loadLib('health')(s,config,lang,io)
     //cluster module
-    loadLib('childNode')(s,config,lang,io)
+    loadLib('childNode')(s,config,lang,app,io)
     //cloud uploaders : amazon s3, webdav, backblaze b2..
     loadLib('cloudUploaders')(s,config,lang)
     //notifiers : discord..
