@@ -24,6 +24,9 @@ module.exports = function(s,config,lang){
         if(!s.group[e.ke].mon[e.mid].isStarted){s.group[e.ke].mon[e.mid].isStarted = false};
         if(s.group[e.ke].mon[e.mid].delete){clearTimeout(s.group[e.ke].mon[e.mid].delete)}
         if(!s.group[e.ke].mon_conf){s.group[e.ke].mon_conf={}}
+        s.onMonitorInitExtensions.forEach(function(extender){
+            extender(e)
+        })
     }
     s.sendMonitorStatus = function(e){
         s.group[e.ke].mon[e.id].monitorStatus = e.status

@@ -47,6 +47,10 @@ module.exports = function(s,config){
     }
 
     ////// MONITOR //////
+    s.onMonitorInitExtensions = []
+    s.onMonitorInit = function(callback){
+        s.onMonitorInitExtensions.push(callback)
+    }
     s.onDetectorNoTriggerTimeoutExtensions = []
     s.onDetectorNoTriggerTimeout = function(callback){
         s.onDetectorNoTriggerTimeoutExtensions.push(callback)
