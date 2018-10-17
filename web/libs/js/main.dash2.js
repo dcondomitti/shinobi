@@ -3176,6 +3176,8 @@ $.log.dateRange.daterangepicker({
     startDate:$.ccio.timeObject().subtract(moment.duration("5:00:00")),
     endDate:$.ccio.timeObject().add(moment.duration("24:00:00")),
     timePicker: true,
+    timePicker24Hour: true,
+    timePickerSeconds: true,
     timePickerIncrement: 30,
     locale: {
         format: 'MM/DD/YYYY h:mm A'
@@ -4536,6 +4538,8 @@ $.vidview.dr.daterangepicker({
     startDate:$.ccio.timeObject().subtract(moment.duration("24:00:00")),
     endDate:$.ccio.timeObject().add(moment.duration("24:00:00")),
     timePicker: true,
+    timePicker24Hour: true,
+    timePickerSeconds: true,
     timePickerIncrement: 30,
     locale: {
         format: 'MM/DD/YYYY h:mm A'
@@ -4672,6 +4676,8 @@ $.timelapse.dr.daterangepicker({
     startDate:$.ccio.timeObject().subtract(moment.duration("24:00:00")),
     endDate:$.ccio.timeObject().add(moment.duration("24:00:00")),
     timePicker: true,
+    timePicker24Hour: true,
+    timePickerSeconds: true,
     timePickerIncrement: 30,
     locale: {
         format: 'MM/DD/YYYY h:mm A'
@@ -5000,6 +5006,8 @@ $.pwrvid.dr.daterangepicker({
     startDate:$.ccio.timeObject().subtract(moment.duration("24:00:00")),
     endDate:$.ccio.timeObject().add(moment.duration("24:00:00")),
     timePicker: true,
+    timePicker24Hour: true,
+    timePickerSeconds: true,
     timePickerIncrement: 30,
     locale: {
         format: 'MM/DD/YYYY h:mm A'
