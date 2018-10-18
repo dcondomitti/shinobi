@@ -218,6 +218,8 @@ module.exports = function(s,config,lang){
         if(!k)k={};
         //cloud saver - amazon s3
         if(s.group[e.ke].aws_s3 && s.group[e.ke].init.use_aws_s3 !== '0' && s.group[e.ke].init.aws_s3_save === '1'){
+            var ext = k.filename.split('.')
+            ext = ext[ext.length - 1]
             var fileStream = fs.createReadStream(k.dir+k.filename);
             fileStream.on('error', function (err) {
                 console.error(err)
@@ -227,7 +229,8 @@ module.exports = function(s,config,lang){
                 Bucket: s.group[e.ke].init.aws_s3_bucket,
                 Key: saveLocation,
                 Body:fileStream,
-                ACL:'public-read'
+                ACL:'public-read',
+                ContentType:'video/'+ext
             },function(err,data){
                 if(err){
                     s.userLog(e,{type:lang['Amazon S3 Upload Error'],msg:err})
