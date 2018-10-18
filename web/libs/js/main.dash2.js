@@ -4513,6 +4513,10 @@ $.sM.e.find('.linkShinobi .add').click(function(){
     $.ccio.tm('link-set',{},'#linkShinobi')
     $.sM.linkChange()
 })
+//basic video window
+$.basicVideo = {
+
+}
 //videos window
 $.vidview={
     e:$('#videos_viewer'),
@@ -5422,15 +5426,20 @@ $('body')
     switch(e.a){
         case'launch':
             e.preventDefault();
-            e.href=$(this).attr('href'),
-            e.e=$('#video_viewer');
-            e.e.find('.modal-title span').html(e.mon.name+' - '+e.file)
-            e.e.find('.modal-body').html('<video class="video_video" video="'+e.href+'" autoplay loop controls><source src="'+e.href+'" type="video/'+e.mon.ext+'"></video>')
-            e.e.attr('mid',e.mid);
-            e.f=e.e.find('.modal-footer');
-            e.f.find('.download_link').attr('href',e.href).attr('download',e.file);
-            e.f.find('[monitor="download"][host="dropbox"]').attr('href',e.href);
-            e.e.modal('show')
+            e.href=$(this).attr('href')
+            var el = $('#video_viewer')
+            var modalBody = el.find('.modal-body')
+            el.find('.modal-title span').html(e.mon.name+' - '+e.file)
+            var html = '<video class="video_video" video="'+e.href+'" autoplay loop controls><source src="'+e.href+'" type="video/'+e.mon.ext+'"></video><br><small class="msg"></small>'
+            modalBody.html(html)
+            el.find('video')[0].onerror = function(){
+                modalBody.find('.msg').text(lang.h265BrowserText1)
+            }
+            el.attr('mid',e.mid);
+            footer = el.find('.modal-footer');
+            footer.find('.download_link').attr('href',e.href).attr('download',e.file);
+            footer.find('[monitor="download"][host="dropbox"]').attr('href',e.href);
+            el.modal('show')
                 .attr('ke',e.ke)
                 .attr('mid',e.mid)
                 .attr('auth',e.auth)
