@@ -232,6 +232,9 @@ module.exports = function(s,config,lang){
             delete(s.group[e.ke].mon[e.id].lastJpegDetectorFrame);
             clearTimeout(s.group[e.ke].mon[e.id].recordingSnapper);
             clearInterval(s.group[e.ke].mon[e.id].getMonitorCpuUsage);
+            if(s.group[e.ke].mon[e.id].onChildNodeExit){
+                s.group[e.ke].mon[e.id].onChildNodeExit()
+            }
             if(s.group[e.ke].mon[e.id].mp4frag){
                 var mp4FragChannels = Object.keys(s.group[e.ke].mon[e.id].mp4frag)
                 mp4FragChannels.forEach(function(channel){
@@ -1108,17 +1111,28 @@ module.exports = function(s,config,lang){
         }
         try{
             if(config.childNodes.enabled === true && config.childNodes.mode === 'master'){
+                var copiedMonitorObject = s.cleanMonitorObject(s.group[e.ke].mon_conf[e.id])
                 var childNodeList = Object.keys(s.childNodes)
                 if(childNodeList.length > 0){
                     e.childNodeFound = false
+                    var selectNode = function(ip){
+                        e.childNodeFound = true
+                        e.childNodeSelected = ip
+                        // s.childNodes[ip].coreCount
+                        s.group[e.ke].mon[e.id].onChildNodeExit = function(){
+                            if(s.childNodes[ip])delete(s.childNodes[ip].activeCameras[e.ke+e.id])
+                        }
+                    }
+                    var nodeWithLowestActiveCamerasCount = 65535
+                    var nodeWithLowestActiveCameras = null
                     childNodeList.forEach(function(ip){
-                        if(e.childNodeFound === false && s.childNodes[ip].cpu < 80){
-                            e.childNodeFound = true
-                            e.childNodeSelected = ip
+                        if(Object.keys(s.childNodes[ip].activeCameras).length < nodeWithLowestActiveCamerasCount){
+                            nodeWithLowestActiveCameras = ip
                         }
                     })
+                    if(nodeWithLowestActiveCameras)selectNode(nodeWithLowestActiveCameras)
                     if(e.childNodeFound === true){
-                        s.childNodes[e.childNodeSelected].activeCameras[e.ke+e.id] = s.cleanMonitorObject(s.group[e.ke].mon_conf[e.id]);
+                        s.childNodes[e.childNodeSelected].activeCameras[e.ke+e.id] = copiedMonitorObject
                         s.group[e.ke].mon[e.id].childNode = e.childNodeSelected
                         s.group[e.ke].mon[e.id].childNodeId = s.childNodes[e.childNodeSelected].cnid;
                         s.cx({f:'sync',sync:s.group[e.ke].mon_conf[e.id],ke:e.ke,mid:e.id},s.group[e.ke].mon[e.id].childNodeId);
@@ -1138,7 +1152,6 @@ module.exports = function(s,config,lang){
         }
     }
     s.fatalCameraError = function(e,errorMessage){
-        s.debugLog(errorMessage)
         clearTimeout(s.group[e.ke].mon[e.id].err_fatal_timeout);
         ++e.errorFatalCount;
         if(s.group[e.ke].mon[e.id].isStarted === true){

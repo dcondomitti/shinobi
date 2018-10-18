@@ -261,7 +261,7 @@ module.exports = function(s,config,lang,io){
                     tx({time:toUTC(),buffer:buffer})
                 })
              }
-            if(s.group[d.ke]&&s.group[d.ke].users&&s.group[d.ke].users[d.auth]){
+            if(s.group[d.ke] && s.group[d.ke].users && s.group[d.ke].users[d.auth]){
                 d.success(s.group[d.ke].users[d.auth]);
             }else{
                 s.sqlQuery('SELECT ke,uid,auth,mail,details FROM Users WHERE ke=? AND auth=? AND uid=?',[d.ke,d.auth,d.uid],function(err,r) {
@@ -452,7 +452,7 @@ module.exports = function(s,config,lang,io){
                             apis:rrr,
                             os:{
                                 platform:s.platform,
-                                cpuCount:os.cpus().length,
+                                cpuCount:s.coreCount,
                                 totalmem:s.totalmem
                             }
                         })

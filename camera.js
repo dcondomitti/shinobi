@@ -13,6 +13,8 @@ var io = new (require('socket.io'))()
 // s = Shinobi
 s = {
     //Total Memory
+    coreCount : os.cpus().length,
+    //Total Memory
     totalmem : os.totalmem(),
     //Check Platform
     platform : os.platform(),

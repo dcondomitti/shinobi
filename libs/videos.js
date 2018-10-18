@@ -146,6 +146,10 @@ module.exports = function(s,config,lang){
                         size:k.filesize,
                         end:k.endTime
                     },'GRP_'+e.ke,'video_view')
+                    //purge over max
+                    s.purgeDiskForGroup(e)
+                    //send new diskUsage values
+                    s.setDiskUsedForGroup(e,k.filesizeMB)
                 }
                 s.insertCompletedVideoExtensions.forEach(function(extender){
                     extender(e,k)
@@ -171,10 +175,6 @@ module.exports = function(s,config,lang){
 
                     })
                 })
-                //purge over max
-                s.purgeDiskForGroup(e)
-                //send new diskUsage values
-                s.setDiskUsedForGroup(e,k.filesizeMB)
             }
         }
     }
@@ -276,7 +276,7 @@ module.exports = function(s,config,lang){
             var videosDirectory = s.getVideoDirectory(monitor)// + s.formattedTime(video.time) + '.' + video.ext
             fs.readdir(videosDirectory,function(err,files){
                 if(files && files.length > 0){
-                    var fiveRecentFiles = files.sort().slice(0,config.orphanedVideoCheckMax)
+                    var fiveRecentFiles = files.slice(files.length - checkMax,files.length)
                     var completedFile = 0
                     var orphanedFilesCount = 0
                     var fileComplete = function(){

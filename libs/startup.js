@@ -24,11 +24,10 @@ module.exports = function(s,config,lang,io){
                     if(!orphanedVideosForMonitors[monitor.ke])orphanedVideosForMonitors[monitor.ke] = {}
                     if(!orphanedVideosForMonitors[monitor.ke][monitor.mid])orphanedVideosForMonitors[monitor.ke][monitor.mid] = 0
                     s.initiateMonitorObject(monitor)
-                    s.orphanedVideoCheck(monitor,4,function(orphanedFilesCount){
+                    s.orphanedVideoCheck(monitor,2,function(orphanedFilesCount){
                         if(orphanedFilesCount){
                             orphanedVideosForMonitors[monitor.ke][monitor.mid] += orphanedFilesCount
                         }
-                        monitor.details = monitor.details
                         s.group[monitor.ke].mon_conf[monitor.mid] = monitor
                         var monObj = Object.assign(monitor,{id : monitor.mid})
                         s.camera(monitor.mode,monObj)
