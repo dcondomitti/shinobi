@@ -84,16 +84,29 @@ module.exports = function(s,config,lang,app,io){
                                     ke:d.ke,
                                     mid:d.mid
                                 });
+                                var filesizeMB = parseFloat((d.filesize/1000000).toFixed(2))
                                 s.txWithSubPermissions({
                                     f:'video_build_success',
                                     hrefNoAuth:'/videos/'+d.ke+'/'+d.mid+'/'+d.filename,
                                     filename:d.filename,
                                     mid:d.mid,
                                     ke:d.ke,
-                                    time:d.startTime,
+                                    time:d.time,
                                     size:d.filesize,
-                                    end:d.endTime
-                                },'GRP_'+d.ke,'video_view');
+                                    end:d.end
+                                },'GRP_'+d.ke,'video_view')
+                                //purge over max
+                                s.purgeDiskForGroup(d)
+                                //send new diskUsage values
+                                s.setDiskUsedForGroup(d,filesizeMB)
+                                //save database row
+                                s.insertDatabaseRow(d.d,{
+                                    startTime : d.time,
+                                    filesize : d.filesize,
+                                    endTime : d.end,
+                                    dir : s.getVideoDirectory(d.d),
+                                    file : d.filename
+                                })
                                 clearTimeout(s.group[d.ke].mon[d.mid].recordingChecker)
                                 clearTimeout(s.group[d.ke].mon[d.mid].streamChecker)
                             break;

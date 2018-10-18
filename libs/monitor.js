@@ -1316,6 +1316,6 @@ module.exports = function(s,config,lang){
                 console.log(x)
             break;
         }
-        if(typeof cn==='function'){setTimeout(function(){cn()},1000);}
+        if(typeof cn === 'function'){setTimeout(function(){cn()},1000)}
     }
 }

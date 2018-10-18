@@ -61,6 +61,31 @@ module.exports = function(s,config,lang){
     s.insertCompletedVideoExtender = function(callback){
         s.insertCompletedVideoExtensions.push(callback)
     }
+    s.insertDatabaseRow = function(e,k,callback){
+        s.checkDetails(e)
+        //save database row
+        k.details = {}
+        if(e.details&&e.details.dir&&e.details.dir!==''){
+            k.details.dir = e.details.dir
+        }
+        if(config.useUTC === true)k.details.isUTC = config.useUTC;
+        var save = [
+            e.mid,
+            e.ke,
+            k.startTime,
+            e.ext,
+            1,
+            s.s(k.details),
+            k.filesize,
+            k.endTime,
+        ]
+        s.sqlQuery('INSERT INTO Videos (mid,ke,time,ext,status,details,size,end) VALUES (?,?,?,?,?,?,?,?)',save,function(err){
+            if(callback)callback(err)
+            fs.chmod(k.dir+k.file,0o777,function(err){
+
+            })
+        })
+    }
     //on video completion
     s.insertCompletedVideo = function(e,k,callback){
         //e = monitor object
@@ -150,30 +175,10 @@ module.exports = function(s,config,lang){
                     s.purgeDiskForGroup(e)
                     //send new diskUsage values
                     s.setDiskUsedForGroup(e,k.filesizeMB)
+                    s.insertDatabaseRow(e,k,callback)
                 }
                 s.insertCompletedVideoExtensions.forEach(function(extender){
                     extender(e,k)
-                })
-                k.details = {}
-                if(e.details&&e.details.dir&&e.details.dir!==''){
-                    k.details.dir = e.details.dir
-                }
-                if(config.useUTC === true)k.details.isUTC = config.useUTC;
-                var save = [
-                    e.mid,
-                    e.ke,
-                    k.startTime,
-                    e.ext,
-                    1,
-                    s.s(k.details),
-                    k.filesize,
-                    k.endTime,
-                ]
-                s.sqlQuery('INSERT INTO Videos (mid,ke,time,ext,status,details,size,end) VALUES (?,?,?,?,?,?,?,?)',save,function(err){
-                    if(callback)callback(err)
-                    fs.chmod(k.dir+k.file,0o777,function(err){
-
-                    })
                 })
             }
         }

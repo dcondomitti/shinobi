@@ -4212,7 +4212,7 @@ $.apM.e.on('click','.delete',function(e){
         $.post($.ccio.init('location',$user)+$user.auth_token+'/api/'+$user.ke+'/delete',{data:JSON.stringify({code:e.code})},function(d){
             $.ccio.log(d)
         })
-    });
+    })
 })
 //filters window
 if(!$user.details.filters)$user.details.filters={};
