@@ -5797,6 +5797,7 @@ $('body')
                         e.tmp+='<thead>';
                         e.tmp+='<tr>';
                         e.tmp+='<th><div class="checkbox"><input id="videos_select_all" type="checkbox"><label for="videos_select_all"></label></div></th>';
+                        e.tmp+='<th data-field="Thumbnail" data-sortable="true">'+lang.Thumbnail+'</th>';
                         e.tmp+='<th data-field="Closed" data-sortable="true">'+lang.Closed+'</th>';
                         e.tmp+='<th data-field="Ended" data-sortable="true">'+lang.Ended+'</th>';
                         e.tmp+='<th data-field="Started" data-sortable="true">'+lang.Started+'</th>';
@@ -5820,6 +5821,7 @@ $('body')
 //                                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
                                 e.tmp+='<tr data-ke="'+v.ke+'" data-status="'+v.status+'" data-mid="'+v.mid+'" data-file="'+v.filename+'" data-auth="'+v.mon.user.auth_token+'">';
                                 e.tmp+='<td><div class="checkbox"><input id="'+v.ke+'_'+v.filename+'" name="'+v.filename+'" value="'+v.mid+'" type="checkbox"><label for="'+v.ke+'_'+v.filename+'"></label></div></td>';
+                                e.tmp+='<td class="text-center"><img class="thumbnail"></td>';
                                 e.tmp+='<td><span class="livestamp" title="'+$.ccio.timeObject(v.end).format('YYYY-MM-DD HH:mm:ss')+'"></span></td>';
                                 e.tmp+='<td title="'+v.end+'">'+$.ccio.timeObject(v.end).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
                                 e.tmp+='<td title="'+v.time+'">'+$.ccio.timeObject(v.time).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
@@ -5837,6 +5839,12 @@ $('body')
                         e.tmp+='</tbody>';
                         e.tmp+='</table>';
                         e.b.html(e.tmp);delete(e.tmp)
+                        $.each(d.videos,function(n,v){
+                            tool.getVideoImage($.ccio.init('videoUrlBuild',v),0,function(err,base64){
+                                console.log(base64)
+                                $('[data-ke="'+v.ke+'"][data-mid="'+v.mid+'"][data-file="'+v.filename+'"] .thumbnail')[0].src = base64
+                            })
+                        })
                         $.ccio.init('ls');
                         $.vidview.e.find('table').bootstrapTable();
                     break;

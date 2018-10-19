@@ -84,7 +84,6 @@ module.exports = function(s,config,lang,app,io){
                                     ke:d.ke,
                                     mid:d.mid
                                 });
-                                var filesizeMB = parseFloat((d.filesize/1000000).toFixed(2))
                                 s.txWithSubPermissions({
                                     f:'video_build_success',
                                     hrefNoAuth:'/videos/'+d.ke+'/'+d.mid+'/'+d.filename,
@@ -95,18 +94,24 @@ module.exports = function(s,config,lang,app,io){
                                     size:d.filesize,
                                     end:d.end
                                 },'GRP_'+d.ke,'video_view')
-                                //purge over max
-                                s.purgeDiskForGroup(d)
-                                //send new diskUsage values
-                                s.setDiskUsedForGroup(d,filesizeMB)
                                 //save database row
-                                s.insertDatabaseRow(d.d,{
+                                var insert = {
                                     startTime : d.time,
                                     filesize : d.filesize,
                                     endTime : d.end,
                                     dir : s.getVideoDirectory(d.d),
-                                    file : d.filename
+                                    file : d.filename,
+                                    filename : d.filename,
+                                    filesizeMB : parseFloat((d.filesize/1000000).toFixed(2))
+                                }
+                                s.insertDatabaseRow(d.d,insert)
+                                s.insertCompletedVideoExtensions.forEach(function(extender){
+                                    extender(d.d,insert)
                                 })
+                                //purge over max
+                                s.purgeDiskForGroup(d)
+                                //send new diskUsage values
+                                s.setDiskUsedForGroup(d,insert.filesizeMB)
                                 clearTimeout(s.group[d.ke].mon[d.mid].recordingChecker)
                                 clearTimeout(s.group[d.ke].mon[d.mid].streamChecker)
                             break;

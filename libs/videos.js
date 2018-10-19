@@ -130,11 +130,11 @@ module.exports = function(s,config,lang){
                 if(!e.ext){e.ext = k.filename.split('.')[1]}
                 //send event for completed recording
                 if(config.childNodes.enabled === true && config.childNodes.mode === 'child' && config.childNodes.host){
-                    fs.createReadStream(k.dir+k.filename)
+                    fs.createReadStream(k.dir+k.filename,{ highWaterMark: 500 })
                     .on('data',function(data){
                         s.cx({
                             f:'created_file_chunk',
-                            mid:e.id,
+                            mid:e.mid,
                             ke:e.ke,
                             chunk:data,
                             filename:k.filename,
@@ -176,10 +176,10 @@ module.exports = function(s,config,lang){
                     //send new diskUsage values
                     s.setDiskUsedForGroup(e,k.filesizeMB)
                     s.insertDatabaseRow(e,k,callback)
+                    s.insertCompletedVideoExtensions.forEach(function(extender){
+                        extender(e,k)
+                    })
                 }
-                s.insertCompletedVideoExtensions.forEach(function(extender){
-                    extender(e,k)
-                })
             }
         }
     }
@@ -229,6 +229,12 @@ module.exports = function(s,config,lang){
                             }
                         })
                     })
+                })
+                var videoSnap = s.dir.videoSnaps + e.ke + '/' + e.mid + '/' + filename.split('.')[0] + '.jpg'
+                fs.chmod(videoSnap,0o777,function(err){
+                    if(!err){
+                        fs.unlink(videoSnap,function(err){})
+                    }
                 })
             }else{
                 console.log(lang['Database row does not exist'],queryValues)

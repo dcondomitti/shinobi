@@ -614,7 +614,7 @@ module.exports = function(s,config,lang){
                 s.userLog(e,{type:lang['Camera is not recording'],msg:{msg:lang['Restarting Process']}});
                 s.orphanedVideoCheck(e,2,null,true)
             }
-        },60000 * cutoff * 1.1);
+        },60000 * cutoff * 1.3);
     }
     s.resetStreamCheck = function(e){
         clearTimeout(s.group[e.ke].mon[e.id].streamChecker)
