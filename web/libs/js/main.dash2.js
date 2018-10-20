@@ -5762,6 +5762,7 @@ $('body')
                 e.t=e.v.find('.modal-title i');
                 switch(e.a){
                     case'calendar':
+                       $.vidview.e.removeClass('dark')
                        e.t.attr('class','fa fa-calendar')
                        e.ar=[];
                         if(d.videos[0]){
@@ -5798,7 +5799,7 @@ $('body')
                         }
                     break;
                     case'video_grid':
-                    console.log('video_grid')
+                        $.vidview.e.addClass('dark')
                         var tmp = '<di class="video_grid row">';
                         $.each(d.videos,function(n,v){
                             var href = $.ccio.init('videoUrlBuild',v)
@@ -5826,6 +5827,7 @@ $('body')
                         })
                     break;
                     case'videos_table':
+                        $.vidview.e.removeClass('dark')
                         e.t.attr('class','fa fa-film')
                         var tmp = '<table class="table table-striped" style="max-height:500px">';
                         tmp+='<thead>';
