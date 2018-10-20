@@ -1063,6 +1063,12 @@ switch($user.details.lang){
                           "class": "default",
                           "icon": "angle-double-right"
                        },
+                       "Video Grid": {
+                          "label": "Video Grid",
+                          "attr": "monitor=\"video_grid\"",
+                          "class": "default",
+                          "icon": "th"
+                       },
                        "Videos List": {
                           "label": "Videos List",
                           "attr": "monitor=\"videos_table\"",
@@ -5707,7 +5713,7 @@ $('body')
             e.a=e.e.attr('control')
             $.ccio.cx({f:'monitor',ff:'control',direction:e.a,mid:e.mid,ke:e.ke},user)
         break;
-        case'videos_table':case'calendar'://call videos table or calendar
+        case'videos_table':case'calendar':case'video_grid'://call videos table or calendar or video grid
             $.vidview.launcher=$(this);
             e.limit=$.vidview.limit.val();
             if(!$.vidview.current_mid||$.vidview.current_mid!==e.mid){
@@ -5791,27 +5797,55 @@ $('body')
                             e.b.html('<div class="text-center">'+lang.NoVideosFoundForDateRange+'</div>')
                         }
                     break;
+                    case'video_grid':
+                    console.log('video_grid')
+                        var tmp = '<di class="video_grid row">';
+                        $.each(d.videos,function(n,v){
+                            var href = $.ccio.init('videoUrlBuild',v)
+                            v.mon = $.ccio.mon[v.ke+v.mid+user.auth_token]
+                            var parentTag = 'ke="'+v.ke+'" status="'+v.status+'" mid="'+v.mid+'" file="'+v.filename+'" auth="'+v.mon.user.auth_token+'"'
+                            tmp += '<div class="col-md-2" '+parentTag+'>'
+                                tmp += '<div class="thumb">'
+                                    tmp += '<div class="title-strip">'+$.ccio.timeObject(v.time).format('h:mm:ss A, MMMM Do YYYY')+'</div>'
+                                    tmp += '<div class="button-strip">'
+                                        tmp += '<div class="btn-group">'
+                                            tmp += '<a class="btn btn-xs btn-primary" video="launch" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a>'
+                                            tmp += '<a class="btn btn-xs btn-default preview" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a>'
+                                            tmp += '<a class="btn btn-xs btn-default" download="'+v.mid+'-'+v.filename+'" href="'+href+'">&nbsp;<i class="fa fa-download"></i>&nbsp;</a>'
+                                        tmp += '</div>'
+                                    tmp += '</div>'
+                                tmp += '</div>'
+                            tmp += '</div>'
+                        })
+                        tmp += '</div>'
+                        e.b.html(tmp)
+                        $.each(d.videos,function(n,v){
+                            tool.getVideoImage($.ccio.init('videoUrlBuild',v),0,function(err,base64){
+                                $('[ke="'+v.ke+'"][mid="'+v.mid+'"][file="'+v.filename+'"] .thumb').css('background-image','url('+base64+')')
+                            })
+                        })
+                    break;
                     case'videos_table':
                         e.t.attr('class','fa fa-film')
-                        e.tmp='<table class="table table-striped" style="max-height:500px">';
-                        e.tmp+='<thead>';
-                        e.tmp+='<tr>';
-                        e.tmp+='<th><div class="checkbox"><input id="videos_select_all" type="checkbox"><label for="videos_select_all"></label></div></th>';
-                        e.tmp+='<th data-field="Thumbnail" data-sortable="true">'+lang.Thumbnail+'</th>';
-                        e.tmp+='<th data-field="Closed" data-sortable="true">'+lang.Closed+'</th>';
-                        e.tmp+='<th data-field="Ended" data-sortable="true">'+lang.Ended+'</th>';
-                        e.tmp+='<th data-field="Started" data-sortable="true">'+lang.Started+'</th>';
-                        e.tmp+='<th data-field="Monitor" data-sortable="true">'+lang.Monitor+'</th>';
-                        e.tmp+='<th data-field="Filename" data-sortable="true">'+lang.Filename+'</th>';
-                        e.tmp+='<th data-field="Size" data-sortable="true">'+lang['Size (mb)']+'</th>';
-                        e.tmp+='<th data-field="Preview" data-sortable="true">'+lang.Preview+'</th>';
-                        e.tmp+='<th data-field="Watch" data-sortable="true">'+lang.Watch+'</th>';
-                        e.tmp+='<th data-field="Download" data-sortable="true">'+lang.Download+'</th>';
-                        e.tmp+='<th class="permission_video_delete" data-field="Delete" data-sortable="true">'+lang.Delete+'</th>';
-//                        e.tmp+='<th class="permission_video_delete" data-field="Fix" data-sortable="true">'+lang.Fix+'</th>';
-                        e.tmp+='</tr>';
-                        e.tmp+='</thead>';
-                        e.tmp+='<tbody>';
+                        var tmp = '<table class="table table-striped" style="max-height:500px">';
+                        tmp+='<thead>';
+                        tmp+='<tr>';
+                        tmp+='<th><div class="checkbox"><input id="videos_select_all" type="checkbox"><label for="videos_select_all"></label></div></th>';
+                        tmp+='<th data-field="Thumbnail" data-sortable="true">'+lang.Thumbnail+'</th>';
+                        tmp+='<th data-field="Closed" data-sortable="true">'+lang.Closed+'</th>';
+                        tmp+='<th data-field="Ended" data-sortable="true">'+lang.Ended+'</th>';
+                        tmp+='<th data-field="Started" data-sortable="true">'+lang.Started+'</th>';
+                        tmp+='<th data-field="Monitor" data-sortable="true">'+lang.Monitor+'</th>';
+                        tmp+='<th data-field="Filename" data-sortable="true">'+lang.Filename+'</th>';
+                        tmp+='<th data-field="Size" data-sortable="true">'+lang['Size (mb)']+'</th>';
+                        tmp+='<th data-field="Preview" data-sortable="true">'+lang.Preview+'</th>';
+                        tmp+='<th data-field="Watch" data-sortable="true">'+lang.Watch+'</th>';
+                        tmp+='<th data-field="Download" data-sortable="true">'+lang.Download+'</th>';
+                        tmp+='<th class="permission_video_delete" data-field="Delete" data-sortable="true">'+lang.Delete+'</th>';
+//                        tmp+='<th class="permission_video_delete" data-field="Fix" data-sortable="true">'+lang.Fix+'</th>';
+                        tmp+='</tr>';
+                        tmp+='</thead>';
+                        tmp+='<tbody>';
                         $.each(d.videos,function(n,v){
                             if(v.status!==0){
                                 $.vidview.loadedVideos[v.filename] = Object.assign(v,{})
@@ -5819,29 +5853,28 @@ $('body')
                                 v.mon=$.ccio.mon[v.ke+v.mid+user.auth_token];
                                 v.start=v.time;
 //                                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
-                                e.tmp+='<tr data-ke="'+v.ke+'" data-status="'+v.status+'" data-mid="'+v.mid+'" data-file="'+v.filename+'" data-auth="'+v.mon.user.auth_token+'">';
-                                e.tmp+='<td><div class="checkbox"><input id="'+v.ke+'_'+v.filename+'" name="'+v.filename+'" value="'+v.mid+'" type="checkbox"><label for="'+v.ke+'_'+v.filename+'"></label></div></td>';
-                                e.tmp+='<td class="text-center"><img class="thumbnail"></td>';
-                                e.tmp+='<td><span class="livestamp" title="'+$.ccio.timeObject(v.end).format('YYYY-MM-DD HH:mm:ss')+'"></span></td>';
-                                e.tmp+='<td title="'+v.end+'">'+$.ccio.timeObject(v.end).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
-                                e.tmp+='<td title="'+v.time+'">'+$.ccio.timeObject(v.time).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
-                                e.tmp+='<td>'+v.mon.name+'</td>';
-                                e.tmp+='<td>'+v.filename+'</td>';
-                                e.tmp+='<td>'+(parseInt(v.size)/1000000).toFixed(2)+'</td>';
-                                e.tmp+='<td><a class="btn btn-sm btn-default preview" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a></td>';
-                                e.tmp+='<td><a class="btn btn-sm btn-primary" video="launch" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a></td>';
-                                e.tmp+='<td><a class="btn btn-sm btn-success" download="'+v.mid+'-'+v.filename+'" href="'+href+'">&nbsp;<i class="fa fa-download"></i>&nbsp;</a></td>';
-                                e.tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-danger" video="delete" href="'+$.ccio.init('videoHrefToDelete',href)+'">&nbsp;<i class="fa fa-trash"></i>&nbsp;</a></td>';
-//                                e.tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-warning" video="fix">&nbsp;<i class="fa fa-wrench"></i>&nbsp;</a></td>';
-                                e.tmp+='</tr>';
+                                tmp+='<tr data-ke="'+v.ke+'" data-status="'+v.status+'" data-mid="'+v.mid+'" data-file="'+v.filename+'" data-auth="'+v.mon.user.auth_token+'">';
+                                tmp+='<td><div class="checkbox"><input id="'+v.ke+'_'+v.filename+'" name="'+v.filename+'" value="'+v.mid+'" type="checkbox"><label for="'+v.ke+'_'+v.filename+'"></label></div></td>';
+                                tmp+='<td class="text-center"><img class="thumbnail"></td>';
+                                tmp+='<td><span class="livestamp" title="'+$.ccio.timeObject(v.end).format('YYYY-MM-DD HH:mm:ss')+'"></span></td>';
+                                tmp+='<td title="'+v.end+'">'+$.ccio.timeObject(v.end).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
+                                tmp+='<td title="'+v.time+'">'+$.ccio.timeObject(v.time).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
+                                tmp+='<td>'+v.mon.name+'</td>';
+                                tmp+='<td>'+v.filename+'</td>';
+                                tmp+='<td>'+(parseInt(v.size)/1000000).toFixed(2)+'</td>';
+                                tmp+='<td><a class="btn btn-sm btn-default preview" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a></td>';
+                                tmp+='<td><a class="btn btn-sm btn-primary" video="launch" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a></td>';
+                                tmp+='<td><a class="btn btn-sm btn-success" download="'+v.mid+'-'+v.filename+'" href="'+href+'">&nbsp;<i class="fa fa-download"></i>&nbsp;</a></td>';
+                                tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-danger" video="delete" href="'+$.ccio.init('videoHrefToDelete',href)+'">&nbsp;<i class="fa fa-trash"></i>&nbsp;</a></td>';
+//                                tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-warning" video="fix">&nbsp;<i class="fa fa-wrench"></i>&nbsp;</a></td>';
+                                tmp+='</tr>';
                             }
                         })
-                        e.tmp+='</tbody>';
-                        e.tmp+='</table>';
-                        e.b.html(e.tmp);delete(e.tmp)
+                        tmp+='</tbody>';
+                        tmp+='</table>';
+                        e.b.html(tmp)
                         $.each(d.videos,function(n,v){
                             tool.getVideoImage($.ccio.init('videoUrlBuild',v),0,function(err,base64){
-                                console.log(base64)
                                 $('[data-ke="'+v.ke+'"][data-mid="'+v.mid+'"][data-file="'+v.filename+'"] .thumbnail')[0].src = base64
                             })
                         })
