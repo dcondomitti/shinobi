@@ -93,7 +93,6 @@ s.detectObject=function(buffer,d,tx){
                        })
                    })
                    if(matrices.length > 0){
-                       console.log(detections)
                        tx({
                            f:'trigger',
                            id:d.id,

@@ -1,12 +1,11 @@
 #!/bin/bash
-echo "-----------------------------------------------"
+echo "----------------------------------------"
 echo "-- Installing Yolo Plugin for Shinobi --"
-echo "-----------------------------------------------"
-echo "-----------------------------------"
+echo "----------------------------------------"
 if ! [ -x "$(command -v nvidia-smi)" ]; then
     echo "You need to install NVIDIA Drivers to use this."
     echo "inside the Shinobi directory run the following :"
-    echo "sh INSTALL/cuda9-part1.sh"
+    echo "sh INSTALL/cuda.sh"
     exit 1
 else
     echo "NVIDIA Drivers found..."
@@ -16,7 +15,7 @@ echo "-----------------------------------"
 if [ ! -d "/usr/local/cuda" ]; then
     echo "You need to install CUDA Toolkit to use this."
     echo "inside the Shinobi directory run the following :"
-    echo "sh INSTALL/cuda9-part2-after-reboot.sh"
+    echo "sh INSTALL/cuda.sh"
     exit 1
 else
     echo "CUDA Toolkit found..."
@@ -62,6 +61,8 @@ if [ ! -e "./conf.json" ]; then
 else
     echo "conf.json already exists..."
 fi
+echo "-----------------------------------"
+echo "Getting Imagemagick"
 if [ -f /etc/redhat-release ]; then
   yum update
   yum install imagemagick -y
@@ -71,5 +72,19 @@ if [ -f /etc/lsb-release ]; then
   apt update -y
   apt install imagemagick -y
 fi
+echo "-----------------------------------"
+echo "Getting node-gyp to build C++ modules"
+npm install node-gyp -g --unsafe-perm
+echo "-----------------------------------"
+echo "Getting C++ module : @vapi/node-yolo"
+echo "https://github.com/rcaceiro/node-yolo"
+export PATH=/usr/local/cuda/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+npm install @vapi/node-yolo@1.2.4 --unsafe-perm
+npm audit fix --force
+echo "-----------------------------------"
 echo "Start the plugin with pm2 like so :"
 echo "pm2 start shinobi-yolo.js"
+echo "-----------------------------------"
+echo "Start the plugin without pm2 :"
+echo "node shinobi-yolo.js"
