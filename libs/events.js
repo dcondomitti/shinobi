@@ -348,7 +348,7 @@ module.exports = function(s,config,lang){
                 var filename = s.formattedTime()+'.mp4'
                 s.userLog(d,{type:"Traditional Recording",msg:"Started"})
                 //-t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+'
-                s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i http://'+config.ip+':'+config.port+'/'+d.auth+'/hls/'+d.ke+'/'+d.id+'/detectorStream.m3u8 -t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+' -c:v copy -strftime 1 "'+s.getVideoDirectory(d.mon) + filename + '"').replace(/\s+/g,' ').trim()))
+                s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i http://'+config.ip+':'+config.port+'/'+d.auth+'/hls/'+d.ke+'/'+d.id+'/detectorStream.m3u8 -t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+' -c:v copy -strftime 1 "'+s.getVideoDirectory(d.mon) + filename + '"')))
                 var ffmpegError='';
                 var error
                 s.group[d.ke].mon[d.id].eventBasedRecording.process.stderr.on('data',function(data){

@@ -37,6 +37,11 @@ var loadLib = function(lib){
 loadLib('process')(process)
 //configuration loader
 var config = loadLib('config')(s)
+// change ports for test
+config.port = 9999
+if(config.childNodes && config.childNodes.enabled === true && config.childNodes.mode === 'master'){
+    config.childNodes.port = 9998
+}
 //language loader
 var lang = loadLib('language')(s,config)
 //basic functions
@@ -84,5 +89,5 @@ loadLib('ffmpeg')(s,config,function(){
     //notifiers : discord..
     loadLib('notification')(s,config,lang)
     //on-start actions, daemon(s) starter
-    loadLib('startup')(s,config,lang)
+    loadLib('test')(s,config,lang,app,io)
 })

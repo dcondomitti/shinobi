@@ -110,7 +110,7 @@ module.exports = function(s,config,onFinish){
     //ffmpeg string cleaner, splits for use with spawn()
     s.splitForFFPMEG = function (ffmpegCommandAsString) {
         //this function ignores spaces inside quotes.
-        return ffmpegCommandAsString.match(/\\?.|^$/g).reduce((p, c) => {
+        return ffmpegCommandAsString.replace(/\s+/g,' ').trim().match(/\\?.|^$/g).reduce((p, c) => {
             if(c === '"'){
                 p.quote ^= 1;
             }else if(!p.quote && c === ' '){
@@ -758,7 +758,7 @@ module.exports = function(s,config,onFinish){
                     x.pipe += ' -f singlejpeg '+x.detector_vf+x.cust_detect+x.dratio+' pipe:4';
                 }
             }else{
-                x.pipe+=' -f singlejpeg '+x.detector_vf+x.cust_detect+x.dratio+' pipe:3';
+                x.pipe+=' -f image2pipe '+x.detector_vf+x.cust_detect+x.dratio+' pipe:3';
             }
         }
         //Traditional Recording Buffer
@@ -885,8 +885,8 @@ module.exports = function(s,config,onFinish){
         createPipeArray(e,x)
         //hold ffmpeg command for log stream
         s.group[e.ke].mon[e.mid].ffmpeg = x.ffmpegCommandString
-        //clean the string of spatial impurities
-        x.ffmpegCommandString = s.splitForFFPMEG(x.ffmpegCommandString.replace(/\s+/g,' ').trim())
+        //clean the string of spatial impurities and split for spawn()
+        x.ffmpegCommandString = s.splitForFFPMEG(x.ffmpegCommandString)
         //launch that bad boy
         return spawn(config.ffmpegDir,x.ffmpegCommandString,{detached: true,stdio:x.stdioPipes})
     }

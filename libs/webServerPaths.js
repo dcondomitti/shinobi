@@ -973,10 +973,16 @@ module.exports = function(s,config,lang,app){
                 if(!req.query.endOperator||req.query.endOperator==''){
                     req.query.endOperator='<='
                 }
+                var endIsStartTo
+                var theEndParameter = '`end`'
+                if(req.query.endIsStartTo){
+                    endIsStartTo = true
+                    theEndParameter = '`time`'
+                }
                 switch(true){
                     case(req.query.start&&req.query.start!==''&&req.query.end&&req.query.end!==''):
-                        req.sql+=' AND `time` '+req.query.startOperator+' ? AND `end` '+req.query.endOperator+' ?';
-                        req.count_sql+=' AND `time` '+req.query.startOperator+' ? AND `end` '+req.query.endOperator+' ?';
+                        req.sql+=' AND `time` '+req.query.startOperator+' ? AND '+theEndParameter+' '+req.query.endOperator+' ?';
+                        req.count_sql+=' AND `time` '+req.query.startOperator+' ? AND '+theEndParameter+' '+req.query.endOperator+' ?';
                         req.ar.push(req.query.start)
                         req.ar.push(req.query.end)
                         req.count_ar.push(req.query.start)
@@ -989,8 +995,8 @@ module.exports = function(s,config,lang,app){
                         req.count_ar.push(req.query.start)
                     break;
                     case(req.query.end&&req.query.end!==''):
-                        req.sql+=' AND `end` '+req.query.endOperator+' ?';
-                        req.count_sql+=' AND `end` '+req.query.endOperator+' ?';
+                        req.sql+=' AND '+theEndParameter+' '+req.query.endOperator+' ?';
+                        req.count_sql+=' AND '+theEndParameter+' '+req.query.endOperator+' ?';
                         req.ar.push(req.query.end)
                         req.count_ar.push(req.query.end)
                     break;
@@ -1021,7 +1027,7 @@ module.exports = function(s,config,lang,app){
                         req.skip=0
                         req.query.limit=parseInt(req.query.limit)
                     }
-                    res.end(s.prettyPrint({isUTC:config.useUTC,total:count[0]['COUNT(*)'],limit:req.query.limit,skip:req.skip,videos:r}));
+                    res.end(s.prettyPrint({isUTC:config.useUTC,total:count[0]['COUNT(*)'],limit:req.query.limit,skip:req.skip,videos:r,endIsStartTo:endIsStartTo}));
                 })
             })
         },res,req);

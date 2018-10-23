@@ -1,18 +1,16 @@
-var knex = require('knex');
 module.exports = function(s,config){
     //sql/database connection with knex
-    var databaseOptions = {
+    s.databaseOptions = {
       client: config.databaseType,
       connection: config.db,
     }
-    if(databaseOptions.client.indexOf('sqlite')>-1){
-        databaseOptions.client = 'sqlite3';
-        databaseOptions.useNullAsDefault = true;
+    if(s.databaseOptions.client.indexOf('sqlite')>-1){
+        s.databaseOptions.client = 'sqlite3';
+        s.databaseOptions.useNullAsDefault = true;
     }
-    if(databaseOptions.client === 'sqlite3' && databaseOptions.connection.filename === undefined){
-        databaseOptions.connection.filename = s.mainDirectory+"/shinobi.sqlite"
+    if(s.databaseOptions.client === 'sqlite3' && s.databaseOptions.connection.filename === undefined){
+        s.databaseOptions.connection.filename = s.mainDirectory+"/shinobi.sqlite"
     }
-    s.databaseEngine = knex(databaseOptions)
     s.mergeQueryValues = function(query,values){
         if(!values){values=[]}
         var valuesNotFunction = true;
@@ -60,7 +58,7 @@ module.exports = function(s,config){
                 console.log('s.sqlQuery ERROR',err)
             }
             if(onMoveOn && typeof onMoveOn === 'function'){
-                switch(databaseOptions.client){
+                switch(s.databaseOptions.client){
                     case'sqlite3':
                         if(!r)r=[]
                     break;

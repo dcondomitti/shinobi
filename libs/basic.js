@@ -10,15 +10,15 @@ module.exports = function(s,config){
     s.ffmpegKill=function(){
         var cmd=''
         if(s.isWin===true){
-            cmd="Taskkill /IM ffmpeg.exe /F"
+            cmd = "Taskkill /IM ffmpeg.exe /F"
         }else{
-            cmd="ps aux | grep -ie ffmpeg | awk '{print $2}' | xargs kill -9"
+            cmd = "ps aux | grep -ie ffmpeg | awk '{print $2}' | xargs kill -9"
         }
         exec(cmd,{detached: true})
     };
     process.on('exit',s.ffmpegKill.bind(null,{cleanup:true}));
     process.on('SIGINT',s.ffmpegKill.bind(null, {exit:true}));
-    s.checkRelativePath=function(x){
+    s.checkRelativePath = function(x){
         if(x.charAt(0)!=='/'){
             x=s.mainDirectory+'/'+x
         }

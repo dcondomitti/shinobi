@@ -132,10 +132,30 @@ module.exports = function(s,config,lang,io){
             }
         })
     }
+    //check disk space every 20 minutes
+    if(config.autoDropCache===true){
+        setInterval(function(){
+            exec('echo 3 > /proc/sys/vm/drop_caches',{detached: true})
+        },60000*20)
+    }
+    //master node - startup functions
+    setInterval(function(){
+        s.cpuUsage(function(cpu){
+            s.ramUsage(function(ram){
+                s.tx({f:'os',cpu:cpu,ram:ram},'CPU');
+            })
+        })
+    },10000)
+    //run prerequsite queries, load users and monitors
     if(config.childNodes.mode !== 'child'){
+        //sql/database connection with knex
+        s.databaseEngine = require('knex')(s.databaseOptions)
+        //run prerequsite queries
         s.preQueries()
         setTimeout(function(){
+            //load administrators (groups)
             loadAdminUsers(function(){
+                //load monitors (for groups)
                 loadMonitors(function(){
                     s.processReady()
                 })
