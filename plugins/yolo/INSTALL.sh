@@ -33,7 +33,7 @@ echo "-----------------------------------"
 if [ ! -d "models" ]; then
     echo "Downloading yolov3 weights..."
     mkdir models
-    wget -O models/yolov3.weights https://pjreddie.com/media/files/yolov3-tiny.weights
+    wget -O models/yolov3.weights https://pjreddie.com/media/files/yolov3.weights
 else
     echo "yolov3 weights found..."
 fi
@@ -42,7 +42,7 @@ if [ ! -d "models/cfg" ]; then
     echo "Downloading yolov3 cfg"
     mkdir models/cfg
     wget -O models/cfg/coco.data https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/coco.data
-    wget -O models/cfg/yolov3.cfg https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov3-tiny.cfg
+    wget -O models/cfg/yolov3.cfg https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov3.cfg
 else
     echo "yolov3 cfg found..."
 fi
