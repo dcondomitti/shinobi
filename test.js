@@ -8,40 +8,21 @@
 // If you like what I am doing here and want me to continue please consider donating :)
 // PayPal : paypal@m03.ca
 //
-var os = require('os');
 var io = new (require('socket.io'))()
-// s = Shinobi
-s = {
-    //Total Memory
-    coreCount : os.cpus().length,
-    //Total Memory
-    totalmem : os.totalmem(),
-    //Check Platform
-    platform : os.platform(),
-    //JSON stringify short-hand
-    s : JSON.stringify,
-    //Pretty Print JSON
-    prettyPrint : function(obj){return JSON.stringify(obj,null,3)},
-    //Check if Windows
-    isWin : (process.platform === 'win32' || process.platform === 'win64'),
-    //UTC Offset
-    utcOffset : require('moment')().utcOffset(),
-    //directory path for this file
-    mainDirectory : __dirname
-}
 //library loader
 var loadLib = function(lib){
     return require(__dirname+'/libs/'+lib+'.js')
 }
 //process handlers
-loadLib('process')(process)
+var s = loadLib('process')(process,__dirname)
 //configuration loader
 var config = loadLib('config')(s)
-// change ports for test
+//********* test.js >
 config.port = 9999
 if(config.childNodes && config.childNodes.enabled === true && config.childNodes.mode === 'master'){
     config.childNodes.port = 9998
 }
+//********* test.js />
 //language loader
 var lang = loadLib('language')(s,config)
 //basic functions
@@ -49,7 +30,10 @@ loadLib('basic')(s,config)
 //load extender functions
 loadLib('extenders')(s,config)
 //video processing engine
-loadLib('ffmpeg')(s,config,function(){
+loadLib('ffmpeg')(s,config,function(ffmpeg){
+    //********* test.js >
+    s.ffmpegFunctions = ffmpeg
+    //********* test.js />
     //database connection : mysql, sqlite3..
     loadLib('sql')(s,config)
     //working directories : videos, streams, fileBin..
@@ -89,5 +73,5 @@ loadLib('ffmpeg')(s,config,function(){
     //notifiers : discord..
     loadLib('notification')(s,config,lang)
     //on-start actions, daemon(s) starter
-    loadLib('test')(s,config,lang,app,io)
+    require(__dirname+'/test/run.js')(s,config,lang,app,io)
 })

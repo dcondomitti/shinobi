@@ -12,14 +12,18 @@ module.exports = function(s,config,lang,app,io){
         childNodeServer.listen(config.childNodes.port,config.bindip,function(){
             console.log(lang.Shinobi+' - CHILD NODE PORT : '+config.childNodes.port);
         });
-        console.log('childNodeWebsocket.attach(childNodeServer)')
+        s.debugLog('childNodeWebsocket.attach(childNodeServer)')
         childNodeWebsocket.attach(childNodeServer);
         //send data to child node function (experimental)
-        s.cx = function(z,y,x){if(!z.mid && !z.d){
-                var err = new Error();
-        console.log(err.stack);
-        };
-        if(x){return x.broadcast.to(y).emit('c',z)};childNodeWebsocket.to(y).emit('c',z);}
+        s.cx = function(z,y,x){
+            if(!z.mid && !z.d){
+                console.error('Missing ID')
+            }else if(x){
+                x.broadcast.to(y).emit('c',z)
+            }else{
+                childNodeWebsocket.to(y).emit('c',z)
+            }
+        }
         //child Node Websocket
         childNodeWebsocket.on('connection', function (cn) {
             //functions for dispersing work to child servers;
@@ -40,7 +44,6 @@ module.exports = function(s,config,lang,app,io){
                         d.availableHWAccels.forEach(function(accel){
                             if(config.availableHWAccels.indexOf(accel) === -1)config.availableHWAccels.push(accel)
                         })
-
                         tx({
                             f : 'init_success',
                             childNodes : s.childNodes

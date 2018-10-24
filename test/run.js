@@ -2,11 +2,12 @@ module.exports = function(s,config,lang,app,io){
     var checkResult = function(functionName,expectedResult,testResult){
         if(expectedResult !== testResult){
             console.log(expectedResult,testResult)
-            throw new Error('- ' + functionName + ' : Failed!')
+            throw new Error('x ' + functionName + ' : Failed!')
         }else{
             console.log('- ' + functionName + ' : Success')
         }
     }
+    var sampleMonitorObject = require('./testMonitor-WatchOnly.json')
     var test = {
         "basic.js" : {
             checkRelativePath : function(){
@@ -82,10 +83,36 @@ module.exports = function(s,config,lang,app,io){
                 var expectedResult = [
                     'flag1',
                     'flag2',
-                    'flag3',
+                    'fl ag3',
                 ]
-                var testResult = s.splitForFFPMEG('flag1  flag2    "flag3"')
+                var testResult = s.splitForFFPMEG('flag1  flag2    "fl ag3"')
                 checkResult('splitForFFPMEG',JSON.stringify(expectedResult),JSON.stringify(testResult))
+            },
+            "ffmpeg" : function(){
+                //command string builder
+                var x = {tmp : ''}
+                s.checkDetails(sampleMonitorObject)
+                sampleMonitorObject.url = s.buildMonitorUrl(sampleMonitorObject)
+                var expectedResult = '-loglevel warning -progress pipe:5 -analyzeduration 1000000 -probesize 1000000 -stream_loop -1 -fflags +igndts -re -i "https://cdn.shinobi.video:/videos/bears.mp4" -f mp4 -an -c:v copy -movflags +frag_keyframe+empty_moov+default_base_moof -metadata title="Poseidon Stream" -reset_timestamps 1 pipe:1'
+                s.ffmpegFunctions.buildMainInput(sampleMonitorObject,x)
+                s.ffmpegFunctions.buildMainStream(sampleMonitorObject,x)
+                s.ffmpegFunctions.buildMainRecording(sampleMonitorObject,x)
+                s.ffmpegFunctions.buildMainDetector(sampleMonitorObject,x)
+                s.ffmpegFunctions.assembleMainPieces(sampleMonitorObject,x)
+                var testResult = x.ffmpegCommandString
+                checkResult('ffmpeg',expectedResult,testResult)
+                //check pipe builder
+                var expectedResult = []
+                var times = config.pipeAddition
+                if(sampleMonitorObject.details.stream_channels){
+                    times += sampleMonitorObject.details.stream_channels.length
+                }
+                for(var i=0; i < times; i++){
+                    expectedResult.push('pipe')
+                }
+                s.ffmpegFunctions.createPipeArray(sampleMonitorObject,x)
+                var testResult = x.stdioPipes
+                checkResult('ffmpeg.createPipeArray',JSON.stringify(expectedResult),JSON.stringify(testResult))
             }
         }
     }

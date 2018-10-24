@@ -2,9 +2,10 @@ var fs = require('fs');
 var spawn = require('child_process').spawn;
 var execSync = require('child_process').execSync;
 module.exports = function(s,config,onFinish){
+    var ffmpeg = {}
     var downloadingFfmpeg = false;
     //check local ffmpeg
-    var windowsFfmpegCheck = function(failback){
+    ffmpeg.checkForWindows = function(failback){
         if (s.isWin && fs.existsSync(s.mainDirectory+'/ffmpeg/ffmpeg.exe')) {
             config.ffmpegDir = s.mainDirectory+'/ffmpeg/ffmpeg.exe'
         }else{
@@ -12,7 +13,7 @@ module.exports = function(s,config,onFinish){
         }
     }
     //check local ffmpeg
-    var unixFfmpegCheck = function(failback){
+    ffmpeg.checkForUnix = function(failback){
         if(s.isWin === false){
             if (fs.existsSync('/usr/bin/ffmpeg')) {
                 config.ffmpegDir = '/usr/bin/ffmpeg'
@@ -28,7 +29,7 @@ module.exports = function(s,config,onFinish){
         }
     }
     //check node module : ffmpeg-static
-    var ffmpegStaticCheck = function(failback){
+    ffmpeg.checkForNpmStatic = function(failback){
         try{
             var staticFFmpeg = require('ffmpeg-static').path;
             if (fs.statSync(staticFFmpeg)) {
@@ -44,7 +45,7 @@ module.exports = function(s,config,onFinish){
         }
     }
     //check node module : ffbinaries
-    var ffbinaryCheck = function(failback){
+    ffmpeg.checkForFfbinary = function(failback){
         try{
             ffbinaries = require('ffbinaries')
             var ffbinaryDir = s.mainDirectory + '/ffmpeg/'
@@ -57,7 +58,7 @@ module.exports = function(s,config,onFinish){
                 },function () {
                     config.ffmpegDir = ffbinaryDir + 'ffmpeg'
                     console.log('ffbinaries : FFmpeg Downloaded.');
-                    completeFfmpegCheck()
+                    ffmpeg.completeCheck()
                 })
             }
             if (!fs.existsSync(ffbinaryDir + 'ffmpeg')) {
@@ -72,7 +73,7 @@ module.exports = function(s,config,onFinish){
         }
     }
     //ffmpeg version
-    var checkFfmpegVersion = function(callback){
+    ffmpeg.checkVersion = function(callback){
         try{
             s.ffmpegVersion = execSync(config.ffmpegDir+" -version").toString().split('Copyright')[0].replace('ffmpeg version','').trim()
             if(s.ffmpegVersion.indexOf(': 2.')>-1){
@@ -86,7 +87,7 @@ module.exports = function(s,config,onFinish){
         callback()
     }
     //check available hardware acceleration methods
-    var checkFfmpegHwAccelMethods = function(callback){
+    ffmpeg.checkHwAccelMethods = function(callback){
         if(config.availableHWAccels === undefined){
             hwAccels = execSync(config.ffmpegDir+" -loglevel quiet -hwaccels").toString().split('\n')
             hwAccels.shift()
@@ -100,10 +101,10 @@ module.exports = function(s,config,onFinish){
         }
         callback()
     }
-    var completeFfmpegCheck = function(){
-        checkFfmpegVersion(function(){
-            checkFfmpegHwAccelMethods(function(){
-                onFinish()
+    ffmpeg.completeCheck = function(){
+        ffmpeg.checkVersion(function(){
+            ffmpeg.checkHwAccelMethods(function(){
+                onFinish(ffmpeg)
             })
         })
     }
@@ -372,7 +373,7 @@ module.exports = function(s,config,onFinish){
         }
         return x.pipe
     }
-    var buildMainInput = function(e,x){
+    ffmpeg.buildMainInput = function(e,x){
         //e = monitor object
         //x = temporary values
         //check if CUDA is enabled
@@ -435,7 +436,7 @@ module.exports = function(s,config,onFinish){
             x.cust_input += ' -re'
         }
     }
-    var buildMainStream = function(e,x){
+    ffmpeg.buildMainStream = function(e,x){
         //e = monitor object
         //x = temporary values
         x.stream_video_filters = []
@@ -610,7 +611,7 @@ module.exports = function(s,config,onFinish){
         //custom - output
         if(e.details.custom_output&&e.details.custom_output!==''){x.pipe+=' '+e.details.custom_output;}
     }
-    var buildMainRecording = function(e,x){
+    ffmpeg.buildMainRecording = function(e,x){
         //e = monitor object
         //x = temporary values
         x.record_video_filters = []
@@ -729,7 +730,7 @@ module.exports = function(s,config,onFinish){
             x.record_string+=x.vcodec+x.record_fps+x.record_video_filters+x.record_dimensions+x.segment;
         }
     }
-    var buildMainDetector = function(e,x){
+    ffmpeg.buildMainDetector = function(e,x){
         //e = monitor object
         //x = temporary values
         x.cust_detect = ' '
@@ -830,7 +831,7 @@ module.exports = function(s,config,onFinish){
             x.pipe+=x.detector_buffer_fps+x.detector_buffer_acodec+' -c:v '+e.details.detector_buffer_vcodec+' -f hls -tune '+e.details.detector_buffer_tune+' -g '+e.details.detector_buffer_g+' -hls_time '+e.details.detector_buffer_hls_time+' -hls_list_size '+e.details.detector_buffer_hls_list_size+' -start_number '+e.details.detector_buffer_start_number+' -live_start_index '+e.details.detector_buffer_live_start_index+' -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'detectorStream.m3u8"'
         }
     }
-    assembleMainPieces = function(e,x){
+    ffmpeg.assembleMainPieces = function(e,x){
         //create executeable FFMPEG command
         x.ffmpegCommandString = x.loglevel+x.input_fps;
         //progress pipe
@@ -862,7 +863,7 @@ module.exports = function(s,config,onFinish){
         //add recording and stream outputs
         x.ffmpegCommandString += x.record_string+x.pipe
     }
-    createPipeArray = function(e,x){
+    ffmpeg.createPipeArray = function(e,x){
         //create additional pipes from ffmpeg
         x.stdioPipes = [];
         var times = config.pipeAddition;
@@ -875,14 +876,14 @@ module.exports = function(s,config,onFinish){
     }
     s.ffmpeg = function(e){
         //set X for temporary values so we don't break our main monitor object.
-        var x={tmp:''};
+        var x = {tmp : ''}
         //set some placeholding values to avoid "undefined" in ffmpeg string.
-        buildMainInput(e,x)
-        buildMainStream(e,x)
-        buildMainRecording(e,x)
-        buildMainDetector(e,x)
-        assembleMainPieces(e,x)
-        createPipeArray(e,x)
+        ffmpeg.buildMainInput(e,x)
+        ffmpeg.buildMainStream(e,x)
+        ffmpeg.buildMainRecording(e,x)
+        ffmpeg.buildMainDetector(e,x)
+        ffmpeg.assembleMainPieces(e,x)
+        ffmpeg.createPipeArray(e,x)
         //hold ffmpeg command for log stream
         s.group[e.ke].mon[e.mid].ffmpeg = x.ffmpegCommandString
         //clean the string of spatial impurities and split for spawn()
@@ -891,10 +892,10 @@ module.exports = function(s,config,onFinish){
         return spawn(config.ffmpegDir,x.ffmpegCommandString,{detached: true,stdio:x.stdioPipes})
     }
     if(!config.ffmpegDir){
-        windowsFfmpegCheck(function(){
-            unixFfmpegCheck(function(){
-                ffbinaryCheck(function(){
-                    ffmpegStaticCheck(function(){
+        ffmpeg.checkForWindows(function(){
+            ffmpeg.checkForUnix(function(){
+                ffmpeg.checkForFfbinary(function(){
+                    ffmpeg.checkForNpmStatic(function(){
                         console.log('No FFmpeg found.')
                     })
                 })
@@ -903,6 +904,7 @@ module.exports = function(s,config,onFinish){
     }
     if(downloadingFfmpeg === false){
         //not downloading ffmpeg
-        completeFfmpegCheck()
+        ffmpeg.completeCheck()
     }
+    return ffmpeg
 }

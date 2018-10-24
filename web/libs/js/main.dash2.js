@@ -5820,11 +5820,20 @@ $('body')
                         })
                         tmp += '</div>'
                         e.b.html(tmp)
-                        $.each(d.videos,function(n,v){
-                            tool.getVideoImage($.ccio.init('videoUrlBuild',v),0,function(err,base64){
-                                $('[ke="'+v.ke+'"][mid="'+v.mid+'"][file="'+v.filename+'"] .thumb').css('background-image','url('+base64+')')
-                            })
-                        })
+                        var i = 0
+                        var getThumbnail = function(){
+                            var v = d.videos[i]
+                            if(v){
+                                tool.getVideoImage($.ccio.init('videoUrlBuild',v),0,function(err,base64){
+                                    if(base64){
+                                        $('[ke="'+v.ke+'"][mid="'+v.mid+'"][file="'+v.filename+'"] .thumb').css('background-image','url('+base64+')')
+                                    }
+                                    ++i
+                                    getThumbnail()
+                                })
+                            }
+                        }
+                        getThumbnail()
                     break;
                     case'videos_table':
                         $.vidview.e.removeClass('dark')
@@ -5875,11 +5884,20 @@ $('body')
                         tmp+='</tbody>';
                         tmp+='</table>';
                         e.b.html(tmp)
-                        $.each(d.videos,function(n,v){
-                            tool.getVideoImage($.ccio.init('videoUrlBuild',v),0,function(err,base64){
-                                $('[data-ke="'+v.ke+'"][data-mid="'+v.mid+'"][data-file="'+v.filename+'"] .thumbnail')[0].src = base64
-                            })
-                        })
+                        var i = 0
+                        var getThumbnail = function(){
+                            var v = d.videos[i]
+                            if(v){
+                                tool.getVideoImage($.ccio.init('videoUrlBuild',v),0,function(err,base64){
+                                    if(base64){
+                                        $('[data-ke="'+v.ke+'"][data-mid="'+v.mid+'"][data-file="'+v.filename+'"] .thumbnail')[0].src = base64
+                                    }
+                                    ++i
+                                    getThumbnail()
+                                })
+                            }
+                        }
+                        getThumbnail()
                         $.ccio.init('ls');
                         $.vidview.e.find('table').bootstrapTable();
                     break;
