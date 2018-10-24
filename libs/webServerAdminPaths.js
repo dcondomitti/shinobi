@@ -31,6 +31,7 @@ module.exports = function(s,config,lang,app){
                 var value = []
                 keys.forEach(function(v){
                     condition.push(v+'=?')
+                    if(form[v] instanceof Object)form[v] = JSON.stringify(form[v])
                     value.push(form[v])
                 })
                 value = value.concat([req.params.ke,req.body.uid])
@@ -92,6 +93,8 @@ module.exports = function(s,config,lang,app){
     * API : Administrator : Add Sub-Account (Account to share cameras with)
     */
     app.post([
+        config.webPaths.adminApiPrefix+':auth/accounts/:ke/register',
+        //these two routes are for backwards compatibility
         config.webPaths.adminApiPrefix+':auth/register/:ke/:uid',
         config.webPaths.apiPrefix+':auth/register/:ke/:uid'
     ],function (req,res){
@@ -101,51 +104,45 @@ module.exports = function(s,config,lang,app){
         res.setHeader('Content-Type', 'application/json');
         s.auth(req.params,function(user){
             if(user.details.sub){
-                endData.msg = user.lang['Not Permitted']
+                endData.msg = user.lang['Not an Administrator Account']
                 closeResponse(res,endData)
                 return
             }
-            s.sqlQuery('SELECT * FROM Users WHERE uid=? AND ke=? AND details NOT LIKE ? LIMIT 1',[req.params.uid,req.params.ke,'%"sub"%'],function(err,u) {
-                if(u && u[0]){
-                    if(req.body.mail !== '' && req.body.pass !== ''){
-                        if(req.body.pass === req.body.password_again){
-                            s.sqlQuery('SELECT * FROM Users WHERE mail=?',[req.body.mail],function(err,r) {
-                                if(r&&r[0]){
-                                    //found one exist
-                                    endData.msg = 'Email address is in use.'
-                                }else{
-                                    //create new
-                                    endData.msg = 'New Account Created'
-                                    endData.ok = true
-                                    var newId = s.gid()
-                                    var details = s.s({
-                                        sub: "1",
-                                        allmonitors: "1"
-                                    })
-                                    s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[req.params.ke,newId,req.body.mail,s.createHash(req.body.pass),details])
-                                    s.tx({
-                                        f: 'add_sub_account',
-                                        details: details,
-                                        ke: req.params.ke,
-                                        uid: newId,
-                                        mail: req.body.mail
-                                    },'ADM_'+req.params.ke)
-                                }
-                                res.end(s.prettyPrint(endData))
-                            })
+            if(req.body.mail !== '' && req.body.pass !== ''){
+                if(req.body.pass === req.body.password_again){
+                    s.sqlQuery('SELECT * FROM Users WHERE mail=?',[req.body.mail],function(err,r) {
+                        if(r&&r[0]){
+                            //found one exist
+                            endData.msg = 'Email address is in use.'
                         }else{
-                            endData.msg = user.lang["Passwords Don't Match"]
+                            //create new
+                            endData.msg = 'New Account Created'
+                            endData.ok = true
+                            var newId = s.gid()
+                            var details = s.s({
+                                sub: "1",
+                                allmonitors: "1"
+                            })
+                            s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[req.params.ke,newId,req.body.mail,s.createHash(req.body.pass),details])
+                            s.tx({
+                                f: 'add_sub_account',
+                                details: details,
+                                ke: req.params.ke,
+                                uid: newId,
+                                mail: req.body.mail
+                            },'ADM_'+req.params.ke)
                         }
-                    }else{
-                        endData.msg = user.lang['Fields cannot be empty']
-                    }
+                        res.end(s.prettyPrint(endData))
+                    })
                 }else{
-                    endData.msg = user.lang['Not an Administrator Account']
+                    endData.msg = user.lang["Passwords Don't Match"]
                 }
-                if(endData.msg){
-                    res.end(s.prettyPrint(endData))
-                }
-            })
+            }else{
+                endData.msg = user.lang['Fields cannot be empty']
+            }
+        if(endData.msg){
+            res.end(s.prettyPrint(endData))
+        }
         },res,req)
     })
     /**

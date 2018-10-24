@@ -1,0 +1,10 @@
+{
+    "uid": "[SUB-ACCOUNT USER ID]",
+    "mail": "[SUB-ACCOUNT LOGIN ADDRESS]",
+    "data": {
+       "details": {
+           "sub": "1",
+           "allmonitors": "1"
+        }
+    }
+}

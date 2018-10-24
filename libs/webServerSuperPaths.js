@@ -10,7 +10,7 @@ module.exports = function(s,config,lang,app){
     /**
     * API : Superuser : Get Logs
     */
-    app.all([config.webPaths.supersuperApiPrefix+':auth/logs/:ke',config.webPaths.superApiPrefix+':auth/logs/:ke/:id'], function (req,res){
+    app.all([config.webPaths.supersuperApiPrefix+':auth/logs'], function (req,res){
         req.ret={ok:false};
         s.superAuth(req.params,function(resp){
             req.sql='SELECT * FROM Logs WHERE ke=?';req.ar=['$'];
@@ -255,7 +255,7 @@ module.exports = function(s,config,lang,app){
             var form = s.getPostData(req)
             if(form){
                 if(form.mail !== '' && form.pass !== ''){
-                    if(form.pass === form.password_again){
+                    if(form.pass === form.password_again || form.pass === form.pass_again){
                         isCallbacking = true
                         s.sqlQuery('SELECT * FROM Users WHERE mail=?',[form.mail],function(err,r) {
                             if(r&&r[0]){
@@ -271,6 +271,10 @@ module.exports = function(s,config,lang,app){
                                     form.ke=s.gid()
                                 }else{
                                     form.ke = form.ke.replace(/[`~!@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi, '')
+                                }
+                                //check if "details" is object
+                                if(form.details instanceof Object){
+                                    form.details = JSON.stringify(form.details)
                                 }
                                 //write user to db
                                 s.sqlQuery(
@@ -314,7 +318,7 @@ module.exports = function(s,config,lang,app){
             }
             var form = s.getPostData(req)
             if(form){
-                var account = s.parseJSON(req.body.account)
+                var account = s.getPostData(req,'account')
                 s.sqlQuery('SELECT * FROM Users WHERE mail=?',[account.mail],function(err,r) {
                     if(r && r[0]){
                         r = r[0]
@@ -338,7 +342,7 @@ module.exports = function(s,config,lang,app){
                             if(set==='ke'||set==='password_again'||!form[v]){return}
                             set.push(v+'=?')
                             if(v === 'details'){
-                                form[v] = JSON.stringify(Object.assign(details,JSON.parse(form[v])))
+                                form[v] = s.stringJSON(Object.assign(details,s.parseJSON(form[v])))
                             }
                             values.push(form[v])
                         })
@@ -375,25 +379,29 @@ module.exports = function(s,config,lang,app){
             var close = function(){
                 res.end(s.prettyPrint(endData))
             }
-            var account = s.parseJSON(req.body.account)
+            var account = s.getPostData(req,'account')
             s.sqlQuery('DELETE FROM Users WHERE uid=? AND ke=? AND mail=?',[account.uid,account.ke,account.mail])
             s.sqlQuery('DELETE FROM API WHERE uid=? AND ke=?',[account.uid,account.ke])
-            if(req.body.deleteSubAccounts === '1'){
+            if(s.getPostData(req,'deleteSubAccounts',false) === '1'){
                 s.sqlQuery('DELETE FROM Users WHERE ke=?',[account.ke])
             }
-            if(req.body.deleteMonitors === '1'){
-                s.sqlQuery('SELECT FROM Monitors WHERE ke=?',[account.ke],function(err,monitors){
-                    monitors.forEach(function(monitor){
-                        s.camera('stop',monitor)
-                    })
-                    s.sqlQuery('DELETE FROM Monitors WHERE ke=?',[account.ke])
+            if(s.getPostData(req,'deleteMonitors',false) == '1'){
+                s.sqlQuery('SELECT * FROM Monitors WHERE ke=?',[account.ke],function(err,monitors){
+                    if(monitors && monitors[0]){
+                        monitors.forEach(function(monitor){
+                            s.camera('stop',monitor)
+                        })
+                        s.sqlQuery('DELETE FROM Monitors WHERE ke=?',[account.ke])
+                    }
                 })
             }
-            if(req.body.deleteVideos === '1'){
+            if(s.getPostData(req,'deleteVideos',false) == '1'){
                 s.sqlQuery('DELETE FROM Videos WHERE ke=?',[account.ke])
-                fs.unlink(s.dir.videos+account.ke)
+                fs.chmod(s.dir.videos+account.ke,0o777,function(err){
+                    fs.unlink(s.dir.videos+account.ke,function(err){})
+                })
             }
-            if(req.body.deleteEvents === '1'){
+            if(s.getPostData(req,'deleteEvents',false) == '1'){
                 s.sqlQuery('DELETE FROM Events WHERE ke=?',[account.ke])
             }
             s.tx({f:'delete_account',ke:account.ke,uid:account.uid,mail:account.mail},'$')

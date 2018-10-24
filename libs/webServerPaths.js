@@ -73,19 +73,17 @@ module.exports = function(s,config,lang,app){
         }
     }
     //get post data
-    s.getPostData = function(req){
+    s.getPostData = function(req,target,parseJSON){
+        if(!target)target = 'data'
+        if(!parseJSON)parseJSON = true
         var postData = false
-        var selected = false
-        try{
-            if(req.query && req.query.data){
-                selected = req.query.data
-                postData = JSON.parse(req.query.data)
-            }else{
-                selected = req.body.data
-                postData = JSON.parse(req.body.data)
-            }
-        }catch(er){
-            postData = selected
+        if(req.query && req.query[target]){
+            postData = req.query[target]
+        }else{
+            postData = req.body[target]
+        }
+        if(parseJSON === true){
+            postData = s.parseJSON(postData)
         }
         return postData
     }

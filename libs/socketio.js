@@ -1202,7 +1202,7 @@ module.exports = function(s,config,lang,io){
                     if(r&&r[0]){
                         r=r[0];
                         if(!s.group[d.ke]){s.group[d.ke]={users:{}}}
-                        if(!s.group[d.ke].users[d.auth]){s.group[d.ke].users[d.auth]={cnid:cn.id}}
+                        if(!s.group[d.ke].users[d.auth]){s.group[d.ke].users[d.auth]={cnid:cn.id,uid:d.uid,ke:d.ke,auth:d.auth}}
                         try{s.group[d.ke].users[d.auth].details=JSON.parse(r.details)}catch(er){}
                         cn.join('ADM_'+d.ke);
                         cn.ke=d.ke;
