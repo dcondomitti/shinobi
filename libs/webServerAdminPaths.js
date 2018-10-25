@@ -25,6 +25,8 @@ module.exports = function(s,config,lang,app){
                 return
             }
             var form = s.getPostData(req)
+            var uid = s.getPostData(req,'uid',false)
+            var mail = s.getPostData(req,'mail',false)
             if(form){
                 var keys = Object.keys(form)
                 var condition = []
@@ -34,17 +36,17 @@ module.exports = function(s,config,lang,app){
                     if(form[v] instanceof Object)form[v] = JSON.stringify(form[v])
                     value.push(form[v])
                 })
-                value = value.concat([req.params.ke,req.body.uid])
+                value = value.concat([req.params.ke,uid])
                 s.sqlQuery("UPDATE Users SET "+condition.join(',')+" WHERE ke=? AND uid=?",value)
                 s.tx({
                     f: 'edit_sub_account',
                     ke: req.params.ke,
-                    uid: req.body.uid,
-                    mail: req.body.mail,
+                    uid: uid,
+                    mail: mail,
                     form: form
                 },'ADM_'+req.params.ke)
                 endData.ok = true
-                s.sqlQuery("SELECT * FROM API WHERE ke=? AND uid=?",[req.params.ke,req.body.uid],function(err,rows){
+                s.sqlQuery("SELECT * FROM API WHERE ke=? AND uid=?",[req.params.ke,uid],function(err,rows){
                     if(rows && rows[0]){
                         rows.forEach(function(row){
                             delete(s.api[row.code])
@@ -70,20 +72,22 @@ module.exports = function(s,config,lang,app){
                 closeResponse(res,endData)
                 return
             }
-            s.sqlQuery('DELETE FROM Users WHERE uid=? AND ke=? AND mail=?',[req.body.uid,req.params.ke,req.body.mail])
-            s.sqlQuery("SELECT * FROM API WHERE ke=? AND uid=?",[req.params.ke,req.body.uid],function(err,rows){
+            var uid = s.getPostData(req,'uid',false)
+            var mail = s.getPostData(req,'mail',false)
+            s.sqlQuery('DELETE FROM Users WHERE uid=? AND ke=? AND mail=?',[uid,req.params.ke,mail])
+            s.sqlQuery("SELECT * FROM API WHERE ke=? AND uid=?",[req.params.ke,uid],function(err,rows){
                 if(rows && rows[0]){
                     rows.forEach(function(row){
                         delete(s.api[row.code])
                     })
-                    s.sqlQuery('DELETE FROM API WHERE uid=? AND ke=?',[req.body.uid,req.params.ke])
+                    s.sqlQuery('DELETE FROM API WHERE uid=? AND ke=?',[uid,req.params.ke])
                 }
             })
             s.tx({
                 f: 'delete_sub_account',
                 ke: req.params.ke,
-                uid: req.body.uid,
-                mail: req.body.mail
+                uid: uid,
+                mail: mail
             },'ADM_'+req.params.ke)
             endData.ok = true
             closeResponse(res,endData)
@@ -108,9 +112,10 @@ module.exports = function(s,config,lang,app){
                 closeResponse(res,endData)
                 return
             }
-            if(req.body.mail !== '' && req.body.pass !== ''){
-                if(req.body.pass === req.body.password_again){
-                    s.sqlQuery('SELECT * FROM Users WHERE mail=?',[req.body.mail],function(err,r) {
+            var form = s.getPostData(req)
+            if(form.mail !== '' && form.pass !== ''){
+                if(form.pass === form.password_again || form.pass === form.pass_again){
+                    s.sqlQuery('SELECT * FROM Users WHERE mail=?',[form.mail],function(err,r) {
                         if(r&&r[0]){
                             //found one exist
                             endData.msg = 'Email address is in use.'
@@ -123,13 +128,13 @@ module.exports = function(s,config,lang,app){
                                 sub: "1",
                                 allmonitors: "1"
                             })
-                            s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[req.params.ke,newId,req.body.mail,s.createHash(req.body.pass),details])
+                            s.sqlQuery('INSERT INTO Users (ke,uid,mail,pass,details) VALUES (?,?,?,?,?)',[req.params.ke,newId,form.mail,s.createHash(form.pass),details])
                             s.tx({
                                 f: 'add_sub_account',
                                 details: details,
                                 ke: req.params.ke,
                                 uid: newId,
-                                mail: req.body.mail
+                                mail: form.mail
                             },'ADM_'+req.params.ke)
                         }
                         res.end(s.prettyPrint(endData))

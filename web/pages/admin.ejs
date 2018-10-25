@@ -156,7 +156,7 @@ $.aN.e.submit(function(e){
     e.preventDefault();
     e.s = $.aN.e.serializeObject()
     e.m = $('#msg').empty()
-    $.post('<%=originalURL%><%=config.webPaths.adminApiPrefix%>'+$user.auth_token+'/register/'+$user.ke+'/'+$user.uid,e.s,function(d){
+    $.post('<%=originalURL%><%=config.webPaths.adminApiPrefix%>'+$user.auth_token+'/accounts/'+$user.ke+'/register',{data:e.s},function(d){
         if(d.msg){
             e.m.text(d.msg)
         }
@@ -249,7 +249,7 @@ $.pR.f.submit(function(e){
     $.post('<%=originalURL%><%=config.webPaths.adminApiPrefix%>'+$user.auth_token+'/accounts/'+$user.ke+'/edit',{
         uid: $.pR.user,
         mail: $.ccio.subs[$.pR.user].mail,
-        data: JSON.stringify(form)
+        data: form
     },function(data){
         if(data.ok){
             $.pR.e.modal('hide')

@@ -166,7 +166,7 @@ $.aN.f.submit(function(e){
     e.preventDefault();
     var formValues = $.aN.f.serializeObject()
     var postData = {
-        data: JSON.stringify(formValues)
+        data: formValues
     }
     var webPath = 'registerAdmin'
     if($.aN.modeIsEdit){
@@ -242,7 +242,11 @@ $.aC.e.on('click','.delete',function(e){
     $.confirm.click({title:'Delete',class:'btn-danger'},function(){
         // $.ccio.cx({f:'accounts',ff:'delete',account:e.account})
         $.post('<%=originalURL%><%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/accounts/deleteAdmin',{
-            account : e.account
+            account : e.account,
+            // "deleteSubAccounts" : "1",
+            // "deleteMonitors" : "1",
+            // "deleteVideos" : "1",
+            // "deleteEvents" : "1"
         },function(data){
             console.log(data)
             if(data.ok === true){
