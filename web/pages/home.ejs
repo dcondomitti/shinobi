@@ -1,6 +1,7 @@
-<% var details=JSON.parse($user.details) %>
+<% var details = JSON.parse($user.details) %>
 <% include blocks/header %>
-<script>var $user=<%- JSON.stringify($user) %>;</script>
+<script>var $user = <%- JSON.stringify($user) %>;</script>
+<script>var lang = <%- JSON.stringify(lang) %>;</script>
 <link rel="stylesheet" href="<%-originalURL%>libs/css/pnotify.custom.min.css">
 <link rel="stylesheet" href="<%-originalURL%>libs/css/vbox.css">
 <link rel="stylesheet" href="<%-originalURL%>libs/css/daterangepicker.css">
@@ -194,5 +195,6 @@
 <script src="<%-originalURL%>libs/js/lodash.min.js"></script>
 <script src="<%-originalURL%>libs/js/gridstack.min.js"></script>
 <script src="<%-originalURL%>libs/js/gridstack.jQueryUI.min.js"></script>
+<script src="<%-originalURL%>libs/js/basic.js"></script>
 <script><% include ../libs/js/main.dash2.js %></script>
 <% include blocks/help.ejs %>

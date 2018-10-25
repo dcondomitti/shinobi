@@ -175,7 +175,7 @@ $(document).ready(function(){
                       $.shinobi.mon[d.id].Base64.disconnect()
                   }
                   if($.shinobi.mon[d.id].Poseidon){
-                      $.shinobi.mon[d.id].Poseidon.destroy()
+                      $.shinobi.mon[d.id].Poseidon.stop()
                   }
                   if ($.shinobi.mon[d.id].h265Player) {
                       $.shinobi.mon[d.id].h265Player.stop()
@@ -253,13 +253,19 @@ $(document).ready(function(){
                         var stream = $('#SHINOBI_'+d.ke+'_'+d.id+' .stream-element');
                         if($.shinobi.mon[d.id].details.stream_flv_type==='ws'){
                             var createPoseidon = function(){
+                                var onPoseidonError = function(){
+                                    // setTimeout(function(){
+                                    //     $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
+                                    // },2000)
+                                }
                                 $.shinobi.mon[d.id].Poseidon = new Poseidon({
                                     video: stream[0],
                                     auth_token:'<%=data.auth%>',
                                     ke:d.ke,
                                     uid:'<%=data.uid%>',
                                     id:d.id,
-                                    url: '<%=data.url%>'
+                                    url: '<%=data.url%>',
+                                    onError : onPoseidonError
                                 });
                                 $.shinobi.mon[d.id].Poseidon.start();
                                 $.shinobi.mon[d.id].Poseidon._socket.on('data',function(res){

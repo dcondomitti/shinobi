@@ -1,0 +1,26 @@
+{
+    "data": {
+        "mail": "[LOGIN ADDRESS]",
+        "ke": "[GROUP KEY]",
+        "pass": "[PASSWORD]",
+        "password_again": "[PASSWORD AGAIN]",
+        "details": {
+            "factorAuth": "0",
+            "size": "10000",
+            "days": "5",
+            "event_days": "10",
+            "log_days": "10",
+            "max_camera": "",
+            "permissions": "all",
+            "edit_size": "1",
+            "edit_days": "1",
+            "edit_event_days": "1",
+            "edit_log_days": "1",
+            "use_admin": "1",
+            "use_aws_s3": "1",
+            "use_webdav": "1",
+            "use_discordbot": "1",
+            "use_ldap": "1"
+        }
+    }
+}

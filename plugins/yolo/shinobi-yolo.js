@@ -1,5 +1,5 @@
 //
-// Shinobi - Python YOLOv3 Plugin
+// Shinobi - Yolo Plugin
 // Copyright (C) 2016-2025 Moe Alam, moeiscool
 //
 // # Donate
@@ -10,45 +10,30 @@
 process.on('uncaughtException', function (err) {
     console.error('uncaughtException',err);
 });
-//main vars
 var fs=require('fs');
+var yolo = require('@vapi/node-yolo');
 var exec = require('child_process').exec;
-var spawn = require('child_process').spawn;
 var moment = require('moment');
-var http = require('http');
 var express = require('express');
-var socketIoClient = require('socket.io-client');
-var config = require('./conf.json');
 var http = require('http'),
     app = express(),
     server = http.createServer(app);
-s={
-    group:{},
-    dir:{},
-    isWin:(process.platform==='win32'),
-    s:function(json){return JSON.stringify(json,null,3)}
-}
-s.checkCorrectPathEnding=function(x){
-    var length=x.length
-    if(x.charAt(length-1)!=='/'){
-        x=x+'/'
-    }
-    return x.replace('__DIR__',__dirname)
-}
-s.debugLog = function(){
-    if(config.debugLog === true){
-        console.log(new Date(),arguments)
-        if(config.debugLogVerbose === true){
-            console.log(new Error())
-        }
-    }
-}
+var config=require('./conf.json');
 if(!config.port){config.port=8080}
-if(!config.pythonScript){config.pythonScript=__dirname+'/pumpkin.py'}
-if(!config.pythonPort){config.pythonPort=7990}
 if(!config.hostPort){config.hostPort=8082}
 if(config.systemLog===undefined){config.systemLog=true}
-if(config.alprConfig===undefined){config.alprConfig=__dirname+'/openalpr.conf'}
+if(config.cascadesDir===undefined){config.cascadesDir=__dirname+'/cascades/'}
+var detector = new yolo(__dirname + "/models", "cfg/coco.data", "cfg/yolov3.cfg", "yolov3.weights");
+s={
+    group:{},
+    dir:{
+        cascades : config.cascadesDir
+    },
+    isWin:(process.platform==='win32'),
+    foundCascades : {
+
+    }
+}
 //default stream folder check
 if(!config.streamDir){
     if(s.isWin===false){
@@ -67,30 +52,19 @@ s.dir.streams=config.streamDir;
 if(!fs.existsSync(s.dir.streams)){
     fs.mkdirSync(s.dir.streams);
 }
+//streams dir
+if(!fs.existsSync(s.dir.cascades)){
+    fs.mkdirSync(s.dir.cascades);
+}
 s.gid=function(x){
     if(!x){x=10};var t = "";var p = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     for( var i=0; i < x; i++ )
         t += p.charAt(Math.floor(Math.random() * p.length));
     return t;
 };
-s.getRequest = function(url,callback){
-    return http.get(url, function(res){
-        var body = '';
-        res.on('data', function(chunk){
-            body += chunk;
-        });
-        res.on('end',function(){
-            try{body = JSON.parse(body)}catch(err){}
-            callback(body)
-        });
-    }).on('error', function(e){
-//                              s.systemLog("Get Snapshot Error", e);
-    });
-}
-s.multiplerHeight = 0.75
-s.multiplerWidth = 0.96
 s.detectObject=function(buffer,d,tx){
   d.tmpFile=s.gid(5)+'.jpg'
+  d.tmpFile2=s.gid(5)+'.jpg'
   if(!fs.existsSync(s.dir.streams)){
       fs.mkdirSync(s.dir.streams);
   }
@@ -104,52 +78,67 @@ s.detectObject=function(buffer,d,tx){
   }
   fs.writeFile(d.dir+d.tmpFile,buffer,function(err){
       if(err) return s.systemLog(err);
-      if(s.isPythonRunning === false){
-          return console.log('Python Script is not Running.')
+      try{
+          detector.detect(d.dir+d.tmpFile)
+               .then(detections => {
+                   matrices = []
+                   detections.forEach(function(v){
+                       matrices.push({
+                         x:v.box.x,
+                         y:v.box.y,
+                         width:v.box.w,
+                         height:v.box.h,
+                         tag:v.className,
+                         confidence:v.probability,
+                       })
+                   })
+                   if(matrices.length > 0){
+                       tx({
+                           f:'trigger',
+                           id:d.id,
+                           ke:d.ke,
+                           details:{
+                               plug:config.plug,
+                               name:'yolo',
+                               reason:'object',
+                               matrices:matrices,
+                               imgHeight:parseFloat(d.mon.detector_scale_y),
+                               imgWidth:parseFloat(d.mon.detector_scale_x)
+                           }
+                       })
+                   }
+                   fs.unlink(d.dir+d.tmpFile,function(){
+
+                   })
+               })
+               .catch(error => {
+                   console.log(error)
+
+                 // here you can handle the errors. Ex: Out of memory
+             })
+      }catch(error){
+          console.error('Catch: ' + error);
       }
-      var callbackId = s.gid(10)
-      s.group[d.ke][d.id].sendToPython({path:d.dir+d.tmpFile,id:callbackId},function(data){
-          if(data.length > 0){
-              var mats=[]
-              data.forEach(function(v){
-                  mats.push({
-                    x:v.points[0] * s.multiplerWidth,
-                    y:v.points[1] * s.multiplerHeight,
-                    width:v.points[2],
-                    height:v.points[3],
-                    confidence:v.confidence,
-                    tag:v.tag
-                  })
-              })
-              tx({
-                  f:'trigger',
-                  id:d.id,
-                  ke:d.ke,
-                  details:{
-                      plug:config.plug,
-                      name:'yolo',
-                      reason:'object',
-                      matrices:mats,
-                      imgHeight:d.mon.detector_scale_y,
-                      imgWidth:d.mon.detector_scale_x
-                  }
-              })
-          }
-          delete(s.callbacks[callbackId])
-          exec('rm -rf '+d.dir+d.tmpFile,{encoding:'utf8'})
-      })
   })
 }
 s.systemLog=function(q,w,e){
-    if(w===undefined){return}
     if(!w){w=''}
     if(!e){e=''}
     if(config.systemLog===true){
        return console.log(moment().format(),q,w,e)
     }
 }
+
 s.MainEventController=function(d,cn,tx){
     switch(d.f){
+        case'refreshPlugins':
+            s.findCascades(function(cascades){
+                s.cx({f:'s.tx',data:{f:'detector_cascade_list',cascades:cascades},to:'GRP_'+d.ke})
+            })
+        break;
+        case'readPlugins':
+            s.cx({f:'s.tx',data:{f:'detector_cascade_list',cascades:s.cascadesInDir},to:'GRP_'+d.ke})
+        break;
         case'init_plugin_as_host':
             if(!cn){
                 console.log('No CN',d)
@@ -166,8 +155,19 @@ s.MainEventController=function(d,cn,tx){
         break;
         case'init_monitor':
             if(s.group[d.ke]&&s.group[d.ke][d.id]){
+                s.group[d.ke][d.id].canvas={}
+                s.group[d.ke][d.id].canvasContext={}
+                s.group[d.ke][d.id].blendRegion={}
+                s.group[d.ke][d.id].blendRegionContext={}
+                s.group[d.ke][d.id].lastRegionImageData={}
+                s.group[d.ke][d.id].numberOfTriggers=0
+                delete(s.group[d.ke][d.id].cords)
                 delete(s.group[d.ke][d.id].buffer)
             }
+        break;
+        case'init_aws_push':
+//            console.log('init_aws')
+            s.group[d.ke][d.id].aws={links:[],complete:0,total:d.total,videos:[],tx:tx}
         break;
         case'frame':
             try{
@@ -176,7 +176,11 @@ s.MainEventController=function(d,cn,tx){
                 }
                 if(!s.group[d.ke][d.id]){
                     s.group[d.ke][d.id]={
-                        sendToPython : s.createCameraBridgeToPython(d.ke+d.id)
+                        canvas:{},
+                        canvasContext:{},
+                        lastRegionImageData:{},
+                        blendRegion:{},
+                        blendRegionContext:{},
                     }
                 }
                 if(!s.group[d.ke][d.id].buffer){
@@ -185,7 +189,8 @@ s.MainEventController=function(d,cn,tx){
                   s.group[d.ke][d.id].buffer.push(d.frame)
                 }
                 if(d.frame[d.frame.length-2] === 0xFF && d.frame[d.frame.length-1] === 0xD9){
-                    s.detectObject(Buffer.concat(s.group[d.ke][d.id].buffer),d,tx)
+                    var buffer = Buffer.concat(s.group[d.ke][d.id].buffer);
+                    s.detectObject(buffer,d,tx)
                     s.group[d.ke][d.id].buffer=null;
                 }
             }catch(err){
@@ -224,7 +229,7 @@ if(config.mode==='host'){
 }else{
     //start plugin as client
     if(!config.host){config.host='localhost'}
-    var io = socketIoClient('ws://'+config.host+':'+config.port);//connect to master
+    var io = require('socket.io-client')('ws://'+config.host+':'+config.port);//connect to master
     s.cx=function(x){x.pluginKey=config.key;x.plug=config.plug;return io.emit('ocv',x)}
     io.on('connect',function(d){
         s.cx({f:'init',plug:config.plug,notice:config.notice,type:config.type});
@@ -236,61 +241,3 @@ if(config.mode==='host'){
         s.MainEventController(d,null,s.cx)
     })
 }
-
-//Start Python Controller
-s.callbacks = {}
-s.createCameraBridgeToPython = function(uniqueId){
-    var pythonIo = socketIoClient('ws://localhost:'+config.pythonPort,{transports : ['websocket']});
-    var sendToPython = function(data,callback){
-        s.callbacks[data.id] = callback
-        pythonIo.emit('f',data)
-    }
-    pythonIo.on('connect',function(d){
-        s.debugLog(uniqueId+' is Connected from Python')
-    })
-    pythonIo.on('disconnect',function(d){
-        s.debugLog(uniqueId+' is Disconnected from Python')
-        setTimeout(function(){
-            pythonIo.connect();
-            s.debugLog(uniqueId+' is Attempting to Reconect to Python')
-        },3000)
-    })
-    pythonIo.on('f',function(d){
-        if(s.callbacks[d.id]){
-            s.callbacks[d.id](d.data)
-            delete(s.callbacks[d.id])
-        }
-    })
-    return sendToPython
-}
-
-
-//Start Python Daemon
-process.env.PYTHONUNBUFFERED = 1;
-s.createPythonProcess = function(){
-    s.isPythonRunning = false
-    s.pythonScript = spawn('sh',[__dirname+'/bootPy.sh',config.pythonScript,__dirname]);
-    var onStdErr = function (data) {
-        s.debugLog('Python ERR')
-        data = data.toString()
-        s.debugLog(data)
-        if(data.indexOf('Done!') > -1){
-            console.log('PYTHON READY')
-            s.isPythonRunning = true
-            onStdErr = function(data){
-                s.debugLog(data.toString())
-            }
-        }
-    }
-    s.pythonScript.stderr.on('data',onStdErr);
-
-    s.pythonScript.stdout.on('data', function (data) {
-        s.debugLog('Python OUT')
-        s.debugLog(data.toString())
-    });
-
-    s.pythonScript.on('close', function () {
-        s.debugLog('Python CLOSED')
-    });
-}
-s.createPythonProcess()

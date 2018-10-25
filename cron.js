@@ -156,15 +156,15 @@ s.utcToLocal = function(time){
 s.localToUtc = function(time){
     return moment(time).utc()
 }
-s.nameToTime=function(x){x=x.replace('.webm','').replace('.mp4','').split('T'),x[1]=x[1].replace(/-/g,':');x=x.join(' ');return x;}
+s.nameToTime = function(x){x=x.replace('.webm','').replace('.mp4','').split('T'),x[1]=x[1].replace(/-/g,':');x=x.join(' ');return x;}
 io = require('socket.io-client')('ws://'+config.ip+':'+config.port);//connect to master
-s.cx=function(x){x.cronKey=config.cron.key;return io.emit('cron',x)}
+s.cx = function(x){x.cronKey=config.cron.key;return io.emit('cron',x)}
 //emulate master socket emitter
-s.tx=function(x,y){s.cx({f:'s.tx',data:x,to:y})}
-s.video=function(x,y){s.cx({f:'s.video',data:x,file:y})}
+s.tx = function(x,y){s.cx({f:'s.tx',data:x,to:y})}
+s.deleteVideo = function(x){s.cx({f:'s.deleteVideo',file:x})}
 //Cron Job
 s.cx({f:'init',time:moment()})
-s.getVideoDirectory=function(e){
+s.getVideoDirectory = function(e){
     if(e.mid&&!e.id){e.id=e.mid};
     if(e.details&&(e.details instanceof Object)===false){
         try{e.details=JSON.parse(e.details)}catch(err){}
@@ -175,13 +175,13 @@ s.getVideoDirectory=function(e){
         return s.dir.videos+e.ke+'/'+e.id+'/';
     }
 }
-s.getFileBinDirectory=function(e){
+s.getFileBinDirectory = function(e){
     if(e.mid&&!e.id){e.id=e.mid};
     return s.dir.fileBin+e.ke+'/'+e.id+'/';
 }
 //filters set by the user in their dashboard
 //deleting old videos is part of the filter - config.cron.deleteOld
-s.checkFilterRules=function(v,callback){
+s.checkFilterRules = function(v,callback){
     //filters
     if(!v.d.filters||v.d.filters==''){
         v.d.filters={};
@@ -289,7 +289,7 @@ s.checkFilterRules=function(v,callback){
     }
 }
 //database rows with no videos in the filesystem
-s.deleteRowsWithNoVideo=function(v,callback){
+s.deleteRowsWithNoVideo = function(v,callback){
     if(
         config.cron.deleteNoVideo===true&&(
             config.cron.deleteNoVideoRecursion===true||
@@ -321,7 +321,7 @@ s.deleteRowsWithNoVideo=function(v,callback){
                     }
                     fileExists = fs.existsSync(dir+filename)
                     if(fileExists !== true){
-                        s.video('delete',ev)
+                        s.deleteVideo(ev)
                         s.tx({f:'video_delete',filename:filename+'.'+ev.ext,mid:ev.mid,ke:ev.ke,time:ev.time,end:s.moment(new Date,'YYYY-MM-DD HH:mm:ss')},'GRP_'+ev.ke);
                     }
                 });
@@ -338,7 +338,7 @@ s.deleteRowsWithNoVideo=function(v,callback){
     }
 }
 //info about what the application is doing
-s.deleteOldLogs=function(v,callback){
+s.deleteOldLogs = function(v,callback){
     if(!v.d.log_days||v.d.log_days==''){v.d.log_days=10}else{v.d.log_days=parseFloat(v.d.log_days)};
     if(config.cron.deleteLogs===true&&v.d.log_days!==0){
         s.sqlQuery("DELETE FROM Logs WHERE ke=? AND `time` < "+s.sqlDate('? DAYS'),[v.ke,v.d.log_days],function(err,rrr){
@@ -353,7 +353,7 @@ s.deleteOldLogs=function(v,callback){
     }
 }
 //events - motion, object, etc. detections
-s.deleteOldEvents=function(v,callback){
+s.deleteOldEvents = function(v,callback){
     if(!v.d.event_days||v.d.event_days==''){v.d.event_days=10}else{v.d.event_days=parseFloat(v.d.event_days)};
     if(config.cron.deleteEvents===true&&v.d.event_days!==0){
         s.sqlQuery("DELETE FROM Events WHERE ke=? AND `time` < "+s.sqlDate('? DAYS'),[v.ke,v.d.event_days],function(err,rrr){
@@ -368,10 +368,10 @@ s.deleteOldEvents=function(v,callback){
     }
 }
 //check for temporary files (special archive)
-s.deleteOldFileBins=function(v,callback){
+s.deleteOldFileBins = function(v,callback){
     if(!v.d.fileBin_days||v.d.fileBin_days==''){v.d.fileBin_days=10}else{v.d.fileBin_days=parseFloat(v.d.fileBin_days)};
     if(config.cron.deleteFileBins===true&&v.d.fileBin_days!==0){
-        var fileBinQuery = " FROM Files WHERE ke=? AND `date` < "+s.sqlDate('? DAYS');
+        var fileBinQuery = " FROM Files WHERE ke=? AND `time` < "+s.sqlDate('? DAYS');
         s.sqlQuery("SELECT *"+fileBinQuery,[v.ke,v.d.fileBin_days],function(err,files){
             if(files&&files[0]){
                 //delete the files
@@ -397,60 +397,12 @@ s.deleteOldFileBins=function(v,callback){
     }
 }
 //check for files with no database row
-s.checkForOrphanedFiles=function(v,callback){
-    if(config.cron.deleteOrphans===true){
-        var finish=function(count){
-            if(count>0 || config.debugLog === true){
-                s.cx({f:'deleteOrphanedFiles',msg:count+' SQL rows with no database row deleted',ke:v.ke,time:moment()})
-            }
-            callback()
-        }
-        e={};
-        var numberOfItems = 0;
-        s.sqlQuery('SELECT * FROM Monitors WHERE ke=?',[v.ke],function(arr,b) {
-            if(b&&b[0]){
-                b.forEach(function(mon,m){
-                    fs.readdir(s.getVideoDirectory(mon), function(err, items) {
-                        e.query=[];
-                        e.filesFound=[mon.ke,mon.mid];
-                        numberOfItems+=items.length;
-                        if(items&&items.length>0){
-                            items.forEach(function(v,n){
-                                e.query.push('time=?')
-                                e.filesFound.push(s.nameToTime(v))
-                            })
-                            s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND mid=? AND ('+e.query.join(' OR ')+')',e.filesFound,function(arr,r) {
-                                if(!r){r=[]};
-                                e.foundSQLrows=[];
-                                r.forEach(function(v,n){
-                                    v.index=e.filesFound.indexOf(s.moment(v.time,'YYYY-MM-DD HH:mm:ss'));
-                                    if(v.index>-1){
-                                        delete(items[v.index-2]);
-                                    }
-                                });
-                                items.forEach(function(v,n){
-                                    if(v&&v!==null){
-                                        exec('rm '+s.getVideoDirectory(mon)+v);
-                                    }
-                                    if(m===b.length-1&&n===items.length-1){
-                                        finish(numberOfItems)
-                                    }
-                                })
-                            })
-                        }else{
-                            if(m===b.length-1){
-                                finish(numberOfItems)
-                            }
-                        }
-                    })
-                });
-            }else{
-                finish(numberOfItems)
-            }
-        });
-    }else{
-        callback()
+s.checkForOrphanedFiles = function(v,callback){
+    if(config.cron.deleteOrphans === true){
+        console.log('"config.cron.deleteOrphans" has been removed. It has been replace by a one-time-run at startup with "config.insertOrphans". As the variable name suggests, instead of deleting, it will insert videos found without a database row.')
+        console.log('By default "config.orphanedVideoCheckMax" will only check up to 20 video. You can raise this value to any number you choose but be careful as it will check that number of videos on every start.')
     }
+    callback()
 }
 //user processing function
 s.processUser = function(number,rows){
@@ -516,7 +468,6 @@ s.processUser = function(number,rows){
                             s.deleteRowsWithNoVideo(v,function(){
                                 s.debugLog('--- deleteRowsWithNoVideo Complete')
                                 s.checkForOrphanedFiles(v,function(){
-                                    s.debugLog('--- checkForOrphanedFiles Complete')
                                     //done user, unlock current, and do next
                                     s.overlapLock[v.ke]=false;
                                     s.processUser(number+1,rows)

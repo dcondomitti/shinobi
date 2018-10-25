@@ -6,7 +6,7 @@
   "main": "camera.js",
   "bin": "camera.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node test.js",
     "start": "chmod +x INSTALL/start.sh && INSTALL/start.sh"
   },
   "repository": {
@@ -41,6 +41,7 @@
     "http-proxy": "^1.17.0",
     "webdav-fs": "^1.11.0",
     "discord.js": "^11.3.2",
+    "backblaze-b2": "^1.0.4",
     "ldapauth-fork": "^4.0.2"
   },
   "devDependencies": {}

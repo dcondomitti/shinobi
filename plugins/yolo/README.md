@@ -1,13 +1,11 @@
-# Python Yolo
+# Yolo
 
-> This plugin requires the use of port `7990` by default. You can specify a different port by adding `pythonPort` to your plugin's conf.json.
-
-**Ubuntu and Debian only**
+**Ubuntu and CentOS only**
 
 Go to the Shinobi directory. **/home/Shinobi** is the default directory.
 
 ```
-cd /home/Shinobi/plugins/python-yolo
+cd /home/Shinobi/plugins/yolo
 ```
 
 Copy the config file.
@@ -19,7 +17,7 @@ sh INSTALL.sh
 Start the plugin.
 
 ```
-pm2 start shinobi-python-yolo.js
+pm2 start shinobi-yolo.js
 ```
 
 Doing this will reveal options in the monitor configuration. Shinobi does not need to be restarted when a plugin is initiated or stopped.
@@ -41,9 +39,9 @@ Here is a sample of a Host configuration for the plugin.
 
 ```
 {
-  "plug":"PythonYolo",
+  "plug":"Yolo",
   "hostPort":8082,
-  "key":"SomeOpenALPRkeySoPeopleDontMessWithYourShinobi",
+  "key":"Yolo123123",
   "mode":"host",
   "type":"detector"
 }
@@ -60,11 +58,11 @@ Add the `plugins` array if you don't already have it. Add the following *object 
 ```
   "plugins":[
       {
-          "id" : "PythonYolo",
+          "id" : "Yolo",
           "https" : false,
           "host" : "localhost",
           "port" : 8082,
-          "key" : "SomeOpenALPRkeySoPeopleDontMessWithYourShinobi",
+          "key" : "Yolo123123",
           "mode" : "host",
           "type" : "detector"
       }
