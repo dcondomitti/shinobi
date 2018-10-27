@@ -328,9 +328,15 @@ module.exports = function(s,config,lang){
         }else{
             detector_timeout = parseFloat(currentConfig.detector_timeout)
         }
-        s.group[d.ke].mon[d.id].eventBasedRecording.timeout = setTimeout(function(){
-            s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd=true;
-        },detector_timeout * 950 * 60)
+        if(currentConfig.watchdog_reset !== '1' || !s.group[d.ke].mon[d.id].eventBasedRecording.timeout){
+            clearTimeout(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
+            s.group[d.ke].mon[d.id].eventBasedRecording.timeout = setTimeout(function(){
+                s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd = true
+                s.group[d.ke].mon[d.id].eventBasedRecording.process.stdin.setEncoding('utf8')
+                s.group[d.ke].mon[d.id].eventBasedRecording.process.stdin.write('q')
+                delete(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
+            },detector_timeout * 1000 * 60)
+        }
         if(!s.group[d.ke].mon[d.id].eventBasedRecording.process){
             if(!d.auth){
                 d.auth = s.gid(60)
@@ -348,7 +354,7 @@ module.exports = function(s,config,lang){
                 var filename = s.formattedTime()+'.mp4'
                 s.userLog(d,{type:"Traditional Recording",msg:"Started"})
                 //-t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+'
-                s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i http://'+config.ip+':'+config.port+'/'+d.auth+'/hls/'+d.ke+'/'+d.id+'/detectorStream.m3u8 -t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+' -c:v copy -strftime 1 "'+s.getVideoDirectory(d.mon) + filename + '"')))
+                s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i http://'+config.ip+':'+config.port+'/'+d.auth+'/hls/'+d.ke+'/'+d.id+'/detectorStream.m3u8 -c:v copy -strftime 1 "'+s.getVideoDirectory(d.mon) + filename + '"')))
                 var ffmpegError='';
                 var error
                 s.group[d.ke].mon[d.id].eventBasedRecording.process.stderr.on('data',function(data){
