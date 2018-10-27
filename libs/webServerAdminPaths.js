@@ -165,71 +165,59 @@ module.exports = function(s,config,lang,app){
         s.auth(req.params,function(user){
             var hasRestrictions = user.details.sub && user.details.allmonitors !== '1'
             if(req.params.f !== 'delete'){
-                if(!req.body.data&&!req.query.data){
-                    req.ret.msg='No Monitor Data found.'
+                var form = s.getPostData(req)
+                if(!form){
+                    req.ret.msg = user.lang.monitorEditText1;
                     res.end(s.prettyPrint(req.ret))
-                    return
-                }
-                try{
-                    if(req.query.data){
-                        req.monitor=JSON.parse(req.query.data)
-                    }else{
-                        req.monitor=JSON.parse(req.body.data)
-                    }
-                }catch(er){
-                    if(!req.monitor){
-                        req.ret.msg=user.lang.monitorEditText1;
-                        res.end(s.prettyPrint(req.ret))
-                    }
                     return
                 }
                 if(!user.details.sub ||
                    user.details.allmonitors === '1' ||
-                   hasRestrictions && user.details.monitor_edit.indexOf(req.monitor.mid) >- 1 ||
+                   hasRestrictions && user.details.monitor_edit.indexOf(form.mid) >- 1 ||
                    hasRestrictions && user.details.monitor_create === '1'){
-                        if(req.monitor&&req.monitor.mid&&req.monitor.name){
+                        if(form&&form.mid&&form.name){
                             req.set=[],req.ar=[];
-                            req.monitor.mid=req.params.id.replace(/[^\w\s]/gi,'').replace(/ /g,'');
+                            form.mid=req.params.id.replace(/[^\w\s]/gi,'').replace(/ /g,'');
                             try{
-                                JSON.parse(req.monitor.details)
+                                JSON.parse(form.details)
                             }catch(er){
-                                if(!req.monitor.details||!req.monitor.details.stream_type){
+                                if(!form.details||!form.details.stream_type){
                                     req.ret.msg=user.lang.monitorEditText2;
                                     res.end(s.prettyPrint(req.ret))
                                     return
                                 }else{
-                                    req.monitor.details=JSON.stringify(req.monitor.details)
+                                    form.details=JSON.stringify(form.details)
                                 }
                             }
-                            req.monitor.ke=req.params.ke
-                            req.logObject={details:JSON.parse(req.monitor.details),ke:req.params.ke,mid:req.params.id}
-                            s.sqlQuery('SELECT * FROM Monitors WHERE ke=? AND mid=?',[req.monitor.ke,req.monitor.mid],function(er,r){
-                                req.tx={f:'monitor_edit',mid:req.monitor.mid,ke:req.monitor.ke,mon:req.monitor};
+                            form.ke=req.params.ke
+                            req.logObject={details:JSON.parse(form.details),ke:req.params.ke,mid:req.params.id}
+                            s.sqlQuery('SELECT * FROM Monitors WHERE ke=? AND mid=?',[form.ke,form.mid],function(er,r){
+                                req.tx={f:'monitor_edit',mid:form.mid,ke:form.ke,mon:form};
                                 if(r&&r[0]){
                                     req.tx.new=false;
-                                    Object.keys(req.monitor).forEach(function(v){
-                                        if(req.monitor[v]&&req.monitor[v]!==''){
-                                            req.set.push(v+'=?'),req.ar.push(req.monitor[v]);
+                                    Object.keys(form).forEach(function(v){
+                                        if(form[v]&&form[v]!==''){
+                                            req.set.push(v+'=?'),req.ar.push(form[v]);
                                         }
                                     })
                                     req.set=req.set.join(',');
-                                    req.ar.push(req.monitor.ke),req.ar.push(req.monitor.mid);
-                                    s.userLog(req.monitor,{type:'Monitor Updated',msg:'by user : '+user.uid});
+                                    req.ar.push(form.ke),req.ar.push(form.mid);
+                                    s.userLog(form,{type:'Monitor Updated',msg:'by user : '+user.uid});
                                     req.ret.msg=user.lang['Monitor Updated by user']+' : '+user.uid;
                                     s.sqlQuery('UPDATE Monitors SET '+req.set+' WHERE ke=? AND mid=?',req.ar)
                                     req.finish=1;
                                 }else{
-                                    if(!s.group[req.monitor.ke].init.max_camera||s.group[req.monitor.ke].init.max_camera==''||Object.keys(s.group[req.monitor.ke].mon).length <= parseInt(s.group[req.monitor.ke].init.max_camera)){
+                                    if(!s.group[form.ke].init.max_camera||s.group[form.ke].init.max_camera==''||Object.keys(s.group[form.ke].mon).length <= parseInt(s.group[form.ke].init.max_camera)){
                                         req.tx.new=true;
                                         req.st=[];
-                                        Object.keys(req.monitor).forEach(function(v){
-                                            if(req.monitor[v]&&req.monitor[v]!==''){
-                                                req.set.push(v),req.st.push('?'),req.ar.push(req.monitor[v]);
+                                        Object.keys(form).forEach(function(v){
+                                            if(form[v]&&form[v]!==''){
+                                                req.set.push(v),req.st.push('?'),req.ar.push(form[v]);
                                             }
                                         })
-            //                                        req.set.push('ke'),req.st.push('?'),req.ar.push(req.monitor.ke);
+            //                                        req.set.push('ke'),req.st.push('?'),req.ar.push(form.ke);
                                         req.set=req.set.join(','),req.st=req.st.join(',');
-                                        s.userLog(req.monitor,{type:'Monitor Added',msg:'by user : '+user.uid});
+                                        s.userLog(form,{type:'Monitor Added',msg:'by user : '+user.uid});
                                         req.ret.msg=user.lang['Monitor Added by user']+' : '+user.uid;
                                         s.sqlQuery('INSERT INTO Monitors ('+req.set+') VALUES ('+req.st+')',req.ar)
                                         req.finish=1;
@@ -240,18 +228,18 @@ module.exports = function(s,config,lang,app){
                                     }
                                 }
                                 if(req.finish===1){
-                                    req.monitor.details=JSON.parse(req.monitor.details)
+                                    form.details=JSON.parse(form.details)
                                     req.ret.ok=true;
-                                    s.initiateMonitorObject({mid:req.monitor.mid,ke:req.monitor.ke});
-                                    s.group[req.monitor.ke].mon_conf[req.monitor.mid]=s.cleanMonitorObject(req.monitor);
-                                    if(req.monitor.mode==='stop'){
-                                        s.camera('stop',req.monitor);
+                                    s.initiateMonitorObject({mid:form.mid,ke:form.ke});
+                                    s.group[form.ke].mon_conf[form.mid]=s.cleanMonitorObject(form);
+                                    if(form.mode==='stop'){
+                                        s.camera('stop',form);
                                     }else{
-                                        s.camera('stop',req.monitor);setTimeout(function(){s.camera(req.monitor.mode,req.monitor);},5000)
+                                        s.camera('stop',form);setTimeout(function(){s.camera(form.mode,form);},5000)
                                     };
-                                    s.tx(req.tx,'STR_'+req.monitor.ke);
+                                    s.tx(req.tx,'STR_'+form.ke);
                                 };
-                                s.tx(req.tx,'GRP_'+req.monitor.ke);
+                                s.tx(req.tx,'GRP_'+form.ke);
                                 res.end(s.prettyPrint(req.ret))
                             })
                         }else{
