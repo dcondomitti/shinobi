@@ -377,11 +377,15 @@ module.exports = function(s,config,lang,app){
                         }
                         if(r.details.sub){
                             s.sqlQuery('SELECT details FROM Users WHERE ke=? AND details NOT LIKE ?',[r.ke,'%"sub"%'],function(err,rr) {
-                                rr=rr[0];
-                                rr.details=JSON.parse(rr.details);
-                                r.details.mon_groups=rr.details.mon_groups;
-                                req.resp.details=JSON.stringify(r.details);
-                                req.factorAuth()
+                                if(rr && rr[0]){
+                                    rr=rr[0];
+                                    rr.details=JSON.parse(rr.details);
+                                    r.details.mon_groups=rr.details.mon_groups;
+                                    req.resp.details=JSON.stringify(r.details);
+                                    req.factorAuth()
+                                }else{
+                                    failedAuthentication(req.body.function)
+                                }
                             })
                         }else{
                             req.factorAuth()
