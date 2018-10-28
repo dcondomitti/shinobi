@@ -198,7 +198,8 @@ module.exports = function(s,config,onFinish){
         //`e` is the monitor object
         //`x` is an object used to contain temporary values.
         var x = {
-            pipe:''
+            pipe: '',
+            cust_stream: ''
         }
         if(!number||number==''){
             x.channel_sdir = e.sdir;
@@ -245,7 +246,7 @@ module.exports = function(s,config,onFinish){
         //hls list size
         if(channel.hls_list_size&&channel.hls_list_size!==''){x.hls_list_size=channel.hls_list_size}else{x.hls_list_size=2}
         //stream - custom flags
-        if(channel.cust_stream&&channel.cust_stream!==''){x.cust_stream=' '+channel.cust_stream}else{x.cust_stream=''}
+        if(channel.cust_stream&&channel.cust_stream!==''){x.cust_stream=' '+channel.cust_stream}
         //stream - preset
         if(channel.stream_type !== 'h265' && channel.preset_stream && channel.preset_stream!==''){x.preset_stream=' -preset '+channel.preset_stream;}else{x.preset_stream=''}
         //hardware acceleration
@@ -441,6 +442,7 @@ module.exports = function(s,config,onFinish){
         //x = temporary values
         x.stream_video_filters = []
         x.pipe = ''
+        x.cust_stream = ''
         //stream - timestamp
         if(e.details.stream_timestamp&&e.details.stream_timestamp=="1"&&e.details.vcodec!=='copy'){
             //font
@@ -496,7 +498,7 @@ module.exports = function(s,config,onFinish){
         if(e.details.hls_time&&e.details.hls_time!==''){x.hls_time=e.details.hls_time}else{x.hls_time="2"}    //hls list size
         if(e.details.hls_list_size&&e.details.hls_list_size!==''){x.hls_list_size=e.details.hls_list_size}else{x.hls_list_size=2}
         //stream - custom flags
-        if(e.details.cust_stream&&e.details.cust_stream!==''){x.cust_stream=' '+e.details.cust_stream}else{x.cust_stream=''}
+        if(e.details.cust_stream&&e.details.cust_stream!==''){x.cust_stream=' '+e.details.cust_stream}
         //stream - preset
         if(e.details.stream_type !== 'h265' && e.details.preset_stream && e.details.preset_stream !== ''){x.preset_stream=' -preset '+e.details.preset_stream;}else{x.preset_stream=''}
 
@@ -524,9 +526,12 @@ module.exports = function(s,config,onFinish){
             //add input feed map
             x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.stream)
         }
-        if(e.details.stream_vcodec !== 'copy' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64'){
+        console.log('x.cust_stream',x.cust_stream)
+
+        if(x.stream_fps && (e.details.stream_vcodec !== 'copy' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64')){
             x.cust_stream += x.stream_fps
         }
+        console.log('x.cust_stream',x.cust_stream)
         switch(e.details.stream_type){
             case'mp4':
                 x.cust_stream+=' -movflags +frag_keyframe+empty_moov+default_base_moof -metadata title="Poseidon Stream" -reset_timestamps 1'
@@ -660,7 +665,7 @@ module.exports = function(s,config,onFinish){
         //record - frames per second (fps)
         if(e.fps&&e.fps!==''&&e.details.vcodec!=='copy'){x.record_fps=' -r '+e.fps}else{x.record_fps=''}
         //stream - frames per second (fps)
-        if(e.details.stream_fps&&e.details.stream_fps!==''){x.stream_fps=' -r '+e.details.stream_fps}else{x.stream_fps=''}
+        if(e.details.stream_fps&&e.details.stream_fps!==''){x.stream_fps=' -r '+e.details.stream_fps}else{x.stream_fps = ''}
         //record - timestamp options for -vf
         if(e.details.timestamp&&e.details.timestamp=="1"&&e.details.vcodec!=='copy'){
             //font
