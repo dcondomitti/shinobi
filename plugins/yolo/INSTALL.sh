@@ -81,6 +81,7 @@ echo "https://github.com/rcaceiro/node-yolo"
 export PATH=/usr/local/cuda/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 npm install @vapi/node-yolo@1.2.4 --unsafe-perm
+npm install --unsafe-perm
 npm audit fix --force
 echo "-----------------------------------"
 echo "Start the plugin with pm2 like so :"
