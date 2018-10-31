@@ -90,17 +90,23 @@ module.exports = function(s,config,lang){
         var url
         var runExtraction = function(){
             var snapBuffer = []
-            var snapProcess = spawn(config.ffmpegDir,('-loglevel quiet -re -i '+url+options+' -frames:v 1 -f mjpeg pipe:1').split(' '),{detached: true})
+            var snapProcess = spawn(config.ffmpegDir,('-loglevel quiet -re -i '+url+options+' -frames:v 1 -f image2pipe pipe:1').split(' '),{detached: true})
             snapProcess.stdout.on('data',function(data){
                 snapBuffer.push(data)
             });
             snapProcess.stderr.on('data',function(data){
                 console.log(data.toString())
             });
-            snapProcess.on('close',function(data){
+            snapProcess.on('exit',function(data){
+                clearTimeout(snapProcessTimeout)
                 snapBuffer = Buffer.concat(snapBuffer)
                 callback(snapBuffer,false)
             })
+            var snapProcessTimeout = setTimeout(function(){
+                snapProcess.stdin.setEncoding('utf8')
+                snapProcess.stdin.write('q')
+                delete(snapProcessTimeout)
+            },5000)
         }
         var checkExists = function(localStream,callback){
             fs.stat(localStream,function(err){
@@ -494,8 +500,8 @@ module.exports = function(s,config,lang){
     }
     s.cameraSendSnapshot = function(e){
         s.checkDetails(e)
-        if(config.doSnapshot===true){
-            if(e.mon.mode!=='stop'){
+        if(config.doSnapshot === true){
+            if(e.mon.mode !== 'stop'){
                 var pathDir = s.dir.streams+e.ke+'/'+e.mid+'/'
                 fs.stat(pathDir+'icon.jpg',function(err){
                     if(!err){
@@ -505,36 +511,22 @@ module.exports = function(s,config,lang){
                         })
                     }else{
                         e.url = s.buildMonitorUrl(e.mon)
-                        switch(e.mon.type){
-                            case'mjpeg':case'h264':case'local':
-                                if(e.mon.type==='local'){e.url=e.mon.path;}
-                                 s.getRawSnapshotFromMonitor(e.mon,'-s 200x200',function(data,isStaticFile){
-                                     if((data[data.length-2] === 0xFF && data[data.length-1] === 0xD9)){
-                                         if(!isStaticFile){
-                                             fs.writeFile(s.dir.streams+e.ke+'/'+e.mid+'/icon.jpg',data,function(){})
-                                         }
-                                         s.tx({
-                                             f:'monitor_snapshot',
-                                             snapshot:data.toString('base64'),
-                                             snapshot_format:'b64',
-                                             mid:e.mid,
-                                             ke:e.ke
-                                         },'GRP_'+e.ke)
-                                     }else{
-                                         s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
-                                    }
-                                 })
-                            break;
-                            case'jpeg':
-                                request({url:e.url,method:'GET',encoding:null},function(err,data){
-                                    if(err){s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke);return};
-                                    s.tx({f:'monitor_snapshot',snapshot:data.body,snapshot_format:'ab',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
-                                })
-                            break;
-                            default:
-                                s.tx({f:'monitor_snapshot',snapshot:'...',snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
-                            break;
-                        }
+                        s.getRawSnapshotFromMonitor(e.mon,'-s 200x200',function(data,isStaticFile){
+                            if((data[data.length-2] === 0xFF && data[data.length-1] === 0xD9)){
+                                if(!isStaticFile){
+                                    fs.writeFile(s.dir.streams+e.ke+'/'+e.mid+'/icon.jpg',data,function(){})
+                                }
+                                s.tx({
+                                    f: 'monitor_snapshot',
+                                    snapshot: data.toString('base64'),
+                                    snapshot_format: 'b64',
+                                    mid: e.mid,
+                                    ke: e.ke
+                                },'GRP_'+e.ke)
+                            }else{
+                                s.tx({f:'monitor_snapshot',snapshot:e.mon.name,snapshot_format:'plc',mid:e.mid,ke:e.ke},'GRP_'+e.ke)
+                           }
+                        })
                     }
                 })
             }else{
