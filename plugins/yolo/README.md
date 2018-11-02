@@ -47,7 +47,7 @@ Here is a sample of a Host configuration for the plugin.
 }
 ```
 
-Now modify the **main configuration file** located in the main directory of Shinobi. *Where you currently should be.*
+Now modify the **main configuration file** located in the main directory of Shinobi.
 
 ```
 nano conf.json

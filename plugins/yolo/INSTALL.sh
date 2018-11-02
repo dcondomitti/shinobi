@@ -29,11 +29,20 @@ if ! [ -x "$(command -v opencv_version)" ]; then
 else
     echo "OpenCV found... : $(opencv_version)"
 fi
+echo "============="
+echo "Shinobi - Do you want to Install Tiny Weights?"
+echo "This is better for Graphics Cards with less than 4GB RAM"
+echo "(y)es or (N)o"
+weightNameExtension=""
+read tinyweights
+if [ "$tinyweights" = "y" ] || [ "$tinyweights" = "Y" ]; then
+    weightNameExtension="-tiny"
+fi
 echo "-----------------------------------"
 if [ ! -d "models" ]; then
     echo "Downloading yolov3 weights..."
     mkdir models
-    wget -O models/yolov3.weights https://pjreddie.com/media/files/yolov3.weights
+    wget -O models/yolov3.weights https://pjreddie.com/media/files/yolov3$weightNameExtension.weights
 else
     echo "yolov3 weights found..."
 fi
@@ -42,7 +51,7 @@ if [ ! -d "models/cfg" ]; then
     echo "Downloading yolov3 cfg"
     mkdir models/cfg
     wget -O models/cfg/coco.data https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/coco.data
-    wget -O models/cfg/yolov3.cfg https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov3.cfg
+    wget -O models/cfg/yolov3.cfg https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov3$weightNameExtension.cfg
 else
     echo "yolov3 cfg found..."
 fi

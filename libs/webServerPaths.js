@@ -72,6 +72,10 @@ module.exports = function(s,config,lang,app){
             cb()
         }
     }
+    s.closeJsonResponse = function(res,endData){
+        res.setHeader('Content-Type', 'application/json')
+        res.end(s.prettyPrint(endData))
+    }
     //get post data
     s.getPostData = function(req,target,parseJSON){
         if(!target)target = 'data'
@@ -1843,5 +1847,28 @@ module.exports = function(s,config,lang,app){
                 doAction(s.group[req.params.ke].mon[req.params.id].onvifConnection)
             }
         },res,req);
+    })
+    /**
+    * API : Account Edit from Dashboard
+     */
+    app.all(config.webPaths.apiPrefix+':auth/accounts/:ke/edit',function (req,res){
+        s.auth(req.params,function(user){
+            var endData = {
+                ok : false
+            }
+            var form = s.getPostData(req)
+            if(form){
+                endData.ok = true
+                s.accountSettingsEdit({
+                    ke: req.params.ke,
+                    uid: user.uid,
+                    form: form,
+                    cnid: user.cnid
+                })
+            }else{
+                endData.msg = lang.postDataBroken
+            }
+            s.closeJsonResponse(res,endData)
+        },res,req)
     })
 }

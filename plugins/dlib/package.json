@@ -1,13 +1,14 @@
 {
-  "name": "shinobi-python-dlib",
+  "name": "shinobi-dlib",
   "version": "1.0.0",
-  "description": "DLIB plugin for Shinobi that uses Python functions for detection.",
-  "main": "shinobi-python-dlib.js",
+  "description": "Dlib plugin for Shinobi that uses C++ functions for detection.",
+  "main": "shinobi-dlib.js",
   "dependencies": {
     "socket.io-client": "^1.7.4",
     "express": "^4.16.2",
     "moment": "^2.19.2",
-    "socket.io": "^2.0.4"
+    "socket.io": "^2.0.4",
+    "face-recognition-cuda": "0.9.3"
   },
   "devDependencies": {},
   "scripts": {

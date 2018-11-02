@@ -4204,6 +4204,10 @@ $.apM.f.submit(function(e){
     if(!e.s.ip||e.s.ip.length<7){e.er.push('Enter atleast one IP')}
     if(e.er.length>0){$.apM.e.find('.msg').html(e.er.join('<br>'));return;}
     $.each(e.s,function(n,v){e.s[n]=v.trim()})
+    // e.s = {
+    //     "ip": "",
+    //     "details": "{\"get_monitors\":\"1\",\"control_monitors\":\"1\",\"get_logs\":\"1\",\"watch_stream\":\"1\",\"watch_snapshot\":\"1\",\"watch_videos\":\"1\",\"delete_videos\":\"1\"}"
+    // }
     $.post($.ccio.init('location',$user)+$user.auth_token+'/api/'+$user.ke+'/add',{data:JSON.stringify(e.s)},function(d){
         $.ccio.log(d)
     })

@@ -1,5 +1,5 @@
 //
-// Shinobi - Yolo Plugin
+// Shinobi - Dlib Plugin
 // Copyright (C) 2016-2025 Moe Alam, moeiscool
 //
 // # Donate
@@ -11,7 +11,7 @@ process.on('uncaughtException', function (err) {
     console.error('uncaughtException',err);
 });
 var fs=require('fs');
-var yolo = require('@vapi/node-yolo');
+var fr = require('face-recognition-cuda');//modified "binding.gyp" file for "face-recognition" to build dlib with cuda
 var exec = require('child_process').exec;
 var moment = require('moment');
 var express = require('express');
@@ -24,7 +24,7 @@ if(!config.hostPort){config.hostPort=8082}
 if(config.systemLog===undefined){config.systemLog=true}
 if(config.cascadesDir===undefined){config.cascadesDir=__dirname+'/cascades/'}
 if(config.connectionType === undefined)config.connectionType = 'websocket'
-var detector = new yolo(__dirname + "/models", "cfg/coco.data", "cfg/yolov3.cfg", "yolov3.weights");
+const detector = fr.FaceDetector()
 s={
     group:{},
     dir:{
@@ -64,44 +64,51 @@ s.gid=function(x){
     return t;
 };
 s.detectObject=function(buffer,d,tx,frameLocation){
-    var detectStuff = function(frame,callback){
-        detector.detect(frame)
-             .then(detections => {
-                 matrices = []
-                 detections.forEach(function(v){
-                     matrices.push({
-                       x:v.box.x,
-                       y:v.box.y,
-                       width:v.box.w,
-                       height:v.box.h,
-                       tag:v.className,
-                       confidence:v.probability,
-                     })
-                 })
-                 if(matrices.length > 0){
-                     tx({
-                         f:'trigger',
-                         id:d.id,
-                         ke:d.ke,
-                         details:{
-                             plug:config.plug,
-                             name:'yolo',
-                             reason:'object',
-                             matrices:matrices,
-                             imgHeight:parseFloat(d.mon.detector_scale_y),
-                             imgWidth:parseFloat(d.mon.detector_scale_x)
-                         }
-                     })
-                 }
-                 fs.unlink(frame,function(){
+    var detectStuff = function(frame){
+        try{
+            var buffer = fr.loadImage(frame)
+            var faceRectangles = detector.locateFaces(buffer)
+            var matrices = []
+            faceRectangles.forEach(function(v){
+                var coordinates = [
+                    {"x" : v.rect.left, "y" : v.rect.top},
+                    {"x" : v.rect.right, "y" : v.rect.top},
+                    {"x" : v.rect.right, "y" : v.rect.bottom},
+                    {"x" : v.rect.left, "y" : v.rect.bottom}
+                ]
+                var width = Math.sqrt( Math.pow(coordinates[1].x - coordinates[0].x, 2) + Math.pow(coordinates[1].y - coordinates[0].y, 2));
+                var height = Math.sqrt( Math.pow(coordinates[2].x - coordinates[1].x, 2) + Math.pow(coordinates[2].y - coordinates[1].y, 2))
+                matrices.push({
+                  x:coordinates[0].x,
+                  y:coordinates[0].y,
+                  width:width,
+                  height:height,
+                  tag:'UNKNOWN FACE',
+                  confidence:v.confidence,
+                })
+            })
+            console.log(matrices)
+            if(matrices.length > 0){
+                tx({
+                    f:'trigger',
+                    id:d.id,
+                    ke:d.ke,
+                    details:{
+                        plug:config.plug,
+                        name:'dlib',
+                        reason:'object',
+                        matrices:matrices,
+                        imgHeight:parseFloat(d.mon.detector_scale_y),
+                        imgWidth:parseFloat(d.mon.detector_scale_x)
+                    }
+                })
+            }
+            fs.unlink(frame,function(){
 
-                 })
-             })
-             .catch(error => {
-                 console.log(error)
-
-               // here you can handle the errors. Ex: Out of memory
-           })
+            })
+        }catch(err){
+            console.log(err)
+        }
     }
     if(frameLocation){
         detectStuff(frameLocation)
