@@ -12,8 +12,7 @@ var exec = require('child_process').exec;
 var moment = require('moment');
 var express = require('express');
 var http = require('http'),
-    app = express(),
-    server = http.createServer(app);
+    app = express();
 module.exports = function(__dirname,config){
     var plugLog = function(d1){
         console.log(new Date(),config.plug,d1)
@@ -164,9 +163,31 @@ module.exports = function(__dirname,config){
             })
         }
     }
-    server.listen(config.hostPort,function(){
-        plugLog('Plugin started on Port ' + config.hostPort)
-    });
+    server = http.createServer(app).on('error', function(err){
+        if(err.code === 'EADDRINUSE'){
+            //try next port
+            if(webServerTryCount === 5){
+                return plugLog('Failed to Start Web Server. No Longer Trying.')
+            }
+            ++webServerTryCount
+            var port = parseInt(config.hostPort)
+            config.hostPort = parseInt(config.hostPort) + 1
+            plugLog('Failed to Start Web Server on '+port+'. Trying next Port '+config.hostPort)
+            startWebServer()
+        }else{
+            console.log(err)
+        }
+    })
+    var webServerTryCount = 0
+    var startWebServer = function(){
+        var port = parseInt(config.hostPort)
+        server.listen(config.hostPort,function(err){
+            if(port === config.hostPort){
+                plugLog('Plugin started on Port ' + port)
+            }
+        })
+    }
+    startWebServer()
     //web pages and plugin api
     var webPageMssage = '<b>'+config.plug+'</b> for Shinobi is running'
     app.get('/', function (req, res) {
