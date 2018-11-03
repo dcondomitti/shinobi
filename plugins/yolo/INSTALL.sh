@@ -19,6 +19,8 @@ if [ ! -d "/usr/local/cuda" ]; then
     exit 1
 else
     echo "CUDA Toolkit found..."
+    export PATH=/usr/local/cuda/bin:$PATH
+    export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 fi
 echo "-----------------------------------"
 if ! [ -x "$(command -v opencv_version)" ]; then
@@ -85,11 +87,8 @@ echo "-----------------------------------"
 echo "Getting node-gyp to build C++ modules"
 npm install node-gyp -g --unsafe-perm
 echo "-----------------------------------"
-echo "Getting C++ module : @vapi/node-yolo"
-echo "https://github.com/rcaceiro/node-yolo"
-export PATH=/usr/local/cuda/bin:$PATH
-export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-npm install @vapi/node-yolo@1.2.4 --unsafe-perm
+echo "Getting C++ module : node-yolo-shinobi"
+echo "https://www.npmjs.com/package/node-yolo-shinobi is a fork of https://github.com/rcaceiro/node-yolo"
 npm install --unsafe-perm
 npm audit fix --force
 echo "-----------------------------------"

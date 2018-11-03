@@ -8,7 +8,7 @@
     "express": "^4.16.2",
     "moment": "^2.19.2",
     "socket.io": "^2.0.4",
-    "@vapi/node-yolo": "1.2.4"
+    "node-yolo-shinobi": "1.2.4"
   },
   "devDependencies": {},
   "scripts": {
