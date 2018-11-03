@@ -1494,17 +1494,22 @@ module.exports = function(s,config,lang,app){
                         req.ext=req.params.file.split('.')[1];
                         var total = fs.statSync(req.dir).size;
                         if (req.headers['range']) {
-                            var range = req.headers.range;
-                            var parts = range.replace(/bytes=/, "").split("-");
-                            var partialstart = parts[0];
-                            var partialend = parts[1];
-
-                            var start = parseInt(partialstart, 10);
-                            var end = partialend ? parseInt(partialend, 10) : total-1;
-                            var chunksize = (end-start)+1;
-                            var file = fs.createReadStream(req.dir, {start: start, end: end});
-                            req.headerWrite={ 'Content-Range': 'bytes ' + start + '-' + end + '/' + total, 'Accept-Ranges': 'bytes', 'Content-Length': chunksize, 'Content-Type': 'video/'+req.ext }
-                            req.writeCode=206
+                            try{
+                                var range = req.headers.range;
+                                var parts = range.replace(/bytes=/, "").split("-");
+                                var partialstart = parts[0];
+                                var partialend = parts[1];
+                                var start = parseInt(partialstart, 10);
+                                var end = partialend ? parseInt(partialend, 10) : total-1;
+                                var chunksize = (end-start)+1;
+                                var file = fs.createReadStream(req.dir, {start: start, end: end});
+                                req.headerWrite={ 'Content-Range': 'bytes ' + start + '-' + end + '/' + total, 'Accept-Ranges': 'bytes', 'Content-Length': chunksize, 'Content-Type': 'video/'+req.ext }
+                                req.writeCode=206
+                            }catch(err){
+                                req.headerWrite={ 'Content-Length': total, 'Content-Type': 'video/'+req.ext};
+                                var file = fs.createReadStream(req.dir)
+                                req.writeCode=200
+                            }
                         } else {
                             req.headerWrite={ 'Content-Length': total, 'Content-Type': 'video/'+req.ext};
                             var file=fs.createReadStream(req.dir)
