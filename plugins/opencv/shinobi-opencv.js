@@ -62,7 +62,7 @@ s.onPluginEventExtender(function(d,cn,tx){
     }
 })
 // OpenCV Init />>
-s.detectObject=function(buffer,d,tx,frameLocation){
+s.detectObject = function(buffer,d,tx,frameLocation){
     var detectStuff = function(frameBuffer,callback){
         if(d.mon.detector_lisence_plate==="1"){
             s.detectLicensePlate(buffer,d,tx,frameLocation)
@@ -113,7 +113,9 @@ s.detectObject=function(buffer,d,tx,frameLocation){
     }
     if(frameLocation){
         fs.readFile(frameLocation,function(err,buffer){
-            detectStuff(buffer)
+            if(!err){
+                detectStuff(buffer)
+            }
             fs.unlink(frameLocation,function(){
 
             })
