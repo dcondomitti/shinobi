@@ -24,29 +24,22 @@ try{
 }
 // Base Init />>
 // OpenCV Init >>
+var exec = require('child_process').exec;
 var cv = require('opencv4nodejs');
 if(config.cascadesDir===undefined){config.cascadesDir=__dirname+'/cascades/'}
 if(config.alprConfig===undefined){config.alprConfig=__dirname+'/openalpr.conf'}
-s.foundCascades = {}
-s.dir.cascades = config.cascadesDir
-//streams dir
-if(!fs.existsSync(s.dir.cascades)){
-    fs.mkdirSync(s.dir.cascades);
-}
 s.findCascades = function(callback){
-    var tmp={};
-    tmp.foundCascades=[];
-    fs.readdir(s.dir.cascades,function(err,files){
-        files.forEach(function(cascade,n){
-            if(cascade.indexOf('.xml')>-1){
-                tmp.foundCascades.push(cascade.replace('.xml',''))
-            }
-        })
-        s.cascadesInDir=tmp.foundCascades;
-        callback(tmp.foundCascades)
+    var foundCascades = []
+    Object.keys(cv).forEach(function(cascade,n){
+        if(cascade.indexOf('HAAR_') >- 1){
+            foundCascades.push(cascade)
+        }
     })
+    s.cascadesInDir = foundCascades
+    s.systemLog('Found '+foundCascades.length+' Cascades')
+    callback(foundCascades)
 }
-s.findCascades(function(){
+s.findCascades(function(cascades){
     //get cascades
 })
 s.onPluginEventExtender(function(d,cn,tx){
@@ -76,13 +69,10 @@ s.detectObject = function(buffer,d,tx,frameLocation){
                   return
               }
               selectedCascades.forEach(function(cascade){
-                  var cascadePath = s.dir.cascades+cascade+'.xml'
-                  if(s.foundCascades[cascadePath] === undefined){
-                      s.foundCascades[cascadePath] = fs.existsSync(cascadePath)
-                  }else if(s.foundCascades[cascadePath] === false){
-                      return s.systemLog('Attempted to use non existant cascade. : '+cascadePath)
+                  if(!cv[cascade]){
+                      return s.systemLog('Attempted to use non existant cascade. : '+cascade)
                   }
-                  var classifier = new cv.CascadeClassifier(cascadePath)
+                  var classifier = new cv.CascadeClassifier(cv[cascade])
                   var matrices = classifier.detectMultiScaleGpu(im).objects
                   if(matrices.length > 0){
                       matrices.forEach(function(v,n){

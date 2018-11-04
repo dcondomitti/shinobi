@@ -158,10 +158,10 @@ module.exports = function(__dirname,config){
                     }
                 }
             break;
-            s.onPluginEvent.forEach(function(extender){
-                extender(d,cn,tx)
-            })
         }
+        s.onPluginEvent.forEach(function(extender){
+            extender(d,cn,tx)
+        })
     }
     server = http.createServer(app).on('error', function(err){
         if(err.code === 'EADDRINUSE'){
