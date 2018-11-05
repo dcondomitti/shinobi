@@ -21,14 +21,14 @@ module.exports = function(s,config,lang){
     var loadWebDavForUser = function(e){
         // e = user
         var ar = JSON.parse(e.details);
-        if(ar.webdav_use_global === '1' && config.cloudUloaders && config.cloudUloaders.WebDAV){
+        if(ar.webdav_use_global === '1' && config.cloudUploaders && config.cloudUploaders.WebDAV){
             // {
             //     webdav_user: "",
             //     webdav_pass: "",
             //     webdav_url: "",
             //     webdav_dir: "",
             // }
-            ar = Object.assign(ar,config.cloudUloaders.WebDAV)
+            ar = Object.assign(ar,config.cloudUploaders.WebDAV)
         }
         //owncloud/webdav
         if(!s.group[e.ke].webdav &&
@@ -175,7 +175,7 @@ module.exports = function(s,config,lang){
     var loadAmazonS3ForUser = function(e){
         // e = user
         var ar = JSON.parse(e.details)
-        if(ar.aws_use_global === '1' && config.cloudUloaders && config.cloudUloaders.AmazonS3){
+        if(ar.aws_use_global === '1' && config.cloudUploaders && config.cloudUploaders.AmazonS3){
             // {
             //     aws_accessKeyId: "",
             //     aws_secretAccessKey: "",
@@ -183,7 +183,7 @@ module.exports = function(s,config,lang){
             //     aws_s3_bucket: "",
             //     aws_s3_dir: "",
             // }
-            ar = Object.assign(ar,config.cloudUloaders.AmazonS3)
+            ar = Object.assign(ar,config.cloudUploaders.AmazonS3)
         }
         //Amazon S3
         if(!s.group[e.ke].aws &&
@@ -298,14 +298,14 @@ module.exports = function(s,config,lang){
     var loadBackblazeB2ForUser = function(e){
         var ar = JSON.parse(e.details);
         try{
-            if(ar.b2_use_global === '1' && config.cloudUloaders && config.cloudUloaders.BackblazeB2){
+            if(ar.b2_use_global === '1' && config.cloudUploaders && config.cloudUploaders.BackblazeB2){
                 // {
                 //     bb_b2_accountId: "",
                 //     bb_b2_applicationKey: "",
                 //     bb_b2_bucket: "",
                 //     bb_b2_dir: "",
                 // }
-                ar = Object.assign(ar,config.cloudUloaders.BackblazeB2)
+                ar = Object.assign(ar,config.cloudUploaders.BackblazeB2)
             }
             if(!s.group[e.ke].bb_b2 &&
                ar.bb_b2_accountId &&
