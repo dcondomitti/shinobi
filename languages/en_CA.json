@@ -609,6 +609,7 @@
    "Control Error": "Control Error",
    "Database row does not exist": "Database row does not exist",
    "File Delete Error": "File Delete Error",
+   "List of Videos Delete Error": "List of Videos Delete Error",
    "postDataBroken": "Check the format of the JSON. Ensure it is stringified and defined under 'data'",
    "ControlErrorText1": "Control is not enabled",
    "ControlErrorText2": "Check your connection details. You may need to point the Base URL at port 8000 or 80. Check your authentication info.",

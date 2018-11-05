@@ -2751,7 +2751,6 @@ $user.ws.on('f',function (d){
             d.currentlyEditing=$.aM.e.attr('mid')
             if(d.currentlyEditing&&d.currentlyEditing!==''){
                 d.currentlyEditing=JSON.parse(JSON.parse($.ccio.mon[d.currentlyEditing].details).detector_cascades)
-                console.log(d.currentlyEditing)
                 $.each(d.currentlyEditing,function(m,b){
                     d.e=$('.detector_cascade_selection[value="'+m+'"]').prop('checked',true)
                     d.p=d.e.parents('.mdl-js-switch')
