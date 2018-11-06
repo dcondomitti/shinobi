@@ -23,9 +23,9 @@ module.exports = function(s,config,lang,io){
         //API Prefix
         if(config.webPaths.apiPrefix === undefined){config.webPaths.apiPrefix = s.checkCorrectPathEnding(config.webPaths.home)}else{config.webPaths.apiPrefix = s.checkCorrectPathEnding(config.webPaths.apiPrefix)}
         //Admin API Prefix
-        if(config.webPaths.adminApiPrefix === undefined){config.webPaths.adminApiPrefix='/admin/'}else{config.webPaths.adminApiPrefix = s.checkCorrectPathEnding(config.webPaths.adminApiPrefix)}
+        if(config.webPaths.adminApiPrefix === undefined){config.webPaths.adminApiPrefix=s.checkCorrectPathEnding(config.webPaths.admin)}else{config.webPaths.adminApiPrefix = s.checkCorrectPathEnding(config.webPaths.adminApiPrefix)}
         //Super API Prefix
-        if(config.webPaths.superApiPrefix === undefined){config.webPaths.superApiPrefix='/super/'}else{config.webPaths.superApiPrefix = s.checkCorrectPathEnding(config.webPaths.superApiPrefix)}
+        if(config.webPaths.superApiPrefix === undefined){config.webPaths.superApiPrefix=s.checkCorrectPathEnding(config.webPaths.super)}else{config.webPaths.superApiPrefix = s.checkCorrectPathEnding(config.webPaths.superApiPrefix)}
     //Render Configurations - Page Render Paths
     if(config.renderPaths === undefined){config.renderPaths={}}
         //login page
