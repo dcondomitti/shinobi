@@ -7,10 +7,6 @@ var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var execSync = require('child_process').execSync;
 module.exports = function(s,config,lang,app){
-    var closeResponse = function(res,endData){
-        res.setHeader('Content-Type', 'application/json')
-        res.end(s.prettyPrint(endData))
-    }
     /**
     * API : Administrator : Edit Sub-Account (Account to share cameras with)
     */
@@ -21,7 +17,7 @@ module.exports = function(s,config,lang,app){
             }
             if(user.details.sub){
                 endData.msg = user.lang['Not Permitted']
-                closeResponse(res,endData)
+                s.closeJsonResponse(res,endData)
                 return
             }
             var form = s.getPostData(req)
@@ -56,7 +52,7 @@ module.exports = function(s,config,lang,app){
             }else{
                 endData.msg = lang.postDataBroken
             }
-            closeResponse(res,endData)
+            s.closeJsonResponse(res,endData)
         },res,req)
     })
     /**
@@ -69,7 +65,7 @@ module.exports = function(s,config,lang,app){
             }
             if(user.details.sub){
                 endData.msg = user.lang['Not Permitted']
-                closeResponse(res,endData)
+                s.closeJsonResponse(res,endData)
                 return
             }
             var uid = s.getPostData(req,'uid',false)
@@ -90,7 +86,7 @@ module.exports = function(s,config,lang,app){
                 mail: mail
             },'ADM_'+req.params.ke)
             endData.ok = true
-            closeResponse(res,endData)
+            s.closeJsonResponse(res,endData)
         },res,req)
     })
     /**
@@ -109,7 +105,7 @@ module.exports = function(s,config,lang,app){
         s.auth(req.params,function(user){
             if(user.details.sub){
                 endData.msg = user.lang['Not an Administrator Account']
-                closeResponse(res,endData)
+                s.closeJsonResponse(res,endData)
                 return
             }
             var form = s.getPostData(req)
@@ -328,11 +324,11 @@ module.exports = function(s,config,lang,app){
                         },'GRP_' + req.params.ke)
                         endData.ok = true
                     }
-                    closeResponse(res,endData)
+                    s.closeJsonResponse(res,endData)
                 })
             }else{
                 endData.msg = lang.postDataBroken
-                closeResponse(res,endData)
+                s.closeJsonResponse(res,endData)
             }
         },res,req)
     })
@@ -359,7 +355,7 @@ module.exports = function(s,config,lang,app){
                         form:'APIs'
                     },'GRP_' + req.params.ke)
                     endData.msg = lang.postDataBroken
-                    closeResponse(res,endData)
+                    s.closeJsonResponse(res,endData)
                     return
                 }
                 var row = {
@@ -381,11 +377,11 @@ module.exports = function(s,config,lang,app){
                         endData.ok = true
                         delete(s.api[row.code])
                     }
-                    closeResponse(res,endData)
+                    s.closeJsonResponse(res,endData)
                 })
             }else{
                 endData.msg = lang.postDataBroken
-                closeResponse(res,endData)
+                s.closeJsonResponse(res,endData)
             }
         },res,req)
     })
@@ -421,7 +417,7 @@ module.exports = function(s,config,lang,app){
                     endData.ke = user.ke
                     endData.keys = rows
                 }
-                closeResponse(res,endData)
+                s.closeJsonResponse(res,endData)
             })
         },res,req)
     })

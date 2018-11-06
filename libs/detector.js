@@ -1,5 +1,6 @@
 var P2P = require('pipe2pam');
-var PamDiff = require('pam-diff');
+// pamDiff is based on https://www.npmjs.com/package/pam-diff
+var PamDiff = require('./detectorPamDiff.js');
 module.exports = function(s,config){
     s.createPamDiffEngine = function(e){
         var width,
@@ -64,12 +65,13 @@ module.exports = function(s,config){
                     plug:'built-in',
                     name:trigger.name,
                     reason:'motion',
-                    confidence:trigger.percent,
+                    confidence:trigger.percent
                 },
                 plates:[],
-                imgHeight:height,
-                imgWidth:width
+                imgHeight:e.details.detector_scale_y,
+                imgWidth:e.details.detector_scale_x
             }
+            if(trigger.matrix)detectorObject.details.matrices = [trigger.matrix]
             var region = Object.values(regionJson).find(x => x.name == detectorObject.name)
             s.checkMaximumSensitivity(e, region, detectorObject, function() {
                 s.checkTriggerThreshold(e, region, detectorObject, function() {

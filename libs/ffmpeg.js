@@ -526,12 +526,9 @@ module.exports = function(s,config,onFinish){
             //add input feed map
             x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.stream)
         }
-        console.log('x.cust_stream',x.cust_stream)
-
         if(x.stream_fps && (e.details.stream_vcodec !== 'copy' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64')){
             x.cust_stream += x.stream_fps
         }
-        console.log('x.cust_stream',x.cust_stream)
         switch(e.details.stream_type){
             case'mp4':
                 x.cust_stream+=' -movflags +frag_keyframe+empty_moov+default_base_moof -metadata title="Poseidon Stream" -reset_timestamps 1'

@@ -6,6 +6,7 @@ module.exports = function(s,config,lang){
     // WebDAV
     var beforeAccountSaveForWebDav = function(d){
         //d = save event
+        d.form.details.webdav_use_global=d.d.webdav_use_global
         d.form.details.use_webdav=d.d.use_webdav
     }
     var cloudDiskUseStartupForWebDav = function(group,userDetails){
@@ -20,6 +21,15 @@ module.exports = function(s,config,lang){
     var loadWebDavForUser = function(e){
         // e = user
         var ar = JSON.parse(e.details);
+        if(ar.webdav_use_global === '1' && config.cloudUploaders && config.cloudUploaders.WebDAV){
+            // {
+            //     webdav_user: "",
+            //     webdav_pass: "",
+            //     webdav_url: "",
+            //     webdav_dir: "",
+            // }
+            ar = Object.assign(ar,config.cloudUploaders.WebDAV)
+        }
         //owncloud/webdav
         if(!s.group[e.ke].webdav &&
            ar.webdav_user&&
@@ -150,6 +160,7 @@ module.exports = function(s,config,lang){
     //Amazon S3
     var beforeAccountSaveForAmazonS3 = function(d){
         //d = save event
+        d.form.details.aws_use_global=d.d.aws_use_global
         d.form.details.use_aws_s3=d.d.use_aws_s3
     }
     var cloudDiskUseStartupForAmazonS3 = function(group,userDetails){
@@ -163,7 +174,17 @@ module.exports = function(s,config,lang){
     }
     var loadAmazonS3ForUser = function(e){
         // e = user
-        var ar = JSON.parse(e.details);
+        var ar = JSON.parse(e.details)
+        if(ar.aws_use_global === '1' && config.cloudUploaders && config.cloudUploaders.AmazonS3){
+            // {
+            //     aws_accessKeyId: "",
+            //     aws_secretAccessKey: "",
+            //     aws_region: "",
+            //     aws_s3_bucket: "",
+            //     aws_s3_dir: "",
+            // }
+            ar = Object.assign(ar,config.cloudUploaders.AmazonS3)
+        }
         //Amazon S3
         if(!s.group[e.ke].aws &&
            !s.group[e.ke].aws_s3 &&
@@ -262,7 +283,8 @@ module.exports = function(s,config,lang){
     //Backblaze B2
     var beforeAccountSaveForBackblazeB2 = function(d){
         //d = save event
-        d.form.details.use_aws_s3=d.d.use_bb_b2
+        d.form.details.b2_use_global=d.d.b2_use_global
+        d.form.details.use_bb_b2=d.d.use_bb_b2
     }
     var cloudDiskUseStartupForBackblazeB2 = function(group,userDetails){
         group.cloudDiskUse['b2'].name = 'Backblaze B2'
@@ -276,6 +298,15 @@ module.exports = function(s,config,lang){
     var loadBackblazeB2ForUser = function(e){
         var ar = JSON.parse(e.details);
         try{
+            if(ar.b2_use_global === '1' && config.cloudUploaders && config.cloudUploaders.BackblazeB2){
+                // {
+                //     bb_b2_accountId: "",
+                //     bb_b2_applicationKey: "",
+                //     bb_b2_bucket: "",
+                //     bb_b2_dir: "",
+                // }
+                ar = Object.assign(ar,config.cloudUploaders.BackblazeB2)
+            }
             if(!s.group[e.ke].bb_b2 &&
                ar.bb_b2_accountId &&
                ar.bb_b2_accountId !=='' &&

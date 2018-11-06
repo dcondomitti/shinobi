@@ -1,0 +1,9 @@
+{
+  "plug":"Dlib",
+  "host":"localhost",
+  "port":8080,
+  "key":"Dlib123123",
+  "mode":"client",
+  "type":"detector",
+  "connectionType":"websocket"
+}

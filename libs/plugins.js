@@ -30,8 +30,15 @@ module.exports = function(s,config,lang){
             s.systemLog('Connected to plugin : Detector - '+d.plug+' - '+d.type)
             switch(d.type){
                 default:case'detector':
-                    s.ocv={started:s.timeObject(),id:cn.id,plug:d.plug,notice:d.notice,isClientPlugin:true};
-                    cn.ocv=1;
+                    s.ocv = {
+                        started: s.timeObject(),
+                        id: cn.id,
+                        plug: d.plug,
+                        notice: d.notice,
+                        isClientPlugin: true,
+                        connectionType: d.connectionType
+                    };
+                    cn.ocv = 1;
                     s.tx({f:'detector_plugged',plug:d.plug,notice:d.notice},'CPU')
                 break;
             }
@@ -39,7 +46,14 @@ module.exports = function(s,config,lang){
             //is in host mode (camera.js is client)
             switch(d.type){
                 default:case'detector':
-                    s.ocv={started:s.timeObject(),id:"host",plug:d.plug,notice:d.notice,isHostPlugin:true};
+                    s.ocv = {
+                        started:s.timeObject(),
+                        id:"host",
+                        plug:d.plug,
+                        notice:d.notice,
+                        isHostPlugin:true,
+                        connectionType: d.connectionType
+                    };
                 break;
             }
         }

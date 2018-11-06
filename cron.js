@@ -46,22 +46,35 @@ if(databaseOptions.client === 'sqlite3' && databaseOptions.connection.filename =
     databaseOptions.connection.filename = __dirname+"/shinobi.sqlite"
 }
 s.databaseEngine = knex(databaseOptions)
+s.dateSubtract = function(date, interval, units){
+  var ret = date
+  var checkRollover = function() { if(ret.getDate() != date.getDate()) ret.setDate(0);};
+  switch(interval.toLowerCase()) {
+    case 'year'   :  ret.setFullYear(ret.getFullYear() - units); checkRollover();  break;
+    case 'quarter':  ret.setMonth(ret.getMonth() - 3*units); checkRollover();  break;
+    case 'month'  :  ret.setMonth(ret.getMonth() - units); checkRollover();  break;
+    case 'week'   :  ret.setDate(ret.getDate() - 7*units);  break;
+    case 'day'    :  ret.setDate(ret.getDate() - units);  break;
+    case 'hour'   :  ret.setTime(ret.getTime() - units*3600000);  break;
+    case 'minute' :  ret.setTime(ret.getTime() - units*60000);  break;
+    case 'second' :default:  ret.setTime(ret.getTime() - units*1000);  break;
+  }
+  return (new Date(ret))
+}
 s.sqlDate = function(value){
-    var dateQueryFunction = ''
-    if(databaseOptions.client === 'sqlite3'){
-        value = value.toLowerCase()
-        if (value.slice(-1) !== 's') {
-            value = value+'s'
-        }
-        dateQueryFunction = "datetime('now', '-"+value+"')"
-    }else{
-        value = value.toUpperCase()
-        if (value.slice(-1) === 'S') {
-            value = value.slice(0, -1);
-        }
-        dateQueryFunction = "DATE_SUB(NOW(), INTERVAL "+value+")"
+    var value = value.toLowerCase()
+    var splitValue = value.split(' ')
+    var amount = parseFloat(splitValue[0])
+    var today = new Date()
+    var query
+    if(value.indexOf('min') > -1){
+        query = s.dateSubtract(today,'minute',amount)
+    }else if(value.indexOf('day') > -1){
+        query = s.dateSubtract(today,'day',amount)
+    }else if(value.indexOf('hour') > -1){
+        query = s.dateSubtract(today,'hour',amount)
     }
-    return dateQueryFunction
+    return query
 }
 s.mergeQueryValues = function(query,values){
     if(!values){values=[]}
@@ -187,12 +200,11 @@ s.checkFilterRules = function(v,callback){
         v.d.filters={};
     }
     //delete old videos with filter
-    if(config.cron.deleteOld===true){
+    if(config.cron.deleteOld === true){
         var where = [{
             "p1":"end",
-            "p2":"<",
-            "p3":s.sqlDate(v.d.days+" DAYS"),
-            "p3_type":"function",
+            "p2":"<=",
+            "p3":s.sqlDate(v.d.days+" DAY")
         }]
         //exclude monitors with their own max days
         v.monitorsWithMaxKeepDays.forEach(function(mid){
@@ -298,7 +310,7 @@ s.deleteRowsWithNoVideo = function(v,callback){
     ){
         s.alreadyDeletedRowsWithNoVideosOnStart[v.ke]=true;
         es={};
-        s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND status!=0 AND details NOT LIKE \'%"archived":"1"%\' AND time < '+s.sqlDate('10 MINUTE'),[v.ke],function(err,evs){
+        s.sqlQuery('SELECT * FROM Videos WHERE ke=? AND status!=0 AND details NOT LIKE \'%"archived":"1"%\' AND time < ?',[v.ke,s.sqlDate('10 MINUTE')],function(err,evs){
             if(evs&&evs[0]){
                 es.del=[];es.ar=[v.ke];
                 evs.forEach(function(ev){
@@ -341,7 +353,7 @@ s.deleteRowsWithNoVideo = function(v,callback){
 s.deleteOldLogs = function(v,callback){
     if(!v.d.log_days||v.d.log_days==''){v.d.log_days=10}else{v.d.log_days=parseFloat(v.d.log_days)};
     if(config.cron.deleteLogs===true&&v.d.log_days!==0){
-        s.sqlQuery("DELETE FROM Logs WHERE ke=? AND `time` < "+s.sqlDate('? DAYS'),[v.ke,v.d.log_days],function(err,rrr){
+        s.sqlQuery("DELETE FROM Logs WHERE ke=? AND `time` < ?",[v.ke,s.sqlDate(v.d.log_days+' DAY')],function(err,rrr){
             callback()
             if(err)return console.error(err);
             if(rrr.affectedRows && rrr.affectedRows.length>0 || config.debugLog === true){
@@ -356,7 +368,7 @@ s.deleteOldLogs = function(v,callback){
 s.deleteOldEvents = function(v,callback){
     if(!v.d.event_days||v.d.event_days==''){v.d.event_days=10}else{v.d.event_days=parseFloat(v.d.event_days)};
     if(config.cron.deleteEvents===true&&v.d.event_days!==0){
-        s.sqlQuery("DELETE FROM Events WHERE ke=? AND `time` < "+s.sqlDate('? DAYS'),[v.ke,v.d.event_days],function(err,rrr){
+        s.sqlQuery("DELETE FROM Events WHERE ke=? AND `time` < ?",[v.ke,s.sqlDate(v.d.event_days+' DAY')],function(err,rrr){
             callback()
             if(err)return console.error(err);
             if(rrr.affectedRows && rrr.affectedRows.length>0 || config.debugLog === true){
@@ -371,8 +383,8 @@ s.deleteOldEvents = function(v,callback){
 s.deleteOldFileBins = function(v,callback){
     if(!v.d.fileBin_days||v.d.fileBin_days==''){v.d.fileBin_days=10}else{v.d.fileBin_days=parseFloat(v.d.fileBin_days)};
     if(config.cron.deleteFileBins===true&&v.d.fileBin_days!==0){
-        var fileBinQuery = " FROM Files WHERE ke=? AND `time` < "+s.sqlDate('? DAYS');
-        s.sqlQuery("SELECT *"+fileBinQuery,[v.ke,v.d.fileBin_days],function(err,files){
+        var fileBinQuery = " FROM Files WHERE ke=? AND `time` < ?";
+        s.sqlQuery("SELECT *"+fileBinQuery,[v.ke,s.sqlDate(v.d.fileBin_days+' DAY')],function(err,files){
             if(files&&files[0]){
                 //delete the files
                 files.forEach(function(file){
@@ -451,8 +463,7 @@ s.processUser = function(number,rows){
                         },{
                             "p1":"end",
                             "p2":"<",
-                            "p3":s.sqlDate(b.details.max_keep_days+" DAYS"),
-                            "p3_type":"function",
+                            "p3":s.sqlDate(b.details.max_keep_days+" DAY")
                         }]
                     };
                 }

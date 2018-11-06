@@ -6,6 +6,7 @@ var spawn = require('child_process').spawn;
 var jsonfile = require("jsonfile");
 var onvif = require("node-onvif");
 module.exports = function(s,config,lang,io){
+    s.clientSocketConnection = {}
     //send data to detector plugin
     s.ocvTx=function(data){
         if(!s.ocv){return}
@@ -426,7 +427,15 @@ module.exports = function(s,config,lang,io){
     //                    if(!s.group[d.ke].vid)s.group[d.ke].vid={};
                     if(!s.group[d.ke].users)s.group[d.ke].users={};
     //                    s.group[d.ke].vid[cn.id]={uid:d.uid};
-                    s.group[d.ke].users[d.auth]={cnid:cn.id,uid:r.uid,mail:r.mail,details:JSON.parse(r.details),logged_in_at:s.timeObject(new Date).format(),login_type:'Dashboard'}
+                    s.group[d.ke].users[d.auth] = {
+                        cnid: cn.id,
+                        uid: r.uid,
+                        mail: r.mail,
+                        details: JSON.parse(r.details),
+                        logged_in_at: s.timeObject(new Date).format(),
+                        login_type: 'Dashboard'
+                    }
+                    s.clientSocketConnection[cn.id] = cn
                     try{s.group[d.ke].users[d.auth].details=JSON.parse(r.details)}catch(er){}
                     if(s.group[d.ke].users[d.auth].details.get_server_log!=='0'){
                         cn.join('GRPLOG_'+d.ke)
@@ -588,75 +597,8 @@ module.exports = function(s,config,lang,io){
                                 }
                             break;
                             case'edit':
-                                s.sqlQuery('SELECT details FROM Users WHERE ke=? AND uid=?',[d.ke,d.uid],function(err,r){
-                                    if(r&&r[0]){
-                                        r=r[0];
-                                        d.d=JSON.parse(r.details);
-                                        if(!d.d.sub || d.d.user_change === "1"){
-                                            if(d.d.get_server_log==='1'){
-                                                cn.join('GRPLOG_'+d.ke)
-                                            }else{
-                                                cn.leave('GRPLOG_'+d.ke)
-                                            }
-                                            ///unchangeable from client side, so reset them in case they did.
-                                            d.form.details=JSON.parse(d.form.details)
-                                            s.beforeAccountSaveExtensions.forEach(function(extender){
-                                                extender(d)
-                                            })
-                                            //admin permissions
-                                            d.form.details.permissions=d.d.permissions
-                                            d.form.details.edit_size=d.d.edit_size
-                                            d.form.details.edit_days=d.d.edit_days
-                                            d.form.details.use_admin=d.d.use_admin
-                                            d.form.details.use_ldap=d.d.use_ldap
-                                            //check
-                                            if(d.d.edit_days=="0"){
-                                                d.form.details.days=d.d.days;
-                                            }
-                                            if(d.d.edit_size=="0"){
-                                                d.form.details.size=d.d.size;
-                                            }
-                                            if(d.d.sub){
-                                                d.form.details.sub=d.d.sub;
-                                                if(d.d.monitors){d.form.details.monitors=d.d.monitors;}
-                                                if(d.d.allmonitors){d.form.details.allmonitors=d.d.allmonitors;}
-                                                if(d.d.monitor_create){d.form.details.monitor_create=d.d.monitor_create;}
-                                                if(d.d.video_delete){d.form.details.video_delete=d.d.video_delete;}
-                                                if(d.d.video_view){d.form.details.video_view=d.d.video_view;}
-                                                if(d.d.monitor_edit){d.form.details.monitor_edit=d.d.monitor_edit;}
-                                                if(d.d.size){d.form.details.size=d.d.size;}
-                                                if(d.d.days){d.form.details.days=d.d.days;}
-                                                delete(d.form.details.mon_groups)
-                                            }
-                                            var newSize = d.form.details.size || 10000
-                                            d.form.details=JSON.stringify(d.form.details)
-                                            ///
-                                            d.set=[],d.ar=[];
-                                            if(d.form.pass&&d.form.pass!==''){d.form.pass=s.createHash(d.form.pass);}else{delete(d.form.pass)};
-                                            delete(d.form.password_again);
-                                            d.for=Object.keys(d.form);
-                                            d.for.forEach(function(v){
-                                                d.set.push(v+'=?'),d.ar.push(d.form[v]);
-                                            });
-                                            d.ar.push(d.ke),d.ar.push(d.uid);
-                                            s.sqlQuery('UPDATE Users SET '+d.set.join(',')+' WHERE ke=? AND uid=?',d.ar,function(err,r){
-                                                if(!d.d.sub){
-                                                    var user = Object.assign(d.form,{ke : d.ke})
-                                                    var userDetails = JSON.parse(d.form.details)
-                                                    s.group[d.ke].sizeLimit = parseFloat(newSize)
-                                                    s.onAccountSaveExtensions.forEach(function(extender){
-                                                        extender(s.group[d.ke],userDetails)
-                                                    })
-                                                    s.unloadGroupAppExtensions.forEach(function(extender){
-                                                        extender(user)
-                                                    })
-                                                    s.loadGroupApps(d)
-                                                }
-                                                tx({f:'user_settings_change',uid:d.uid,ke:d.ke,form:d.form});
-                                            });
-                                        }
-                                    }
-                                })
+                                d.cnid = cn.id
+                                s.accountSettingsEdit(d)
                             break;
                         }
                     break;
@@ -1428,6 +1370,7 @@ module.exports = function(s,config,lang,io){
             if(cn.superSessionKey){
                 delete(s.superUsersApi[cn.superSessionKey])
             }
+            delete(s.clientSocketConnection[cn.id])
         })
     });
 }

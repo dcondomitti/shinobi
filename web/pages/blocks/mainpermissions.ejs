@@ -143,6 +143,30 @@
                 </select></div>
             </label>
         </div>
+        <div class="form-group h_l_input h_l_limited">
+            <label><div><span><%-lang['Use Global Amazon S3 Video Storage']%></span></div>
+                <div><select class="form-control" detail="aws_use_global">
+                    <option value="1" selected><%-lang.Yes%></option>
+                    <option value="0"><%-lang.No%></option>
+                </select></div>
+            </label>
+        </div>
+        <div class="form-group h_l_input h_l_limited">
+            <label><div><span><%-lang['Use Global Backblaze B2 Video Storage']%></span></div>
+                <div><select class="form-control" detail="b2_use_global">
+                    <option value="1" selected><%-lang.Yes%></option>
+                    <option value="0"><%-lang.No%></option>
+                </select></div>
+            </label>
+        </div>
+        <div class="form-group h_l_input h_l_limited">
+            <label><div><span><%-lang['Use Global WebDAV Video Storage']%></span></div>
+                <div><select class="form-control" detail="webdav_use_global">
+                    <option value="1" selected><%-lang.Yes%></option>
+                    <option value="0"><%-lang.No%></option>
+                </select></div>
+            </label>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default pull-left" data-dismiss="modal"><i class="fa fa-times"></i> <%-lang.Close%></button>
@@ -223,6 +247,14 @@ $.aN.e.on('change','[selector]',function(e){
     $.aN.e.find('.'+e.a+'_input').hide()
     $.aN.e.find('.'+e.a+'_'+e.v).show();
 }).find('[selector]').change();
+$.aN.e.find('[detail="permissions"]').change(function(){
+    var hasAllPrivileges = $(this).val() === 'all'
+    var theClass = $('.h_l_limited')
+    if(hasAllPrivileges){
+        theClass.find('select').val('1')
+        theClass.find('input').val('')
+    }
+})
 //simple lister
 $.aC={e:$('#accounts')};$.aC.t=$.aC.e.find('table')
 $.aC.e.on('click','.add',function(e){

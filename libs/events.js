@@ -12,9 +12,7 @@ module.exports = function(s,config,lang){
                 })
             break;
             case'delete':
-                d.videos.forEach(function(v,n){
-                    s.deleteVideo(v)
-                })
+                s.deleteListOfVideos(d.videos)
             break;
             case'execute':
                 exec(d.execute,{detached: true})
@@ -373,6 +371,7 @@ module.exports = function(s,config,lang){
                     delete(s.api[d.auth])
                     s.userLog(d,{type:"Traditional Recording",msg:'Clear Recorder Process'})
                     delete(s.group[d.ke].mon[d.id].eventBasedRecording.process)
+                    clearTimeout(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
                     delete(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
                     clearTimeout(s.group[d.ke].mon[d.id].recordingChecker)
                 })
