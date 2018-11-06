@@ -3902,7 +3902,8 @@
                                     return (new Date(now.getTime() + now.getTimezoneOffset() * 60000));
                                 }
                                 var _this = this;
-                                var t = _this._ws = io(e.url,{
+                                var t = _this._ws = io(e.config.url,{
+                                    path: e.config.path,
                                     transports:['websocket']
                                 });
                                 l._ws = t;

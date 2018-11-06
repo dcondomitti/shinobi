@@ -235,7 +235,6 @@ module.exports = function(s,config,lang,app){
                 res.setHeader('Content-Type', 'application/json')
                 res.end(s.prettyPrint({ok:false}))
             }else{
-                console.log(screenChooser(req.params.screen))
                 s.renderPage(req,res,config.renderPaths.index,{
                     failedLogin: true,
                     message: lang.failedLoginText2,

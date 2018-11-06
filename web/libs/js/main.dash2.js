@@ -2127,16 +2127,7 @@ $.ccio.globalWebsocket=function(d,user){
             if($.ccio.op().jpeg_on===true){
                 $.ccio.init('jpegMode',$.ccio.mon[d.ke+d.id+user.auth_token]);
             }else{
-                var url = $.ccio.init('location',user);
-                var prefix = 'ws'
-                if(location.protocol==='https:'){
-                    prefix = 'wss'
-                }
-                if(url==''){
-                    url = prefix+'://'+location.host+location.pathname
-                }else{
-                    url = prefix+'://'+url.split('://')[1]
-                }
+                var path = tool.checkCorrectPathEnding(location.pathname)+'socket.io'
                 switch(d.d.stream_type){
                     case'jpeg':
                         $.ccio.init('jpegMode',$.ccio.mon[d.ke+d.id+user.auth_token]);
@@ -2145,7 +2136,7 @@ $.ccio.globalWebsocket=function(d,user){
                         if($.ccio.mon[d.ke+d.id+user.auth_token].Base64 && $.ccio.mon[d.ke+d.id+user.auth_token].Base64.connected){
                             $.ccio.mon[d.ke+d.id+user.auth_token].Base64.disconnect()
                         }
-                        $.ccio.mon[d.ke+d.id+user.auth_token].Base64 = io(url,{transports: ['websocket'], forceNew: false})
+                        $.ccio.mon[d.ke+d.id+user.auth_token].Base64 = io(location.origin,{ path: path, transports: ['websocket'], forceNew: false})
                         var ws = $.ccio.mon[d.ke+d.id+user.auth_token].Base64
                         var buffer
                         ws.on('diconnect',function(){
@@ -2153,7 +2144,6 @@ $.ccio.globalWebsocket=function(d,user){
                         })
                         ws.on('connect',function(){
                             ws.emit('Base64',{
-                                url: url,
                                 auth: user.auth_token,
                                 uid: user.uid,
                                 ke: d.ke,
@@ -2224,7 +2214,8 @@ $.ccio.globalWebsocket=function(d,user){
                                         ke:d.ke,
                                         uid:user.uid,
                                         id:d.id,
-                                        url: url,
+                                        url: location.origin,
+                                        path: path,
                                         onError : onPoseidonError
                                     })
                                     $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.start();
@@ -2261,7 +2252,8 @@ $.ccio.globalWebsocket=function(d,user){
                                     id:d.id,
                                     maxLatency:d.d.stream_flv_maxLatency,
                                     hasAudio:false,
-                                    url: url
+                                    url: location.origin,
+                                    path: path
                                 }
                             }else{
                                 options = {
@@ -2338,14 +2330,13 @@ $.ccio.globalWebsocket=function(d,user){
                             $.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream.abort()
                         }
                         if(d.d.stream_flv_type==='ws'){
-                          $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket = io(url,{transports: ['websocket'], forceNew: false})
+                          $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket = io(location.origin,{ path: path, transports: ['websocket'], forceNew: false})
                           var ws = $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket
                           ws.on('diconnect',function(){
                               console.log('h265Socket Stream Disconnected')
                           })
                           ws.on('connect',function(){
                               ws.emit('h265',{
-                                  url: url,
                                   auth: user.auth_token,
                                   uid: user.uid,
                                   ke: d.ke,

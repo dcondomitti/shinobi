@@ -102,7 +102,7 @@ module.exports = function(s,config,lang,app){
     app.get([config.webPaths.apiPrefix+':auth/mjpeg/:ke/:id',config.webPaths.apiPrefix+':auth/mjpeg/:ke/:id/:channel'], function(req,res) {
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         if(req.query.full=='true'){
-            s.renderPage(req,res,config.renderPaths.mjpeg,{url:'/'+req.params.auth+'/mjpeg/'+req.params.ke+'/'+req.params.id,originalURL:s.getOriginalUrl(req)});
+            s.renderPage(req,res,config.renderPaths.mjpeg,{url:config.webPaths.apiPrefix + req.params.auth+'/mjpeg/'+req.params.ke+'/'+req.params.id,originalURL:s.getOriginalUrl(req)});
             res.end()
         }else{
             s.auth(req.params,function(user){
