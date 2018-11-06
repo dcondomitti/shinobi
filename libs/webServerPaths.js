@@ -153,17 +153,36 @@ module.exports = function(s,config,lang,app){
         if(req.query.json === 'true'){
             res.header("Access-Control-Allow-Origin",req.headers.origin);
         }
+        var screenChooser = function(screen){
+            var search = function(screen){
+                if(req.url.indexOf(screen) > -1){
+                    return true
+                }
+                return false
+            }
+            switch(true){
+                case search(config.webPaths.admin):
+                    return 'admin'
+                break;
+                case search(config.webPaths.super):
+                    return 'super'
+                break;
+                default:
+                    return 'dashboard'
+                break;
+            }
+        }
         // brute check
         if(s.failedLoginAttempts[req.body.mail] && s.failedLoginAttempts[req.body.mail].failCount >= 5){
             if(req.query.json=='true'){
                 res.end(s.prettyPrint({ok:false}))
             }else{
                 s.renderPage(req,res,config.renderPaths.index,{
-                    failedLogin:true,
-                    message:lang.failedLoginText1,
-                    lang:lang,
-                    config:config,
-                    screen:req.params.screen
+                    failedLogin: true,
+                    message: lang.failedLoginText1,
+                    lang: lang,
+                    config: config,
+                    screen: screenChooser(req.params.screen)
                 },function(err,html){
                     if(err){
                         s.systemLog(err)
@@ -216,12 +235,13 @@ module.exports = function(s,config,lang,app){
                 res.setHeader('Content-Type', 'application/json')
                 res.end(s.prettyPrint({ok:false}))
             }else{
+                console.log(screenChooser(req.params.screen))
                 s.renderPage(req,res,config.renderPaths.index,{
-                    failedLogin:true,
-                    message:lang.failedLoginText2,
-                    lang:lang,
-                    config:config,
-                    screen:req.params.screen
+                    failedLogin: true,
+                    message: lang.failedLoginText2,
+                    lang: lang,
+                    config: config,
+                    screen: screenChooser(req.params.screen)
                 },function(err,html){
                     if(err){
                         s.systemLog(err)
