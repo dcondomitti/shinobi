@@ -575,7 +575,7 @@ switch($user.details.lang){
                     k.e=$('#monitor_live_'+d.mid+user.auth_token+' .stream-element');
                     $.ccio.init('jpegModeStop',d,user);
                     k.run=function(){
-                        k.e.attr('src',user.auth_token+'/jpeg/'+d.ke+'/'+d.mid+'/s.jpg?time='+(new Date()).getTime())
+                        k.e.attr('src',$.ccio.init('location',user)+user.auth_token+'/jpeg/'+d.ke+'/'+d.mid+'/s.jpg?time='+(new Date()).getTime())
                     }
                     k.e.load(function(){
                         $.ccio.mon[d.ke+d.mid+user.auth_token].jpegInterval=setTimeout(k.run,1000/k.jpegInterval);
