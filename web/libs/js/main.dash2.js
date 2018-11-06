@@ -209,7 +209,7 @@ switch($user.details.lang){
                         url=url+'/'
                     }
                 }else{
-                    url = '<%-originalURL%>'
+                    url = '<%-window.libURL%>'
                 }
                 return url
             break;
@@ -2632,7 +2632,7 @@ $.ccio.globalWebsocket=function(d,user){
     }
 }
 $user.ws=io(location.origin,{
-    path : location.pathname+'socket.io'
+    path : tool.checkCorrectPathEnding(location.pathname)+'socket.io'
 });
 $user.ws.on('connect',function (d){
     $(document).ready(function(e){
