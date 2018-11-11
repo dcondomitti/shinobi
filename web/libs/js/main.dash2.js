@@ -7,7 +7,11 @@ window.chartColors = {
     purple: 'rgb(153, 102, 255)',
     grey: 'rgb(201, 203, 207)'
 };
-$user.details=JSON.parse($user.details)
+try{
+    $user.details = JSON.parse($user.details)
+}catch(err){
+
+}
 $.ccio={
     fr:$('#files_recent'),
     mon:{}
@@ -209,7 +213,7 @@ switch($user.details.lang){
                         url=url+'/'
                     }
                 }else{
-                    url = '<%-originalURL%>'
+                    url = '<%-window.libURL%>'
                 }
                 return url
             break;
@@ -575,7 +579,7 @@ switch($user.details.lang){
                     k.e=$('#monitor_live_'+d.mid+user.auth_token+' .stream-element');
                     $.ccio.init('jpegModeStop',d,user);
                     k.run=function(){
-                        k.e.attr('src',user.auth_token+'/jpeg/'+d.ke+'/'+d.mid+'/s.jpg?time='+(new Date()).getTime())
+                        k.e.attr('src',$.ccio.init('location',user)+user.auth_token+'/jpeg/'+d.ke+'/'+d.mid+'/s.jpg?time='+(new Date()).getTime())
                     }
                     k.e.load(function(){
                         $.ccio.mon[d.ke+d.mid+user.auth_token].jpegInterval=setTimeout(k.run,1000/k.jpegInterval);
@@ -1876,7 +1880,7 @@ switch($user.details.lang){
         return ii.o
     }
 //websocket functions
-$.users={}
+$.users = {}
 $.ccio.globalWebsocket=function(d,user){
     if(d.f!=='monitor_frame'&&d.f!=='os'&&d.f!=='video_delete'&&d.f!=='detector_trigger'&&d.f!=='detector_record_timeout_start'&&d.f!=='log'){$.ccio.log(d);}
     if(!user){
@@ -2127,16 +2131,7 @@ $.ccio.globalWebsocket=function(d,user){
             if($.ccio.op().jpeg_on===true){
                 $.ccio.init('jpegMode',$.ccio.mon[d.ke+d.id+user.auth_token]);
             }else{
-                var url = $.ccio.init('location',user);
-                var prefix = 'ws'
-                if(location.protocol==='https:'){
-                    prefix = 'wss'
-                }
-                if(url==''){
-                    url = prefix+'://'+location.host+location.pathname
-                }else{
-                    url = prefix+'://'+url.split('://')[1]
-                }
+                var path = tool.checkCorrectPathEnding(location.pathname)+'socket.io'
                 switch(d.d.stream_type){
                     case'jpeg':
                         $.ccio.init('jpegMode',$.ccio.mon[d.ke+d.id+user.auth_token]);
@@ -2145,7 +2140,7 @@ $.ccio.globalWebsocket=function(d,user){
                         if($.ccio.mon[d.ke+d.id+user.auth_token].Base64 && $.ccio.mon[d.ke+d.id+user.auth_token].Base64.connected){
                             $.ccio.mon[d.ke+d.id+user.auth_token].Base64.disconnect()
                         }
-                        $.ccio.mon[d.ke+d.id+user.auth_token].Base64 = io(url,{transports: ['websocket'], forceNew: false})
+                        $.ccio.mon[d.ke+d.id+user.auth_token].Base64 = io(location.origin,{ path: path, transports: ['websocket'], forceNew: false})
                         var ws = $.ccio.mon[d.ke+d.id+user.auth_token].Base64
                         var buffer
                         ws.on('diconnect',function(){
@@ -2153,7 +2148,6 @@ $.ccio.globalWebsocket=function(d,user){
                         })
                         ws.on('connect',function(){
                             ws.emit('Base64',{
-                                url: url,
                                 auth: user.auth_token,
                                 uid: user.uid,
                                 ke: d.ke,
@@ -2224,7 +2218,8 @@ $.ccio.globalWebsocket=function(d,user){
                                         ke:d.ke,
                                         uid:user.uid,
                                         id:d.id,
-                                        url: url,
+                                        url: location.origin,
+                                        path: path,
                                         onError : onPoseidonError
                                     })
                                     $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.start();
@@ -2261,7 +2256,8 @@ $.ccio.globalWebsocket=function(d,user){
                                     id:d.id,
                                     maxLatency:d.d.stream_flv_maxLatency,
                                     hasAudio:false,
-                                    url: url
+                                    url: location.origin,
+                                    path: path
                                 }
                             }else{
                                 options = {
@@ -2338,14 +2334,13 @@ $.ccio.globalWebsocket=function(d,user){
                             $.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream.abort()
                         }
                         if(d.d.stream_flv_type==='ws'){
-                          $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket = io(url,{transports: ['websocket'], forceNew: false})
+                          $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket = io(location.origin,{ path: path, transports: ['websocket'], forceNew: false})
                           var ws = $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket
                           ws.on('diconnect',function(){
                               console.log('h265Socket Stream Disconnected')
                           })
                           ws.on('connect',function(){
                               ws.emit('h265',{
-                                  url: url,
                                   auth: user.auth_token,
                                   uid: user.uid,
                                   ke: d.ke,
@@ -2469,7 +2464,9 @@ $.ccio.globalWebsocket=function(d,user){
             }
             $.ccio.init('monitorInfo',d)
             $.gR.drawList();
-            $.ccio.init('note',{title:'Monitor Saved',text:'<b>'+d.mon.name+'</b> <small>'+d.mon.mid+'</small> has been saved.',type:'success'});
+            if(!d.silenceNote){
+                $.ccio.init('note',{title:'Monitor Saved',text:'<b>'+d.mon.name+'</b> <small>'+d.mon.mid+'</small> has been saved.',type:'success'});
+            }
         break;
         case'monitor_starting':
 //            switch(d.mode){case'start':d.mode='Watch';break;case'record':d.mode='Record';break;}
@@ -2632,7 +2629,7 @@ $.ccio.globalWebsocket=function(d,user){
     }
 }
 $user.ws=io(location.origin,{
-    path : location.pathname+'socket.io'
+    path : tool.checkCorrectPathEnding(location.pathname)+'socket.io'
 });
 $user.ws.on('connect',function (d){
     $(document).ready(function(e){
@@ -3000,6 +2997,7 @@ $.zO.initCanvas=function(){
         $.zO.f.find('[name="sensitivity"]').val('')
         $.zO.f.find('[name="max_sensitivity"]').val('')
         $.zO.f.find('[name="threshold"]').val('')
+        $.zO.f.find('[name="color_threshold"]').val('')
         $.zO.rp.empty()
     }else{
         e.cord=$.zO.regionViewerDetails.cords[e.val];
@@ -3015,6 +3013,7 @@ $.zO.initCanvas=function(){
         $.zO.f.find('[name="sensitivity"]').val(e.cord.sensitivity)
         $.zO.f.find('[name="max_sensitivity"]').val(e.cord.max_sensitivity)
         $.zO.f.find('[name="threshold"]').val(e.cord.threshold)
+        $.zO.f.find('[name="color_threshold"]').val(e.cord.color_threshold)
         $.zO.e.find('.canvas_holder canvas').remove();
 
         $.zO.initLiveStream()
@@ -3119,7 +3118,7 @@ $.zO.e.on('click','.add',function(e){
         }
     })
     $.zO.regionViewerDetails.cords=e.save;
-    $.zO.regionViewerDetails.cords[e.gid]={name:e.gid,sensitivity:0.0005,max_sensitivity:'',threshold:1,points:[[0,0],[0,100],[100,0]]};
+    $.zO.regionViewerDetails.cords[e.gid]={name:e.gid,sensitivity:0.0005,max_sensitivity:'',threshold:1,color_threshold:9,points:[[0,0],[0,100],[100,0]]};
     $.zO.rl.append('<option value="'+e.gid+'">'+e.gid+'</option>');
     $.zO.rl.val(e.gid)
     $.zO.rl.change();
@@ -3575,6 +3574,7 @@ $.aM.generateDefaultMonitorSettings=function(){
         "detector_sensitivity": "",
         "detector_max_sensitivity": "",
         "detector_threshold": "1",
+        "detector_color_threshold": "",
         "cords": "[]",
         "detector_buffer_vcodec": "auto",
         "detector_buffer_fps": "",
@@ -5698,7 +5698,7 @@ $('body')
             }
             if(!e.d.cords||e.d.cords===''){
                 e.d.cords={
-                    red:{ name:"red",sensitivity:0.0005, max_sensitivity:"",points:[[0,0],[0,100],[100,0]] },
+                    red:{ name:"red",sensitivity:0.0005, max_sensitivity:"",color_threshold:"",points:[[0,0],[0,100],[100,0]] },
                 }
             }
             $.zO.regionViewerDetails=e.d;
@@ -6107,14 +6107,14 @@ $('body')
         })
     }
     //set dropdown toggle preferences
-    e.o=$.ccio.op().dropdown_toggle;
+    e.o = $.ccio.op().dropdown_toggle
     if(e.o){
         $.each(e.o,function(n,v){
             $('[dropdown_toggle="'+n+'"]').val(v).change()
         })
     }
     //set localStorage input values
-    e.o=$.ccio.op();
+    e.o = $.ccio.op()
     if(e.o){
         $.each(e.o,function(n,v){
             if(typeof v==='string'){

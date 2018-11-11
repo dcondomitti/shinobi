@@ -34,3 +34,10 @@ tool.getVideoImage = function (path, secs, callback) {
   };
   video.src = path;
 }
+tool.checkCorrectPathEnding = function(x){
+    var length=x.length
+    if(x.charAt(length-1)!=='/'){
+        x=x+'/'
+    }
+    return x
+}

@@ -155,7 +155,9 @@ module.exports = function(s,config,lang,app){
         config.webPaths.adminApiPrefix+':auth/configureMonitor/:ke/:id',
         config.webPaths.adminApiPrefix+':auth/configureMonitor/:ke/:id/:f'
     ], function (req,res){
-        req.ret={ok:false};
+        var endData = {
+            ok: false
+        }
         res.setHeader('Content-Type', 'application/json');
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
@@ -163,88 +165,28 @@ module.exports = function(s,config,lang,app){
             if(req.params.f !== 'delete'){
                 var form = s.getPostData(req)
                 if(!form){
-                    req.ret.msg = user.lang.monitorEditText1;
-                    res.end(s.prettyPrint(req.ret))
-                    return
+                   endData.msg = user.lang.monitorEditText1;
+                   res.end(s.prettyPrint(endData))
+                   return
                 }
+                form.mid = req.params.id.replace(/[^\w\s]/gi,'').replace(/ /g,'')
                 if(!user.details.sub ||
                    user.details.allmonitors === '1' ||
                    hasRestrictions && user.details.monitor_edit.indexOf(form.mid) >- 1 ||
                    hasRestrictions && user.details.monitor_create === '1'){
-                        if(form&&form.mid&&form.name){
-                            req.set=[],req.ar=[];
-                            form.mid=req.params.id.replace(/[^\w\s]/gi,'').replace(/ /g,'');
-                            try{
-                                JSON.parse(form.details)
-                            }catch(er){
-                                if(!form.details||!form.details.stream_type){
-                                    req.ret.msg=user.lang.monitorEditText2;
-                                    res.end(s.prettyPrint(req.ret))
-                                    return
-                                }else{
-                                    form.details=JSON.stringify(form.details)
-                                }
-                            }
-                            form.ke=req.params.ke
-                            req.logObject={details:JSON.parse(form.details),ke:req.params.ke,mid:req.params.id}
-                            s.sqlQuery('SELECT * FROM Monitors WHERE ke=? AND mid=?',[form.ke,form.mid],function(er,r){
-                                req.tx={f:'monitor_edit',mid:form.mid,ke:form.ke,mon:form};
-                                if(r&&r[0]){
-                                    req.tx.new=false;
-                                    Object.keys(form).forEach(function(v){
-                                        if(form[v]&&form[v]!==''){
-                                            req.set.push(v+'=?'),req.ar.push(form[v]);
-                                        }
-                                    })
-                                    req.set=req.set.join(',');
-                                    req.ar.push(form.ke),req.ar.push(form.mid);
-                                    s.userLog(form,{type:'Monitor Updated',msg:'by user : '+user.uid});
-                                    req.ret.msg=user.lang['Monitor Updated by user']+' : '+user.uid;
-                                    s.sqlQuery('UPDATE Monitors SET '+req.set+' WHERE ke=? AND mid=?',req.ar)
-                                    req.finish=1;
-                                }else{
-                                    if(!s.group[form.ke].init.max_camera||s.group[form.ke].init.max_camera==''||Object.keys(s.group[form.ke].mon).length <= parseInt(s.group[form.ke].init.max_camera)){
-                                        req.tx.new=true;
-                                        req.st=[];
-                                        Object.keys(form).forEach(function(v){
-                                            if(form[v]&&form[v]!==''){
-                                                req.set.push(v),req.st.push('?'),req.ar.push(form[v]);
-                                            }
-                                        })
-            //                                        req.set.push('ke'),req.st.push('?'),req.ar.push(form.ke);
-                                        req.set=req.set.join(','),req.st=req.st.join(',');
-                                        s.userLog(form,{type:'Monitor Added',msg:'by user : '+user.uid});
-                                        req.ret.msg=user.lang['Monitor Added by user']+' : '+user.uid;
-                                        s.sqlQuery('INSERT INTO Monitors ('+req.set+') VALUES ('+req.st+')',req.ar)
-                                        req.finish=1;
-                                    }else{
-                                        req.tx.f='monitor_edit_failed';
-                                        req.tx.ff='max_reached';
-                                        req.ret.msg=user.lang.monitorEditFailedMaxReached;
-                                    }
-                                }
-                                if(req.finish===1){
-                                    form.details=JSON.parse(form.details)
-                                    req.ret.ok=true;
-                                    s.initiateMonitorObject({mid:form.mid,ke:form.ke});
-                                    s.group[form.ke].mon_conf[form.mid]=s.cleanMonitorObject(form);
-                                    if(form.mode==='stop'){
-                                        s.camera('stop',form);
-                                    }else{
-                                        s.camera('stop',form);setTimeout(function(){s.camera(form.mode,form);},5000)
-                                    };
-                                    s.tx(req.tx,'STR_'+form.ke);
-                                };
-                                s.tx(req.tx,'GRP_'+form.ke);
-                                res.end(s.prettyPrint(req.ret))
-                            })
+                        if(form && form.name){
+                            s.checkDetails(form)
+                            form.ke = req.params.ke
+                            s.addOrEditMonitor(form,function(err,endData){
+                                res.end(s.prettyPrint(endData))
+                            },user)
                         }else{
-                            req.ret.msg=user.lang.monitorEditText1;
-                            res.end(s.prettyPrint(req.ret))
+                            endData.msg = user.lang.monitorEditText1;
+                            res.end(s.prettyPrint(endData))
                         }
                 }else{
-                        req.ret.msg=user.lang['Not Permitted'];
-                        res.end(s.prettyPrint(req.ret))
+                        endData.msg = user.lang['Not Permitted']
+                        res.end(s.prettyPrint(endData))
                 }
             }else{
                 if(!user.details.sub || user.details.allmonitors === '1' || user.details.monitor_edit.indexOf(req.params.id) > -1 || hasRestrictions && user.details.monitor_create === '1'){
@@ -277,12 +219,12 @@ module.exports = function(s,config,lang,app){
                             }
                         })
                     }
-                    req.ret.ok=true;
-                    req.ret.msg='Monitor Deleted by user : '+user.uid
-                    res.end(s.prettyPrint(req.ret))
+                    endData.ok=true;
+                    endData.msg='Monitor Deleted by user : '+user.uid
+                    res.end(s.prettyPrint(endData))
                 }else{
-                    req.ret.msg=user.lang['Not Permitted'];
-                    res.end(s.prettyPrint(req.ret))
+                    endData.msg=user.lang['Not Permitted'];
+                    res.end(s.prettyPrint(endData))
                 }
             }
         },res,req)
@@ -419,6 +361,141 @@ module.exports = function(s,config,lang,app){
                 }
                 s.closeJsonResponse(res,endData)
             })
+        },res,req)
+    })
+    /**
+    * API : Administrator : Change Group Preset. Currently affects Monitors only.
+    */
+    app.all([
+        config.webPaths.apiPrefix+':auth/monitorStates/:ke/:stateName',
+        config.webPaths.apiPrefix+':auth/monitorStates/:ke/:stateName/:action',
+        config.webPaths.adminApiPrefix+':auth/monitorStates/:ke/:stateName',
+        config.webPaths.adminApiPrefix+':auth/monitorStates/:ke/:stateName/:action',
+    ],function (req,res){
+        s.auth(req.params,function(user){
+            var endData = {
+                ok : false
+            }
+            if(user.details.sub){
+                endData.msg = user.lang['Not Permitted']
+                s.closeJsonResponse(res,endData)
+                return
+            }
+            var findPreset = function(callback){
+                s.sqlQuery("SELECT * FROM Presets WHERE ke=? AND type=? AND name=? LIMIT 1",[req.params.ke,'monitorStates',req.params.stateName],function(err,presets){
+                    var preset
+                    var notFound = false
+                    if(presets && presets[0]){
+                        preset = presets[0]
+                        s.checkDetails(preset)
+                    }else{
+                        notFound = true
+                    }
+                    callback(notFound,preset)
+                })
+            }
+            switch(req.params.action){
+                case'insert':case'edit':
+                    var form = s.getPostData(req)
+                    s.checkDetails(form)
+                    if(!form || !form.monitors){
+                        endData.msg = user.lang['Form Data Not Found']
+                        s.closeJsonResponse(res,endData)
+                        return
+                    }
+                    findPreset(function(notFound,preset){
+                        if(notFound === true){
+                            endData.msg = lang["Inserted State Configuration"]
+                            var details = {
+                                monitors : form.monitors
+                            }
+                            var insertData = {
+                                ke: req.params.ke,
+                                name: req.params.stateName,
+                                details: s.s(details),
+                                type: 'monitorStates'
+                            }
+                            s.sqlQuery('INSERT INTO Presets ('+Object.keys(insertData).join(',')+') VALUES (?,?,?,?)',Object.values(insertData))
+                            s.tx({
+                                f: 'add_group_state',
+                                details: details,
+                                ke: req.params.ke,
+                                name: req.params.stateName
+                            },'GRP_'+req.params.ke)
+                        }else{
+                            endData.msg = lang["Edited State Configuration"]
+                            var details = Object.assign(preset.details,{
+                                monitors : form.monitors
+                            })
+                            s.sqlQuery('UPDATE Presets SET details=? WHERE ke=? AND name=?',[s.s(details),req.params.ke,req.params.stateName])
+                            s.tx({
+                                f: 'edit_group_state',
+                                details: details,
+                                ke: req.params.ke,
+                                name: req.params.stateName
+                            },'GRP_'+req.params.ke)
+                        }
+                        endData.ok = true
+                        s.closeJsonResponse(res,endData)
+                    })
+                break;
+                case'delete':
+                    findPreset(function(notFound,preset){
+                        if(notFound === true){
+                            endData.msg = user.lang['State Configuration Not Found']
+                            s.closeJsonResponse(res,endData)
+                        }else{
+                            s.sqlQuery('DELETE FROM Presets WHERE ke=? AND name=?',[req.params.ke,req.params.stateName],function(err){
+                                if(!err){
+                                    endData.msg = lang["Deleted State Configuration"]
+                                    endData.ok = true
+                                }
+                                s.closeJsonResponse(res,endData)
+                            })
+                        }
+                    })
+                break;
+                default://change monitors according to state
+                    findPreset(function(notFound,preset){
+                        if(notFound === false){
+                            var sqlQuery = 'SELECT * FROM Monitors WHERE ke=? AND '
+                            var monitorQuery = []
+                            var sqlQueryValues = [req.params.ke]
+                            var monitorPresets = {}
+                            preset.details.monitors.forEach(function(monitor){
+                                monitorQuery.push('mid=?')
+                                sqlQueryValues.push(monitor.mid)
+                                monitorPresets[monitor.mid] = monitor
+                            })
+                            sqlQuery += '('+monitorQuery.join(' OR ')+')'
+                            s.sqlQuery(sqlQuery,sqlQueryValues,function(err,monitors){
+                                if(monitors && monitors[0]){
+                                    monitors.forEach(function(monitor){
+                                        s.checkDetails(monitor)
+                                        s.checkDetails(monitorPresets[monitor.mid])
+                                        var monitorPreset = monitorPresets[monitor.mid]
+                                        monitorPreset.details = Object.assign(monitor.details,monitorPreset.details)
+                                        monitor = s.cleanMonitorObjectForDatabase(Object.assign(monitor,monitorPreset))
+                                        monitor.details = JSON.stringify(monitor.details)
+                                        s.addOrEditMonitor(Object.assign(monitor,{}),function(err,endData){
+
+                                        },user)
+                                    })
+                                    endData.ok = true
+                                    s.tx({f:'change_group_state',ke:req.params.ke,name:req.params.stateName},'GRP_'+req.params.ke)
+                                    s.closeJsonResponse(res,endData)
+                                }else{
+                                    endData.msg = user.lang['State Configuration has no monitors associated']
+                                    s.closeJsonResponse(res,endData)
+                                }
+                            })
+                        }else{
+                            endData.msg = user.lang['State Configuration Not Found']
+                            s.closeJsonResponse(res,endData)
+                        }
+                    })
+                break;
+            }
         },res,req)
     })
 }

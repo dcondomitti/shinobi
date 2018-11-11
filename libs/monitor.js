@@ -73,6 +73,16 @@ module.exports = function(s,config,lang){
         if(noPath !== true)url += e.path
         return url
     }
+    s.cleanMonitorObjectForDatabase = function(dirtyMonitor){
+        var cleanMonitor = {}
+        var acceptedFields = ['mid','ke','name','shto','shfr','details','type','ext','protocol','host','path','port','fps','mode','width','height']
+        Object.keys(dirtyMonitor).forEach(function(key){
+            if(acceptedFields.indexOf(key) > -1){
+                cleanMonitor[key] = dirtyMonitor[key]
+            }
+        })
+        return cleanMonitor
+    }
     s.cleanMonitorObject = function(e){
         x={keys:Object.keys(e),ar:{}};
         x.keys.forEach(function(v){
@@ -89,24 +99,28 @@ module.exports = function(s,config,lang){
         }
         var url
         var runExtraction = function(){
-            var snapBuffer = []
-            var snapProcess = spawn(config.ffmpegDir,('-loglevel quiet -re -i '+url+options+' -frames:v 1 -f image2pipe pipe:1').split(' '),{detached: true})
-            snapProcess.stdout.on('data',function(data){
-                snapBuffer.push(data)
-            });
-            snapProcess.stderr.on('data',function(data){
-                console.log(data.toString())
-            });
-            snapProcess.on('exit',function(data){
-                clearTimeout(snapProcessTimeout)
-                snapBuffer = Buffer.concat(snapBuffer)
-                callback(snapBuffer,false)
-            })
-            var snapProcessTimeout = setTimeout(function(){
-                snapProcess.stdin.setEncoding('utf8')
-                snapProcess.stdin.write('q')
-                delete(snapProcessTimeout)
-            },5000)
+            try{
+                var snapBuffer = []
+                var snapProcess = spawn(config.ffmpegDir,('-loglevel quiet -re -i '+url+options+' -frames:v 1 -f image2pipe pipe:1').split(' '),{detached: true})
+                snapProcess.stdout.on('data',function(data){
+                    snapBuffer.push(data)
+                })
+                snapProcess.stderr.on('data',function(data){
+                    console.log(data.toString())
+                })
+                snapProcess.on('exit',function(data){
+                    clearTimeout(snapProcessTimeout)
+                    snapBuffer = Buffer.concat(snapBuffer)
+                    callback(snapBuffer,false)
+                })
+                var snapProcessTimeout = setTimeout(function(){
+                    snapProcess.stdin.setEncoding('utf8')
+                    snapProcess.stdin.write('q')
+                    delete(snapProcessTimeout)
+                },5000)
+            }catch(err){
+                callback(fs.readFileSync(config.defaultMjpeg,'binary'),false)
+            }
         }
         var checkExists = function(localStream,callback){
             fs.stat(localStream,function(err){
@@ -384,7 +398,7 @@ module.exports = function(s,config,lang){
                     }
                 }
                 //create onvif connection
-                if(!s.group[e.ke].mon[e.id].onvifConnection){
+                if(!s.group[e.ke].mon[e.id].onvifConnection || !s.group[e.ke].mon[e.id].onvifConnection.current_profile || !s.group[e.ke].mon[e.id].onvifConnection.current_profile.token){
                     s.group[e.ke].mon[e.id].onvifConnection = new onvif.OnvifDevice({
                         xaddr : 'http://' + controlURLOptions.host + ':' + controlURLOptions.port + '/onvif/device_service',
                         user : controlURLOptions.username,
@@ -1208,6 +1222,92 @@ module.exports = function(s,config,lang){
             }
         }catch(err){}
         return false
+    }
+    s.addOrEditMonitor = function(form,callback,user){
+        var endData = {
+            ok: false
+        }
+        if(!form.mid){
+            endData.msg = lang['No Monitor ID Present in Form']
+            callback(endData)
+            return
+        }
+        form.mid = form.mid.replace(/[^\w\s]/gi,'').replace(/ /g,'')
+        form = s.cleanMonitorObjectForDatabase(form)
+        s.sqlQuery('SELECT * FROM Monitors WHERE ke=? AND mid=?',[form.ke,form.mid],function(er,r){
+            var affectMonitor = false
+            var monitorQuery = []
+            var monitorQueryValues = []
+            var txData = {
+                f: 'monitor_edit',
+                mid: form.mid,
+                ke: form.ke,
+                mon: form
+            }
+            if(r&&r[0]){
+                txData.new = false
+                Object.keys(form).forEach(function(v){
+                    if(form[v]&&form[v]!==''){
+                        monitorQuery.push(v+'=?')
+                        if(form[v] instanceof Object){
+                            form[v] = s.s(form[v])
+                        }
+                        monitorQueryValues.push(form[v])
+                    }
+                })
+                monitorQuery = monitorQuery.join(',')
+                monitorQueryValues.push(form.ke)
+                monitorQueryValues.push(form.mid)
+                s.userLog(form,{type:'Monitor Updated',msg:'by user : '+user.uid})
+                endData.msg = user.lang['Monitor Updated by user']+' : '+user.uid
+                s.sqlQuery('UPDATE Monitors SET '+monitorQuery+' WHERE ke=? AND mid=?',monitorQueryValues)
+                affectMonitor = true
+            }else if(
+                !s.group[form.ke].init.max_camera ||
+                s.group[form.ke].init.max_camera === '' ||
+                Object.keys(s.group[form.ke].mon).length <= parseInt(s.group[form.ke].init.max_camera)
+            ){
+                txData.new = true
+                monitorQueryInsertValues = []
+                Object.keys(form).forEach(function(v){
+                    if(form[v] && form[v] !== ''){
+                        monitorQuery.push(v)
+                        monitorQueryInsertValues.push('?')
+                        if(form[v] instanceof Object){
+                            form[v] = s.s(form[v])
+                        }
+                        monitorQueryValues.push(form[v])
+                    }
+                })
+                monitorQuery = monitorQuery.join(',')
+                monitorQueryInsertValues = monitorQueryInsertValues.join(',')
+                s.userLog(form,{type:'Monitor Added',msg:'by user : '+user.uid})
+                endData.msg = user.lang['Monitor Added by user']+' : '+user.uid
+                s.sqlQuery('INSERT INTO Monitors ('+monitorQuery+') VALUES ('+monitorQueryInsertValues+')',monitorQueryValues)
+                affectMonitor = true
+            }else{
+                txData.f = 'monitor_edit_failed'
+                txData.ff = 'max_reached'
+                endData.msg = user.lang.monitorEditFailedMaxReached
+            }
+            if(affectMonitor === true){
+                form.details = JSON.parse(form.details)
+                endData.ok = true
+                s.initiateMonitorObject({mid:form.mid,ke:form.ke})
+                s.group[form.ke].mon_conf[form.mid] = s.cleanMonitorObject(form)
+                if(form.mode === 'stop'){
+                    s.camera('stop',form)
+                }else{
+                    s.camera('stop',form)
+                    setTimeout(function(){
+                        s.camera(form.mode,form)
+                    },5000)
+                }
+                s.tx(txData,'STR_'+form.ke)
+            }
+            s.tx(txData,'GRP_'+form.ke)
+            callback(!endData.ok,endData)
+        })
     }
     s.camera = function(x,e,cn){
         // x = function or mode

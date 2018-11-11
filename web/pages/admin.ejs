@@ -1,14 +1,17 @@
+<%
+    window.libURL = originalURL + global.s.checkCorrectPathEnding(config.webPaths.admin)
+%>
 <% include blocks/header %>
 <script>$user=<%-JSON.stringify($user)%></script>
-<link rel="stylesheet" href="<%-originalURL%>libs/css/pnotify.custom.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/vbox.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/circles.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/admin-page.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/bootstrap.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/font-awesome.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/fullcalendar.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/bootstrap-table.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/main.dash2.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/pnotify.custom.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/vbox.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/circles.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/admin-page.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/bootstrap.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/font-awesome.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/fullcalendar.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/bootstrap-table.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/main.dash2.css">
 <body class="shinobi-bg">
 <div class="container-fluid">
     <div class="container">
@@ -80,6 +83,7 @@
 <% include blocks/confirm.ejs %>
 <% include blocks/subpermissions.ejs %>
 </body>
+<script><% include ../libs/js/basic.js %></script>
 <script><% include ../libs/js/socket.io.js %></script>
 <script><% include ../libs/js/pnotify.custom.min.js %></script>
 <script><% include ../libs/js/moment.js %></script>
@@ -89,7 +93,9 @@
 <script><% include ../libs/js/bootstrap-table.min.js %></script>
 <script>
 $.ccio={subs:{}};$.ls=localStorage;
-$.ccio.ws=io(location.origin);
+$.ccio.ws=io(location.origin,{
+    path : tool.checkCorrectPathEnding(location.pathname)+'socket.io'
+});
 $.ccio.cx=function(x){if(!x.ke){x.ke=$user.ke;};if(!x.uid){x.uid=$user.uid;};return $.ccio.ws.emit('a',x)}
 $.ccio.ws.on('connect',function(d){
     $.ccio.cx({f:'init',auth:$user.auth_token});

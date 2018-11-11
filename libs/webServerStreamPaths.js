@@ -26,7 +26,7 @@ module.exports = function(s,config,lang,app){
             if(s.group[req.params.ke]&&s.group[req.params.ke].mon[req.params.id]){
                 if(s.group[req.params.ke].mon[req.params.id].isStarted === true){
                     req.params.uid=user.uid;
-                    res.render(config.renderPaths.embed,{data:req.params,baseUrl:req.protocol+'://'+req.hostname,config:config,lang:user.lang,mon:CircularJSON.parse(CircularJSON.stringify(s.group[req.params.ke].mon_conf[req.params.id])),originalURL:s.getOriginalUrl(req)});
+                    s.renderPage(req,res,config.renderPaths.embed,{data:req.params,baseUrl:req.protocol+'://'+req.hostname,config:config,lang:user.lang,mon:CircularJSON.parse(CircularJSON.stringify(s.group[req.params.ke].mon_conf[req.params.id])),originalURL:s.getOriginalUrl(req)});
                     res.end()
                 }else{
                     res.end(user.lang['Cannot watch a monitor that isn\'t running.'])
@@ -102,7 +102,7 @@ module.exports = function(s,config,lang,app){
     app.get([config.webPaths.apiPrefix+':auth/mjpeg/:ke/:id',config.webPaths.apiPrefix+':auth/mjpeg/:ke/:id/:channel'], function(req,res) {
         res.header("Access-Control-Allow-Origin",req.headers.origin);
         if(req.query.full=='true'){
-            res.render(config.renderPaths.mjpeg,{url:'/'+req.params.auth+'/mjpeg/'+req.params.ke+'/'+req.params.id,originalURL:s.getOriginalUrl(req)});
+            s.renderPage(req,res,config.renderPaths.mjpeg,{url:config.webPaths.apiPrefix + req.params.auth+'/mjpeg/'+req.params.ke+'/'+req.params.id,originalURL:s.getOriginalUrl(req)});
             res.end()
         }else{
             s.auth(req.params,function(user){

@@ -243,7 +243,7 @@ var Poseidon = function () {
             }
             this._playing = true;
             var _this = this;
-            this._socket = io(_this._monitor.url, { transports: ['websocket'], forceNew: false });
+            this._socket = io(_this._monitor.url, { path: _this._monitor.path, transports: ['websocket'], forceNew: false });
             this._addSocketEvents();
             if (this._startstop) {
                 this._startstop.disabled = false;
