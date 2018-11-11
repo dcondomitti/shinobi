@@ -7,7 +7,11 @@ window.chartColors = {
     purple: 'rgb(153, 102, 255)',
     grey: 'rgb(201, 203, 207)'
 };
-$user.details=JSON.parse($user.details)
+try{
+    $user.details = JSON.parse($user.details)
+}catch(err){
+
+}
 $.ccio={
     fr:$('#files_recent'),
     mon:{}
@@ -1876,7 +1880,7 @@ switch($user.details.lang){
         return ii.o
     }
 //websocket functions
-$.users={}
+$.users = {}
 $.ccio.globalWebsocket=function(d,user){
     if(d.f!=='monitor_frame'&&d.f!=='os'&&d.f!=='video_delete'&&d.f!=='detector_trigger'&&d.f!=='detector_record_timeout_start'&&d.f!=='log'){$.ccio.log(d);}
     if(!user){
@@ -2460,7 +2464,9 @@ $.ccio.globalWebsocket=function(d,user){
             }
             $.ccio.init('monitorInfo',d)
             $.gR.drawList();
-            $.ccio.init('note',{title:'Monitor Saved',text:'<b>'+d.mon.name+'</b> <small>'+d.mon.mid+'</small> has been saved.',type:'success'});
+            if(!d.silenceNote){
+                $.ccio.init('note',{title:'Monitor Saved',text:'<b>'+d.mon.name+'</b> <small>'+d.mon.mid+'</small> has been saved.',type:'success'});
+            }
         break;
         case'monitor_starting':
 //            switch(d.mode){case'start':d.mode='Watch';break;case'record':d.mode='Record';break;}
@@ -2991,6 +2997,7 @@ $.zO.initCanvas=function(){
         $.zO.f.find('[name="sensitivity"]').val('')
         $.zO.f.find('[name="max_sensitivity"]').val('')
         $.zO.f.find('[name="threshold"]').val('')
+        $.zO.f.find('[name="color_threshold"]').val('')
         $.zO.rp.empty()
     }else{
         e.cord=$.zO.regionViewerDetails.cords[e.val];
@@ -3006,6 +3013,7 @@ $.zO.initCanvas=function(){
         $.zO.f.find('[name="sensitivity"]').val(e.cord.sensitivity)
         $.zO.f.find('[name="max_sensitivity"]').val(e.cord.max_sensitivity)
         $.zO.f.find('[name="threshold"]').val(e.cord.threshold)
+        $.zO.f.find('[name="color_threshold"]').val(e.cord.color_threshold)
         $.zO.e.find('.canvas_holder canvas').remove();
 
         $.zO.initLiveStream()
@@ -3110,7 +3118,7 @@ $.zO.e.on('click','.add',function(e){
         }
     })
     $.zO.regionViewerDetails.cords=e.save;
-    $.zO.regionViewerDetails.cords[e.gid]={name:e.gid,sensitivity:0.0005,max_sensitivity:'',threshold:1,points:[[0,0],[0,100],[100,0]]};
+    $.zO.regionViewerDetails.cords[e.gid]={name:e.gid,sensitivity:0.0005,max_sensitivity:'',threshold:1,color_threshold:9,points:[[0,0],[0,100],[100,0]]};
     $.zO.rl.append('<option value="'+e.gid+'">'+e.gid+'</option>');
     $.zO.rl.val(e.gid)
     $.zO.rl.change();
@@ -3566,6 +3574,7 @@ $.aM.generateDefaultMonitorSettings=function(){
         "detector_sensitivity": "",
         "detector_max_sensitivity": "",
         "detector_threshold": "1",
+        "detector_color_threshold": "",
         "cords": "[]",
         "detector_buffer_vcodec": "auto",
         "detector_buffer_fps": "",
@@ -5689,7 +5698,7 @@ $('body')
             }
             if(!e.d.cords||e.d.cords===''){
                 e.d.cords={
-                    red:{ name:"red",sensitivity:0.0005, max_sensitivity:"",points:[[0,0],[0,100],[100,0]] },
+                    red:{ name:"red",sensitivity:0.0005, max_sensitivity:"",color_threshold:"",points:[[0,0],[0,100],[100,0]] },
                 }
             }
             $.zO.regionViewerDetails=e.d;
@@ -6098,14 +6107,14 @@ $('body')
         })
     }
     //set dropdown toggle preferences
-    e.o=$.ccio.op().dropdown_toggle;
+    e.o = $.ccio.op().dropdown_toggle
     if(e.o){
         $.each(e.o,function(n,v){
             $('[dropdown_toggle="'+n+'"]').val(v).change()
         })
     }
     //set localStorage input values
-    e.o=$.ccio.op();
+    e.o = $.ccio.op()
     if(e.o){
         $.each(e.o,function(n,v){
             if(typeof v==='string'){

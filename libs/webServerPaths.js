@@ -11,7 +11,7 @@ var httpProxy = require('http-proxy');
 var proxy = httpProxy.createProxyServer({})
 var ejs = require('ejs');
 var CircularJSON = require('circular-json');
-module.exports = function(s,config,lang,app){
+module.exports = function(s,config,lang,app,io){
     if(config.productType==='Pro'){
         var LdapAuth = require('ldapauth-fork');
     }
@@ -69,7 +69,7 @@ module.exports = function(s,config,lang,app){
     app.set('views', s.mainDirectory + '/web');
     app.set('view engine','ejs');
     //add template handler
-    if(config.renderPaths.handler!==undefined){require(s.mainDirectory+'/web/'+config.renderPaths.handler+'.js').addHandlers(s,app,io)}
+    if(config.renderPaths.handler!==undefined){require(s.mainDirectory+'/web/'+config.renderPaths.handler+'.js').addHandlers(s,app,io,config)}
 
     /**
     * API : Logout
@@ -337,7 +337,7 @@ module.exports = function(s,config,lang,app){
                         r.details=JSON.parse(r.details);
                         r.lang=s.getLanguageFile(r.details.lang)
                         req.factorAuth=function(cb){
-                            if(r.details.factorAuth==="1"){
+                            if(r.details.factorAuth === "1"){
                                 if(!r.details.acceptedMachines||!(r.details.acceptedMachines instanceof Object)){
                                     r.details.acceptedMachines={}
                                 }

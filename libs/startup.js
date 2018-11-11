@@ -29,6 +29,7 @@ module.exports = function(s,config,lang,io){
                             orphanedVideosForMonitors[monitor.ke][monitor.mid] += orphanedFilesCount
                         }
                         s.group[monitor.ke].mon_conf[monitor.mid] = monitor
+                        s.sendMonitorStatus({id:monitor.mid,ke:monitor.ke,status:'Stopped'});
                         var monObj = Object.assign(monitor,{id : monitor.mid})
                         s.camera(monitor.mode,monObj)
                         ++loadCompleted

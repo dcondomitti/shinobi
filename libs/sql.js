@@ -50,6 +50,9 @@ module.exports = function(s,config){
         if(!onMoveOn){onMoveOn=function(){}}
         var mergedQuery = s.mergeQueryValues(query,values)
         s.debugLog('s.sqlQuery QUERY',mergedQuery)
+        if(!s.databaseEngine || !s.databaseEngine.raw){
+            s.connectDatabase()
+        }
         return s.databaseEngine
         .raw(query,values)
         .asCallback(function(err,r){
@@ -70,9 +73,16 @@ module.exports = function(s,config){
             }
         })
     }
+    s.connectDatabase = function(){
+        s.databaseEngine = require('knex')(s.databaseOptions)
+    }
     s.preQueries = function(){
         //add Cloud Videos table, will remove in future
         s.sqlQuery('CREATE TABLE IF NOT EXISTS `Cloud Videos` (`mid` varchar(50) NOT NULL,`ke` varchar(50) DEFAULT NULL,`href` text NOT NULL,`size` float DEFAULT NULL,`time` timestamp NULL DEFAULT NULL,`end` timestamp NULL DEFAULT NULL,`status` int(1) DEFAULT \'0\' COMMENT \'0:Complete,1:Read,2:Archive\',`details` text) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;',[],function(err){
+            // if(err)console.log(err)
+        },true)
+        //add monitorStates to Preset ENUM
+        s.sqlQuery('ALTER TABLE `Presets` CHANGE COLUMN `type` `type` VARCHAR(50) NULL DEFAULT NULL AFTER `details`;',[],function(err){
             // if(err)console.log(err)
         },true)
         //create Files table
