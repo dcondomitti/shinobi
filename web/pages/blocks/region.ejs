@@ -14,8 +14,8 @@
               <div class="form-group-group orange where">
                   <h4><span class="cord_name"></span>
                     <div class="pull-right">
-                        <a class="btn btn-success btn-xs add">&nbsp;<i class="fa fa-plus"></i>&nbsp;</a> 
-                        <a class="btn btn-danger btn-xs erase">&nbsp;<i class="fa fa-trash-o"></i>&nbsp;</a>  
+                        <a class="btn btn-success btn-xs add">&nbsp;<i class="fa fa-plus"></i>&nbsp;</a>
+                        <a class="btn btn-danger btn-xs erase">&nbsp;<i class="fa fa-trash-o"></i>&nbsp;</a>
                     </div>
                   </h4>
                 <div class="form-group">
@@ -24,19 +24,35 @@
                         <div><select id="regions_list" class="form-control"></select></div>
                     </label>
                 </div>
-                <div class="row">
-                    <div class="form-group col-md-12">
-                        <label>
-                            <div><span><%-lang['Region Name']%></span></div>
-                            <div><input class="form-control" name="name"></div>
-                        </label>
-                    </div>
-                    <div class="form-group col-md-12">
-                        <label>
-                            <div><span><%-lang.Indifference%></span></div>
-                            <div><input class="form-control" name="sensitivity"></div>
-                        </label>
-                    </div>
+                <div class="form-group">
+                    <label>
+                        <div><span><%-lang['Region Name']%></span></div>
+                        <div><input class="form-control" name="name"></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <div><span><%-lang['Indifference']%></span></div>
+                        <div><input class="form-control" name="sensitivity"></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <div><span><%-lang['Max Indifference']%></span></div>
+                        <div><input class="form-control" name="max_sensitivity"></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <div><span><%-lang['Trigger Threshold']%></span></div>
+                        <div><input class="form-control" name="threshold"></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <div><span><%-lang['Color Threshold']%></span></div>
+                        <div><input class="form-control" name="color_threshold"></div>
+                    </label>
                 </div>
                 <div class="form-group">
                     <label><div><span><%-lang.Points%></span></div></label>

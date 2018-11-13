@@ -233,14 +233,26 @@
                   <div class="form-group">
                     <label><div><span><%-lang.hwaccel%></span></div>
                         <div><select class="form-control" detail="hwaccel">
-                            <option value="auto"><%-lang.Auto%></option>
-                            <option value="cuvid"><%-lang.cuvid%></option>
-                            <option value="vaapi"><%-lang.vaapi%></option>
-                            <option value="qsv"><%-lang.qsv%></option>
-                            <option value="vdpau"><%-lang.vdpau%></option>
-                            <option value="dxva2"><%-lang.dxva2%></option>
-                            <option value="vda"><%-lang.vda%></option>
-                            <option value="videotoolbox"><%-lang.videotoolbox%></option>
+                            <% if(config.availableHWAccels) {
+                                    var methods = {
+                                        auto: {label:lang['Auto'],value:'auto'},
+                                        drm: {label:lang['drm'],value:'drm'},
+                                        cuvid: {label:lang['cuvid'],value:'cuvid'},
+                                        vaapi: {label:lang['vaapi'],value:'vaapi'},
+                                        qsv: {label:lang['qsv'],value:'qsv'},
+                                        vdpau: {label:lang['vdpau'],value:'vdpau'},
+                                        dxva2: {label:lang['dxva2'],value:'dxva2'},
+                                        vdpau: {label:lang['vdpau'],value:'vdpau'},
+                                        videotoolbox: {label:lang['videotoolbox'],value:'videotoolbox'}
+                                    }
+                                    config.availableHWAccels.forEach(function(availibleMethod){
+                                        if(methods[availibleMethod]){
+                                            var method = methods[availibleMethod] %>
+                                            <option value="<%= method.value %>"><%= method.label %></option>
+                                        <% }
+                                    })
+                                }
+                             %>
                         </select></div>
                     </label>
                   </div>
@@ -926,7 +938,7 @@
                         </label>
                       </div>
                   </div>
-                  <div class="form-group h_rec_mtd_input h_rec_mtd_hot">
+                  <div class="form-group h_rec_mtd_input h_rec_mtd_hot h_rec_mtd_sip">
                     <label><div><span><%-lang['Timeout Reset on Next Event']%></span></div>
                         <div><select class="form-control" detail="watchdog_reset">
                             <option value="0"><%-lang.No%></option>
@@ -1012,6 +1024,11 @@
                         </select></div>
                     </label>
                   </div>
+                  <div class="form-group h_det_discord_input h_det_discord_1">
+                    <label><div><span><%-lang['Allow Next Discord Alert']%></span></div>
+                    <div><input class="form-control" detail="detector_discordbot_timeout" placeholder="10"></div>
+                    </label>
+                  </div>
                   <div class="form-group">
                     <label><div><span><%-lang['Detector Filters']%></span></div>
                         <div><select class="form-control" detail="use_detector_filters" selector="h_det_fil">
@@ -1026,11 +1043,6 @@
                             <option value="0" selected><%-lang.No%></option>
                             <option value="1"><%-lang.Yes%></option>
                         </select></div>
-                    </label>
-                  </div>
-                  <div class="form-group h_det_discord_input h_det_discord_1">
-                    <label><div><span><%-lang['Allow Next Discord Alert']%></span></div>
-                    <div><input class="form-control" detail="detector_discordbot_timeout" placeholder="10"></div>
                     </label>
                   </div>
                   <div class="hidden">
@@ -1056,6 +1068,21 @@
                       <div class="form-group">
                         <label><div><span><%-lang['Indifference']%></span></div>
                         <div><input class="form-control" detail="detector_sensitivity" placeholder="0.5"></div>
+                        </label>
+                      </div>
+                      <div class="form-group">
+                        <label><div><span><%-lang['Max Indifference']%></span></div>
+                        <div><input class="form-control" detail="detector_max_sensitivity" placeholder=""></div>
+                        </label>
+                      </div>
+                      <div class="form-group">
+                        <label><div><span><%-lang['Trigger Threshold']%></span></div>
+                        <div><input class="form-control" detail="detector_threshold" placeholder="1"></div>
+                        </label>
+                      </div>
+                      <div class="form-group">
+                        <label><div><span><%-lang['Color Threshold']%></span></div>
+                        <div><input class="form-control" detail="detector_color_threshold" placeholder="9"></div>
                         </label>
                       </div>
                       <div class="form-group">
@@ -1114,7 +1141,7 @@
                           </div>
                       </div>
                   </div>
-                  <div class="form-group-group orange shinobi-detector-opencv shinobi-detector-openalpr shinobi-detector-pythonyolo shinobi-detector_plug" section id="monSectionDetectorObject">
+                  <div class="form-group-group orange shinobi-detector-opencv shinobi-detector-openalpr shinobi-detector-yolo shinobi-detector-dlib shinobi-detector_plug" section id="monSectionDetectorObject">
                       <h4><%-lang['Object Detection']%> <small><%-lang['Plugin']%> : <b class="shinobi-detector_name"></b> <b class="shinobi-detector-invert"><%-lang['Not Connected']%></b><b class="shinobi-detector" style="display:none"><%-lang['Connected']%></b></small></h4>
                       <div class="form-group">
                         <label><div><span><%-lang['Detect Objects']%></span></div>

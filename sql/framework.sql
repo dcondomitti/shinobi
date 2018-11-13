@@ -115,6 +115,17 @@ CREATE TABLE IF NOT EXISTS `Videos` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Data exporting was unselected.
+-- Dumping structure for table ccio.Files
+CREATE TABLE IF NOT EXISTS `Files` (
+    `ke` varchar(50) NOT NULL,
+    `mid` varchar(50) NOT NULL,
+    `name` tinytext NOT NULL,
+    `size` float NOT NULL DEFAULT '0',
+    `details` text NOT NULL,
+    `status` int(1) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ALTER TABLE `Files`	ADD COLUMN `time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `status`;
+-- Data exporting was unselected.
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
 /*!40014 SET FOREIGN_KEY_CHECKS=IF(@OLD_FOREIGN_KEY_CHECKS IS NULL, 1, @OLD_FOREIGN_KEY_CHECKS) */;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

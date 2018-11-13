@@ -1,6 +1,6 @@
 <% include blocks/header %>
 <script>var $user=<%- JSON.stringify($user) %>;</script>
-<link rel="stylesheet" href="<%-originalURL%>libs/css/bootstrap.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/bootstrap.min.css">
 <div id="main" class="container">
     <a class="btn btn-danger btn-lg" record>Stream</a>
     <div>
@@ -19,13 +19,15 @@ requires https or firefox
 </div>
 <video id="video"><source></video>
 <canvas id="canvas"></canvas>
-<script src="<%-originalURL%>libs/js/jquery.min.js"></script>
-<script src="<%-originalURL%>libs/js/socket.io.js"></script>
-<script src="<%-originalURL%>libs/js/menu.js"></script>
+<script src="<%-window.libURL%>libs/js/jquery.min.js"></script>
+<script src="<%-window.libURL%>libs/js/socket.io.js"></script>
+<script src="<%-window.libURL%>libs/js/menu.js"></script>
 <script>
 $.ccio = {}
 $.ls = localStorage
-$.ccio.ws = io(location.origin)
+$.ccio.ws=io(location.origin,{
+    path : tool.checkCorrectPathEnding(location.pathname)+'socket.io'
+});
 $.ccio.ws.on('connect',function (d){
     $(document).ready(function(e){
         $.ccio.cx=function(x){
@@ -69,7 +71,7 @@ function _base64ToArrayBuffer(base64) {
 }
 
 $.ccio.framerate=2;
-    
+
 $.ccio.stopSending=function(){
     $.ls.setItem('Shinobi_Dashcam_Started','0')
     $('#main').removeClass('recording');
@@ -78,7 +80,7 @@ $.ccio.stopSending=function(){
     try{
         mediaRecorder.stop()
     }catch(err){
-        
+
     }
     $('[record]').unbind('click').click($.ccio.startSending)
 }
@@ -162,7 +164,7 @@ function log(message){
 	$.ccio.vid.data[0].innerHTML = $.ccio.vid.data[0].innerHTML+'<br>'+message ;
 }
 
-    
+
 /* Webcam */
 navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
 window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
@@ -198,7 +200,7 @@ if(getBrowser() == "Chrome"){
 var mediaRecorder;
 var chunks = [];
 var count = 0;
-    
+
 $.ccio.vid = {element:$('#video')[0],canvas:$('#canvas')[0],data:$('#data')};
 $.ccio.vid.element.controls = false;
 navigator.getUserMedia(constraints,function(stream,fn) {
@@ -217,16 +219,16 @@ navigator.getUserMedia(constraints,function(stream,fn) {
         $.ccio.selected = null;
     }
 }, function(err){console.error('getUserMedia',err)});
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
+
     //draw selectable mons
     var tmp='';
     if($user.mons&&$user.mons.length>0){
@@ -250,8 +252,8 @@ navigator.getUserMedia(constraints,function(stream,fn) {
         $.ls.setItem('Shinobi_Dashcam',e.a)
         $('[monitor]').removeClass('active'),e.e.addClass('active');
     })
-    
-    
+
+
 $('body')
 .on('click','.logout',function(e){
     localStorage.removeItem('ShinobiLogin_'+location.host);location.href='/';

@@ -34,7 +34,7 @@
             <label><div><span><%-lang['2-Factor Authentication']%> (<%-lang.Email%>)</span></div>
                     <div><select class="form-control" detail="factorAuth">
                         <option value="0" selected><%-lang.No%></option>
-                        <option value="1"><%-lang.Yes%></option>  
+                        <option value="1"><%-lang.Yes%></option>
                     </select></div>
             </label>
         </div>
@@ -66,8 +66,8 @@
         <div class="form-group">
             <label><div><span><%-lang['Permissions']%></span></div>
                 <div><select class="form-control" detail="permissions" selector="h_l">
-                    <option value="all" selected><%-lang['All Privileges']%></option>  
-                    <option value="limited"><%-lang.Limited%></option>  
+                    <option value="all" selected><%-lang['All Privileges']%></option>
+                    <option value="limited"><%-lang.Limited%></option>
                 </select></div>
             </label>
         </div>
@@ -75,7 +75,7 @@
             <label><div><span><%-lang['Can edit Max Storage']%></span></div>
                 <div><select class="form-control" detail="edit_size">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -83,7 +83,7 @@
             <label><div><span><%-lang['Can edit Max Days']%></span></div>
                 <div><select class="form-control" detail="edit_days">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -91,7 +91,7 @@
             <label><div><span><%-lang['Can edit how long to keep Events']%> <small><%-lang['in Days']%></small></span></div>
                 <div><select class="form-control" detail="edit_event_days">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -99,7 +99,7 @@
             <label><div><span><%-lang['Can edit how long to keep Logs']%> <small><%-lang['in Days']%></small></span></div>
                 <div><select class="form-control" detail="edit_log_days">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -107,7 +107,7 @@
             <label><div><span><%-lang['Can use Admin Panel']%></span></div>
                 <div><select class="form-control" detail="use_admin">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -115,7 +115,7 @@
             <label><div><span><%-lang['Can use Amazon S3']%></span></div>
                 <div><select class="form-control" detail="use_aws_s3">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -123,7 +123,7 @@
             <label><div><span><%-lang['Can use WebDAV']%></span></div>
                 <div><select class="form-control" detail="use_webdav">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -131,7 +131,7 @@
             <label><div><span><%-lang['Can use Discord Bot']%></span></div>
                 <div><select class="form-control" detail="use_discordbot">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
@@ -139,15 +139,39 @@
             <label><div><span><%-lang['Can use LDAP']%></span></div>
                 <div><select class="form-control" detail="use_ldap">
                     <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>  
+                    <option value="0"><%-lang.No%></option>
+                </select></div>
+            </label>
+        </div>
+        <div class="form-group h_l_input h_l_limited">
+            <label><div><span><%-lang['Use Global Amazon S3 Video Storage']%></span></div>
+                <div><select class="form-control" detail="aws_use_global">
+                    <option value="1" selected><%-lang.Yes%></option>
+                    <option value="0"><%-lang.No%></option>
+                </select></div>
+            </label>
+        </div>
+        <div class="form-group h_l_input h_l_limited">
+            <label><div><span><%-lang['Use Global Backblaze B2 Video Storage']%></span></div>
+                <div><select class="form-control" detail="b2_use_global">
+                    <option value="1" selected><%-lang.Yes%></option>
+                    <option value="0"><%-lang.No%></option>
+                </select></div>
+            </label>
+        </div>
+        <div class="form-group h_l_input h_l_limited">
+            <label><div><span><%-lang['Use Global WebDAV Video Storage']%></span></div>
+                <div><select class="form-control" detail="webdav_use_global">
+                    <option value="1" selected><%-lang.Yes%></option>
+                    <option value="0"><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default pull-left" data-dismiss="modal"><i class="fa fa-times"></i> <%-lang.Close%></button>
-          
-            <div class="pull-left">
+
+            <div class="pull-left" style="display:none">
             <div class="marc-toggle display-inline">
                 <input type="checkbox" id="edit"/><label for="edit">Add or Edit</label>
             </div>
@@ -164,16 +188,32 @@ $.aN={e:$('#add_edit')};$.aN.f=$.aN.e.find('form')
 $.aN.modeIsEdit = false
 $.aN.f.submit(function(e){
     e.preventDefault();
-    e.s=$.aN.f.serializeObject()
-    e.cx={f:'accounts',ff:'register',form:e.s};
-    if($.aN.modeIsEdit){
-        e.cx.ff='edit';
-        e.cx.account=$.aN.selected;
+    var formValues = $.aN.f.serializeObject()
+    var postData = {
+        data: formValues
     }
-    $.ccio.cx(e.cx)
-    $.aN.e.modal('hide')
+    var webPath = 'registerAdmin'
+    if($.aN.modeIsEdit){
+        webPath = 'editAdmin'
+        postData.account = $.aN.selected
+    }
+    $.post('<%=originalURL%><%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/accounts/'+webPath,postData,function(data){
+        console.log(data)
+        if(data.ok === true){
+            $.aN.e.modal('hide')
+        }
+    })
     return false;
-});
+})
+//client side email check
+$.aN.e.on('change','[name="mail"]',function(){
+    var thisVal = $(this).val()
+    $.each(users,function(n,user){
+        if($.aN.selected && user.ke !== $.aN.selected.ke && thisVal.toLowerCase() === user.mail.toLowerCase()){
+            new PNotify({text:"<%=lang['Email address is in use.']%>",type:'error'})
+        }
+    })
+})
 $.aN.e.on('change','[detail]',function(){
     e = {}
     e.ar = {}
@@ -181,7 +221,7 @@ $.aN.e.on('change','[detail]',function(){
         try{
             e.ar = Object.assign(JSON.parse($.aN.selected.details),{})
         }catch(err){
-            
+
         }
     }
     $.each($.aN.e.find('[detail]'),function(n,v){
@@ -194,7 +234,7 @@ $('#edit').change(function(e){
     if($('#edit').is(':checked')){
         $.aN.modeIsEdit = true
         $('#title').text("<%-lang['Edit']%>")
-        $.aN.e.find('[name="mail"],[name="ke"]').prop('disabled',true)
+        $.aN.e.find('[name="ke"]').prop('disabled',true)
     }else{
         $.aN.modeIsEdit = false
         $('#title').text("<%-lang['Add New']%>")
@@ -207,6 +247,14 @@ $.aN.e.on('change','[selector]',function(e){
     $.aN.e.find('.'+e.a+'_input').hide()
     $.aN.e.find('.'+e.a+'_'+e.v).show();
 }).find('[selector]').change();
+$.aN.e.find('[detail="permissions"]').change(function(){
+    var hasAllPrivileges = $(this).val() === 'all'
+    var theClass = $('.h_l_limited')
+    if(hasAllPrivileges){
+        theClass.find('select').val('1')
+        theClass.find('input').val('')
+    }
+})
 //simple lister
 $.aC={e:$('#accounts')};$.aC.t=$.aC.e.find('table')
 $.aC.e.on('click','.add',function(e){
@@ -224,7 +272,19 @@ $.aC.e.on('click','.delete',function(e){
     e.html='Do you want to delete <b>'+e.account.mail+'</b>? You cannot recover this account. Files will remain in the filesystem. If you choose to create an account with the same Group Key it will have the previous events activated in that account.'
     $.confirm.body.html(e.html)
     $.confirm.click({title:'Delete',class:'btn-danger'},function(){
-        $.ccio.cx({f:'accounts',ff:'delete',account:e.account})
+        // $.ccio.cx({f:'accounts',ff:'delete',account:e.account})
+        $.post('<%=originalURL%><%=config.webPaths.superApiPrefix%>'+$user.sessionKey+'/accounts/deleteAdmin',{
+            account : e.account,
+            // "deleteSubAccounts" : "1",
+            // "deleteMonitors" : "1",
+            // "deleteVideos" : "1",
+            // "deleteEvents" : "1"
+        },function(data){
+            console.log(data)
+            if(data.ok === true){
+                $.aN.e.modal('hide')
+            }
+        })
     });
 })
 $.aC.e.on('click','.permission',function(e){
@@ -236,13 +296,15 @@ $.aC.e.on('click','.permission',function(e){
     $.aN.e.find('input').val('');
     $.each(e.account,function(n,v){
         if(n=='pass'){return}
-        $.aN.e.find('[name="'+n+'"]').val(v).change()
+        var el = $.aN.e.find('[name="'+n+'"]')
+        el.val(v)
+        if(n !== 'mail')el.change()
     })
     $.each(JSON.parse(e.account.details),function(n,v){
         $.aN.e.find('[detail="'+n+'"]').val(v)
     })
     $('#edit').prop('checked',true).change().parent().addClass('is-checked')
 //    $.pR.e.modal('show');
-    
+
 })
 </script>

@@ -1,0 +1,10 @@
+{
+  "plug":"PythonContour",
+  "host":"localhost",
+  "port":8080,
+  "pythonPort":7990,
+  "hostPort":8082,
+  "key":"YOUR_CONTOUR_PLUGIN_KEY",
+  "mode":"client",
+  "type":"detector"
+}

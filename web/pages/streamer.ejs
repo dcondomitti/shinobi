@@ -1,6 +1,6 @@
 <% include blocks/header %>
 <script>var $user=<%- JSON.stringify($user) %>;</script>
-<link rel="stylesheet" href="<%-originalURL%>libs/css/bootstrap.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/bootstrap.min.css">
 <div id="main" class="container">
     <a class="btn btn-danger btn-lg" record>Stream</a>
     <div>
@@ -17,11 +17,14 @@ requires https or firefox
 </div>
 <video id="video"><source></video>
 <canvas id="canvas"></canvas>
-<script src="<%-originalURL%>libs/js/socket.io.js"></script>
-<script src="<%-originalURL%>libs/js/menu.js"></script>
+<script src="<%-window.libURL%>libs/js/socket.io.js"></script>
+<script src="<%-window.libURL%>libs/js/basic.js"></script>
+<script src="<%-window.libURL%>libs/js/menu.js"></script>
 <script>
 $.ccio={};$.ls=localStorage;
-$.ccio.ws=io(location.origin);
+$.ccio.ws=io(location.origin,{
+    path : tool.checkCorrectPathEnding(location.pathname)+'socket.io'
+});
 $.ccio.ws.on('connect',function (d){
     $(document).ready(function(e){
         $.ccio.cx=function(x){if(!x.ke){x.ke=$user.ke;};if(!x.uid){x.uid=$user.uid;};return $.ccio.ws.emit('r',x)}
@@ -64,13 +67,13 @@ $.ccio.start=function(){
     },1000/$.ccio.framerate);
     $('[record]').unbind('click').click($.ccio.end)
 };
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
 $.ccio.vid = {e:$('#video'),c:$('#canvas')};
     navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia||navigator.mediaDevices.getUserMedia;
     window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
@@ -88,16 +91,16 @@ $.ccio.vid = {e:$('#video'),c:$('#canvas')};
         $('[record]').click($.ccio.start)
     })
 }, function(err){console.error('getUserMedia',err)});
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
+
     //draw selectable mons
     var tmp='';
     if($user.mons&&$user.mons.length>0){
@@ -121,10 +124,10 @@ $.ccio.vid = {e:$('#video'),c:$('#canvas')};
         $.ls.setItem('Shinobi_socket_camera',e.a)
         $('[monitor]').removeClass('active'),e.e.addClass('active');
     })
-    
-    
+
+
 if($user.mons.length>0&&$.ls.getItem('Shinobi_socket_camera')){$('[monitor="'+$.ls.getItem('Shinobi_socket_camera')+'"]').click()}else{$.ccio.selected=null;}
-    
+
 $('body')
 .on('click','.logout',function(e){
     localStorage.removeItem('ShinobiLogin_'+location.host);location.href='/';

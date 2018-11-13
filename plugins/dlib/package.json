@@ -1,0 +1,19 @@
+{
+  "name": "shinobi-dlib",
+  "version": "1.0.0",
+  "description": "Dlib plugin for Shinobi that uses C++ functions for detection.",
+  "main": "shinobi-dlib.js",
+  "dependencies": {
+    "socket.io-client": "^1.7.4",
+    "express": "^4.16.2",
+    "moment": "^2.19.2",
+    "socket.io": "^2.0.4",
+    "face-recognition-cuda": "0.9.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Moe Alam",
+  "license": "ISC"
+}

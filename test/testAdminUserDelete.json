@@ -1,0 +1,11 @@
+{
+    "account": {
+        "mail": "[LOGIN ADDRESS]",
+        "ke": "[GROUP KEY]",
+        "uid": "[USER ID]"
+    },
+    "deleteSubAccounts": "1",
+    "deleteMonitors": "1",
+    "deleteVideos": "1",
+    "deleteEvents": "1"
+}

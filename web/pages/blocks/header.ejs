@@ -1,19 +1,18 @@
 <head>
 <title><%-lang.Shinobi%></title>
+<% if(!window.libURL)window.libURL = originalURL + global.s.checkCorrectPathEnding(config.webPaths.home) %>
 <% include header-meta.ejs %>
 <meta http-equiv="content-type" content="text/html;charset=UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/bootstrap.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/login.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/material.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/material.style.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/bootstrap.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/login.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/material.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/material.style.css">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="icon" href="<%-originalURL%>libs/img/icon/favicon.ico" type="image/x-icon" />
-<link rel="shortcut icon" href="<%-originalURL%>libs/img/icon/favicon.ico" type="image/x-icon" />
 <% include header-favicon.ejs %>
-<script src="<%-originalURL%>libs/js/jquery.min.js"></script>
-<script src="<%-originalURL%>libs/js/jquery-ui.min.js"></script>
-<script src="<%-originalURL%>libs/js/jquery.serialize.js"></script>
+<script src="<%-window.libURL%>libs/js/jquery.min.js"></script>
+<script src="<%-window.libURL%>libs/js/jquery-ui.min.js"></script>
+<script src="<%-window.libURL%>libs/js/jquery.serialize.js"></script>
 </head>
 <% cleanLang = function(string){
     if(!string){string=''}

@@ -1,17 +1,20 @@
-<% var details=JSON.parse($user.details) %>
+<%
+    var details = JSON.parse($user.details)
+%>
 <% include blocks/header %>
-<script>var $user=<%- JSON.stringify($user) %>;</script>
-<link rel="stylesheet" href="<%-originalURL%>libs/css/pnotify.custom.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/vbox.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/daterangepicker.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/circles.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/bootstrap.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/font-awesome.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/fullcalendar.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/gridstack.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/gridstack-extra.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/bootstrap-table.min.css">
-<link rel="stylesheet" href="<%-originalURL%>libs/css/main.dash2.css">
+<script>var $user = <%- JSON.stringify($user) %>;</script>
+<script>var lang = <%- JSON.stringify(lang) %>;</script>
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/pnotify.custom.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/vbox.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/daterangepicker.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/circles.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/bootstrap.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/font-awesome.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/fullcalendar.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/gridstack.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/gridstack-extra.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/bootstrap-table.min.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/main.dash2.css">
 <style id="theme">
 <% if(details.theme&&details.theme!==''){ %><%- include(__dirname+'/web/libs/themes/'+details.theme+'/style.css'); %><% } %>
 </style>
@@ -170,29 +173,30 @@
 <script type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="<%= config.DropboxAppKey %>"></script>
 <!--Dropbox End-->
 <% } %>
-<script src="<%-originalURL%>libs/js/material.min.js"></script>
-<script src="<%-originalURL%>libs/js/pnotify.custom.min.js"></script>
+<script src="<%-window.libURL%>libs/js/material.min.js"></script>
+<script src="<%-window.libURL%>libs/js/pnotify.custom.min.js"></script>
 <script><% include ../libs/js/moment.js %></script>
 <script><% include ../libs/js/livestamp.min.js %></script>
-<script src="<%-originalURL%>libs/js/placeholder.js"></script>
-<script src="<%-originalURL%>libs/js/bootstrap.min.js"></script>
-<script src="<%-originalURL%>libs/js/bootstrap-table.min.js"></script>
-<script src="<%-originalURL%>libs/js/socket.io.js"></script>
-<script src="<%-originalURL%>libs/js/fullcalendar.min.js"></script>
-<script src="<%-originalURL%>libs/js/hls.min.js"></script>
-<script src="<%-originalURL%>libs/js/libde265.min.js"></script>
-<script type="text/javascript" src="<%-originalURL%>libs/js/flv.shinobi.js">;</script>
-<script src="<%-originalURL%>libs/js/menu.js"></script>
-<script src="<%-originalURL%>libs/js/clock.js"></script>
-<script src="<%-originalURL%>libs/js/poseidon.js"></script>
-<script src="<%-originalURL%>libs/js/Chart.js"></script>
-<script src="<%-originalURL%>libs/js/clusterPoints.js"></script>
-<script src="<%-originalURL%>libs/js/daterangepicker.js"></script>
-<script src="<%-originalURL%>libs/js/jquery.canvasAreaDraw.js"></script>
-<script src="<%-originalURL%>libs/js/jquery-ui.min.js"></script>
-<!--<script src="<%-originalURL%>libs/js/jquery.ui.touch.js"></script>-->
-<script src="<%-originalURL%>libs/js/lodash.min.js"></script>
-<script src="<%-originalURL%>libs/js/gridstack.min.js"></script>
-<script src="<%-originalURL%>libs/js/gridstack.jQueryUI.min.js"></script>
+<script src="<%-window.libURL%>libs/js/placeholder.js"></script>
+<script src="<%-window.libURL%>libs/js/bootstrap.min.js"></script>
+<script src="<%-window.libURL%>libs/js/bootstrap-table.min.js"></script>
+<script src="<%-window.libURL%>libs/js/socket.io.js"></script>
+<script src="<%-window.libURL%>libs/js/fullcalendar.min.js"></script>
+<script src="<%-window.libURL%>libs/js/hls.min.js"></script>
+<script src="<%-window.libURL%>libs/js/libde265.min.js"></script>
+<script type="text/javascript" src="<%-window.libURL%>libs/js/flv.shinobi.js">;</script>
+<script src="<%-window.libURL%>libs/js/menu.js"></script>
+<script src="<%-window.libURL%>libs/js/clock.js"></script>
+<script src="<%-window.libURL%>libs/js/poseidon.js"></script>
+<script src="<%-window.libURL%>libs/js/Chart.js"></script>
+<script src="<%-window.libURL%>libs/js/clusterPoints.js"></script>
+<script src="<%-window.libURL%>libs/js/daterangepicker.js"></script>
+<script src="<%-window.libURL%>libs/js/jquery.canvasAreaDraw.js"></script>
+<script src="<%-window.libURL%>libs/js/jquery-ui.min.js"></script>
+<!--<script src="<%-window.libURL%>libs/js/jquery.ui.touch.js"></script>-->
+<script src="<%-window.libURL%>libs/js/lodash.min.js"></script>
+<script src="<%-window.libURL%>libs/js/gridstack.min.js"></script>
+<script src="<%-window.libURL%>libs/js/gridstack.jQueryUI.min.js"></script>
+<script src="<%-window.libURL%>libs/js/basic.js"></script>
 <script><% include ../libs/js/main.dash2.js %></script>
 <% include blocks/help.ejs %>

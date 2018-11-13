@@ -30,15 +30,15 @@
           <div class="form-group-group blue where">
               <h4>Conditions
                 <div class="pull-right">
-                    <a class="btn btn-success btn-xs add">&nbsp;<i class="fa fa-plus"></i>&nbsp;</a> 
-                    <a class="btn btn-danger btn-xs remove">&nbsp;<i class="fa fa-trash-o"></i>&nbsp;</a>  
+                    <a class="btn btn-success btn-xs add">&nbsp;<i class="fa fa-plus"></i>&nbsp;</a>
+                    <a class="btn btn-danger btn-xs remove">&nbsp;<i class="fa fa-trash-o"></i>&nbsp;</a>
                 </div>
               </h4>
               <div id="detector_filters_where"></div>
           </div>
           <div class="form-group-group red actions">
                 <h4><%- lang['Action for Selected'] %></h4>
-          <% 
+          <%
             var possibleActions = [
                 {
                   "name": "halt",
@@ -210,6 +210,14 @@
                      }
                   ]
                },
+               {
+                  "name": "indifference",
+                  "field": "Modify Indifference",
+                  "description": "Modify minimum indifference required for event.",
+                  "placeholder": "",
+                  "default": "",
+                  "example": ""
+               },
             ].forEach(function(item){ %>
               <%
                 var name = 'actions='+item.name
@@ -226,11 +234,15 @@
                             </span>
                         </div>
                         <div>
+                            <% if(item.possible){ %>
                             <select <%- name %> class="form-control">
                                 <% item.possible.forEach(function(option){ %>
                                     <option value="<%-option.value%>"><%-option.name%></option>
                                 <% }) %>
                             </select>
+                            <% }else{ %>
+                                <input <%- name %> class="form-control" value="<%- item.default %>" placeholder="<%- item.placeholder %>">
+                            <% } %>
                         </div>
                     </label>
                 </div>

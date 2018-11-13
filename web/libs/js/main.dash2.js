@@ -7,7 +7,11 @@ window.chartColors = {
     purple: 'rgb(153, 102, 255)',
     grey: 'rgb(201, 203, 207)'
 };
-$user.details=JSON.parse($user.details)
+try{
+    $user.details = JSON.parse($user.details)
+}catch(err){
+
+}
 $.ccio={
     fr:$('#files_recent'),
     mon:{}
@@ -123,6 +127,32 @@ switch($user.details.lang){
 
       return base64
     }
+    $.ccio.destroyStream = function(d,user,killElement){
+        if(d.mid && !d.id)d.id = d.mid
+        console.log(d.ke+d.id+user.auth_token)
+        console.log($.ccio.mon[d.ke+d.id+user.auth_token])
+        if($.ccio.mon[d.ke+d.id+user.auth_token]){
+            console.log('destroy')
+            $.ccio.init('closeVideo',{mid:d.id,ke:d.ke},user);
+            $.ccio.init('jpegModeStop',{mid:d.id,ke:d.ke},user);
+            $.ccio.init('clearTimers',d,user)
+            clearInterval($.ccio.mon[d.ke+d.id+user.auth_token].signal);delete($.ccio.mon[d.ke+d.id+user.auth_token].signal);
+            $.ccio.mon[d.ke+d.id+user.auth_token].watch = 0;
+            $.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount = 0
+            if($.ccio.mon[d.ke+d.id+user.auth_token].hls){$.ccio.mon[d.ke+d.id+user.auth_token].hls.destroy()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){$.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.stop()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].Base64){$.ccio.mon[d.ke+d.id+user.auth_token].Base64.disconnect()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].h265Socket){$.ccio.mon[d.ke+d.id+user.auth_token].h265Socket.disconnect()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].h265Player){$.ccio.mon[d.ke+d.id+user.auth_token].h265Player.stop()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].dash){$.ccio.mon[d.ke+d.id+user.auth_token].dash.reset()}
+            if($.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream && $.ccio.mon[d.ke+d.id+user.auth_token].abort){
+                $.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream.abort()
+            }
+            if(killElement){
+                $.grid.data().removeWidget($('#monitor_live_'+d.id+user.auth_token))
+            }
+        }
+    }
     $.ccio.init=function(x,d,user,k){
         if(!k){k={}};k.tmp='';
         if(d&&d.user){
@@ -183,7 +213,7 @@ switch($user.details.lang){
                         url=url+'/'
                     }
                 }else{
-                    url = '<%-originalURL%>'
+                    url = '<%-window.libURL%>'
                 }
                 return url
             break;
@@ -401,16 +431,16 @@ switch($user.details.lang){
             case'humanReadMode':
                 switch(d){
                     case'idle':
-                        k.mode='<%-cleanLang(lang['Idle'])%>'
+                        k.mode=lang['Idle']
                     break;
                     case'stop':
-                        k.mode='<%-cleanLang(lang['Disabled'])%>'
+                        k.mode=lang['Disabled']
                     break;
                     case'record':
-                        k.mode='<%-cleanLang(lang['Record'])%>'
+                        k.mode=lang['Record']
                     break;
                     case'start':
-                        k.mode='<%-cleanLang(lang['Watch Only'])%>'
+                        k.mode=lang['Watch Only']
                     break;
                 }
                 return k.mode
@@ -488,7 +518,7 @@ switch($user.details.lang){
                         $.ccio.mon[d.ke+d.mid+user.auth_token].Base64.disconnect()
                     }
                     if($.ccio.mon[d.ke+d.mid+user.auth_token].Poseidon){
-                        $.ccio.mon[d.ke+d.mid+user.auth_token].Poseidon.destroy()
+                        $.ccio.mon[d.ke+d.mid+user.auth_token].Poseidon.stop()
                     }
                 }
             break;
@@ -549,7 +579,7 @@ switch($user.details.lang){
                     k.e=$('#monitor_live_'+d.mid+user.auth_token+' .stream-element');
                     $.ccio.init('jpegModeStop',d,user);
                     k.run=function(){
-                        k.e.attr('src',user.auth_token+'/jpeg/'+d.ke+'/'+d.mid+'/s.jpg?time='+(new Date()).getTime())
+                        k.e.attr('src',$.ccio.init('location',user)+user.auth_token+'/jpeg/'+d.ke+'/'+d.mid+'/s.jpg?time='+(new Date()).getTime())
                     }
                     k.e.load(function(){
                         $.ccio.mon[d.ke+d.mid+user.auth_token].jpegInterval=setTimeout(k.run,1000/k.jpegInterval);
@@ -590,7 +620,7 @@ switch($user.details.lang){
                 return $.ccio.init('tf',d.time,user)+'.'+d.ext
             break;
             case'filters':
-                k.tmp='<option value="" selected><%-cleanLang(lang['Add New'])%></option>';
+                k.tmp='<option value="" selected>'+lang['Add New']+'</option>';
                 $.each(user.details.filters,function(n,v){
                     k.tmp+='<option value="'+v.id+'">'+v.name+'</option>'
                 });
@@ -621,8 +651,14 @@ switch($user.details.lang){
                 }
             break;
             case'url':
-                if(d.port==80){d.porty=''}else{d.porty=':'+d.port}
-                d.url=d.protocol+'://'+d.host+d.porty;return d.url;
+                var porty
+                if(d.port && d.port !== ''){
+                    porty = ':' + d.port
+                }else{
+                    porty = ''
+                }
+                d.url = d.protocol + '://' + d.host + porty
+                return d.url
             break;
             case'data-video':
                 if(!d){
@@ -664,7 +700,7 @@ switch($user.details.lang){
                         case'hls':case'flv':case'mp4':
                             if(d.p.find('video')[0].paused){
                                 if(d.d.signal_check_log==1){
-                                    d.log={type:'Stream Check',msg:'<%-cleanLang(lang.clientStreamFailedattemptingReconnect)%>'}
+                                    d.log={type:'Stream Check',msg:lang.clientStreamFailedattemptingReconnect}
                                     $.ccio.tm(4,d,'#logs,.monitor_item[mid="'+d.id+'"][ke="'+d.ke+'"][auth="'+user.auth_token+'"] .logs')
                                 }
                                 $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user);
@@ -908,9 +944,9 @@ switch($user.details.lang){
                 d.hr=parseInt(d.startMoment.format('HH')),
                 d.per=parseInt(d.hr/24*100);
                 d.circle='<div title="at '+d.hr+' hours of '+d.startMoment.format('MMMM DD')+'" '+href+' video="launch" class="progress-circle progress-'+d.per+'"><span>'+d.hr+'</span></div>'
-                tmp+='<li class="video-item glM'+d.mid+user.auth_token+'" auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" status="'+d.status+'" status="'+d.status+'" file="'+d.filename+'">'+d.circle+'<div><span title="'+d.endMoment.format()+'" class="livestamp"></span></div><div><div class="small"><b><%-cleanLang(lang.Start)%></b> : '+d.startMoment.format('h:mm:ss , MMMM Do YYYY')+'</div><div class="small"><b><%-cleanLang(lang.End)%></b> : '+d.endMoment.format('h:mm:ss , MMMM Do YYYY')+'</div></div><div><span class="pull-right">'+(parseInt(d.size)/1000000).toFixed(2)+'mb</span><div class="controls btn-group"><a class="btn btn-sm btn-primary" video="launch" '+href+'><i class="fa fa-play-circle"></i></a> <a download="'+d.dlname+'" '+href+' class="btn btn-sm btn-default"><i class="fa fa-download"></i></a>'
+                tmp+='<li class="video-item glM'+d.mid+user.auth_token+'" auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" status="'+d.status+'" status="'+d.status+'" file="'+d.filename+'">'+d.circle+'<div><span title="'+d.endMoment.format()+'" class="livestamp"></span></div><div><div class="small"><b>'+lang.Start+'</b> : '+d.startMoment.format('h:mm:ss , MMMM Do YYYY')+'</div><div class="small"><b>'+lang.End+'</b> : '+d.endMoment.format('h:mm:ss , MMMM Do YYYY')+'</div></div><div><span class="pull-right">'+(parseInt(d.size)/1000000).toFixed(2)+'mb</span><div class="controls btn-group"><a class="btn btn-sm btn-primary" video="launch" '+href+'><i class="fa fa-play-circle"></i></a> <a download="'+d.dlname+'" '+href+' class="btn btn-sm btn-default"><i class="fa fa-download"></i></a>'
                 <% if(config.DropboxAppKey){ %> tmp+='<a video="download" host="dropbox" download="'+d.dlname+'" '+href+' class="btn btn-sm btn-default"><i class="fa fa-dropbox"></i></a>' <% } %>
-                tmp+='<a title="<%-cleanLang(lang['Delete Video'])%>" video="delete" href="'+$.ccio.init('videoHrefToDelete',url)+'" class="btn btn-sm btn-danger permission_video_delete"><i class="fa fa-trash"></i></a></div></div></li>';
+                tmp+='<a title="'+lang['Delete Video']+'" video="delete" href="'+$.ccio.init('videoHrefToDelete',url)+'" class="btn btn-sm btn-danger permission_video_delete"><i class="fa fa-trash"></i></a></div></div></li>';
                 $(z).each(function(n,v){
                     v=$(v);
                     if(v.find('.video-item').length>10){v.find('.video-item:last').remove()}
@@ -918,7 +954,7 @@ switch($user.details.lang){
             break;
             case 1://monitor icon
                 d.src=placeholder.getData(placeholder.plcimg({bgcolor:'#b57d00',text:'...'}));
-                tmp+='<div auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" title="'+d.mid+' : '+d.name+'" class="monitor_block glM'+d.mid+user.auth_token+' col-md-4"><img monitor="watch" class="snapshot" src="'+d.src+'"><div class="box"><div class="title monitor_name truncate">'+d.name+'</div><div class="list-data"><div class="monitor_mid">'+d.mid+'</div><div><b><%-cleanLang(lang['Save as'])%> :</b> <span class="monitor_ext">'+d.ext+'</span></div><div><b>Status :</b> <span class="monitor_status">'+d.status+'</span></div></div><div class="icons text-center">'
+                tmp+='<div auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" title="'+d.mid+' : '+d.name+'" class="monitor_block glM'+d.mid+user.auth_token+' col-md-4"><img monitor="watch" class="snapshot" src="'+d.src+'"><div class="box"><div class="title monitor_name truncate">'+d.name+'</div><div class="list-data"><div class="monitor_mid">'+d.mid+'</div><div><b>'+lang['Save as']+' :</b> <span class="monitor_ext">'+d.ext+'</span></div><div><b>Status :</b> <span class="monitor_status">'+d.status+'</span></div></div><div class="icons text-center">'
                 tmp+='<div class="btn-group btn-group-xs">'
                     var buttons = {
                        "Pop": {
@@ -967,7 +1003,9 @@ switch($user.details.lang){
                 tmp+='<div id="monitor_live_'+d.mid+user.auth_token+'" auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" mode="'+k.mode+'" class="grid-stack-item monitor_item glM'+d.mid+user.auth_token+'"><div class="grid-stack-item-content">';
                 tmp+='<div class="stream-block no-padding mdl-card__media mdl-color-text--grey-50">';
                 tmp+='<div class="stream-objects"></div>';
-                tmp+='<div class="stream-hud"><div class="lamp" title="'+k.mode+'"><i class="fa fa-eercast"></i></div><div class="controls"><span title="<%-cleanLang(lang['Currently viewing'])%>" class="label label-default"><span class="viewers"></span></span> <a class="btn-xs btn-danger btn" monitor="mode" mode="record"><i class="fa fa-circle"></i> <%-cleanLang(lang['Start Recording'])%></a> <a class="btn-xs btn-primary btn" monitor="mode" mode="start"><i class="fa fa-eye"></i> <%-cleanLang(lang['Set to Watch Only'])%></a></div><div class="bottom-text monospace "><div class="detector-fade">'
+                tmp+='<div class="stream-hud">'
+                tmp+='<div class="camera_cpu_usage"><div class="progress"><div class="progress-bar progress-bar-danger" role="progressbar"><span></span></div></div></div>';
+                tmp+='<div class="lamp" title="'+k.mode+'"><i class="fa fa-eercast"></i></div><div class="controls"><span title="'+lang['Currently viewing']+'" class="label label-default"><span class="viewers"></span></span> <a class="btn-xs btn-danger btn" monitor="mode" mode="record"><i class="fa fa-circle"></i> '+lang['Start Recording']+'</a> <a class="btn-xs btn-primary btn" monitor="mode" mode="start"><i class="fa fa-eye"></i> '+lang['Set to Watch Only']+'</a></div><div class="bottom-text monospace "><div class="detector-fade">'
                     $.each([
                         {label:'Currently Detected',tag:'stream-detected-count'}
                     ],function(n,v){
@@ -977,7 +1015,7 @@ switch($user.details.lang){
                 tmp+='<div class="mdl-card__supporting-text text-center">';
                 tmp+='<div class="indifference detector-fade"><div class="progress"><div class="progress-bar progress-bar-danger" role="progressbar"><span></span></div></div></div>';
                 tmp+='<div class="monitor_details">';
-                tmp+='<div><span class="monitor_name">'+d.name+'</span><span class="monitor_not_record_copy">, <%-cleanLang(lang['Recording FPS'])%> : <span class="monitor_fps">'+d.fps+'</span></span></div>';
+                tmp+='<div><span class="monitor_name">'+d.name+'</span><span class="monitor_not_record_copy">, '+lang['Recording FPS']+' : <span class="monitor_fps">'+d.fps+'</span></span></div>';
                 tmp+='</div>';
                 tmp+='<div class="btn-group btn-group-sm">'//start of btn list
                     var buttons = {
@@ -1028,6 +1066,12 @@ switch($user.details.lang){
                           "attr": "monitor=\"timelapse\"",
                           "class": "default",
                           "icon": "angle-double-right"
+                       },
+                       "Video Grid": {
+                          "label": "Video Grid",
+                          "attr": "monitor=\"video_grid\"",
+                          "class": "default",
+                          "icon": "th"
                        },
                        "Videos List": {
                           "label": "Videos List",
@@ -1169,17 +1213,18 @@ switch($user.details.lang){
                 tmp+='   <div class="form-group col-md-3">'
                 tmp+='       <label>'
                 tmp+='           <select class="form-control" where="p1">'
-                tmp+='               <option value="indifference" selected><%-cleanLang(lang['Indifference'])%></option>'
-                tmp+='               <option value="name"><%-cleanLang(lang['Region Name'])%></option>'
-                tmp+='               <option value="reason"><%-cleanLang(lang['Reason'])%></option>'
-                tmp+='               <option value="plug"><%-cleanLang(lang['Detection Engine'])%></option>'
+                tmp+='               <option value="indifference" selected>'+lang['Indifference']+'</option>'
+                tmp+='               <option value="name">'+lang['Region Name']+'</option>'
+                tmp+='               <option value="reason">'+lang['Reason']+'</option>'
+                tmp+='               <option value="time">'+lang['Time']+'</option>'
+                tmp+='               <option value="plug">'+lang['Detection Engine']+'</option>'
                 tmp+='               <optgroup label="Matrix">'
-                tmp+='                  <option value="tag"><%-cleanLang(lang['Object Tag'])%></option>'
-                tmp+='                  <option value="confidence"><%-cleanLang(lang['Confidence'])%></option>'
-                tmp+='                  <option value="x"><%-cleanLang(lang['X Point'])%></option>'
-                tmp+='                  <option value="y"><%-cleanLang(lang['Y Point'])%></option>'
-                tmp+='                  <option value="height"><%-cleanLang(lang['Height'])%></option>'
-                tmp+='                  <option value="width"><%-cleanLang(lang['Width'])%></option>'
+                tmp+='                  <option value="tag">'+lang['Object Tag']+'</option>'
+                tmp+='                  <option value="confidence">'+lang['Confidence']+'</option>'
+                tmp+='                  <option value="x">'+lang['X Point']+'</option>'
+                tmp+='                  <option value="y">'+lang['Y Point']+'</option>'
+                tmp+='                  <option value="height">'+lang['Height']+'</option>'
+                tmp+='                  <option value="width">'+lang['Width']+'</option>'
                 tmp+='               </optgroup>'
                 tmp+='           </select>'
                 tmp+='       </label>'
@@ -1187,29 +1232,29 @@ switch($user.details.lang){
                 tmp+='   <div class="form-group col-md-3">'
                 tmp+='       <label>'
                 tmp+='           <select class="form-control" where="p2">'
-                tmp+='               <option value="===" selected><%-cleanLang(lang['Equal to'])%></option>'
-                tmp+='               <option value="!=="><%-cleanLang(lang['Not Equal to'])%></option>'
-                tmp+='               <option value="indexOf"><%-cleanLang(lang['Contains'])%></option>'
-                tmp+='               <option value="!indexOf"><%-cleanLang(lang['Does Not Contain'])%></option>'
+                tmp+='               <option value="===" selected>'+lang['Equal to']+'</option>'
+                tmp+='               <option value="!==">'+lang['Not Equal to']+'</option>'
+                tmp+='               <option value="indexOf">'+lang['Contains']+'</option>'
+                tmp+='               <option value="!indexOf">'+lang['Does Not Contain']+'</option>'
                 tmp+='               <optgroup label="For Numbers">'
-                tmp+='                  <option value=">="><%-cleanLang(lang['Greater Than or Equal to'])%></option>'
-                tmp+='                  <option value=">"><%-cleanLang(lang['Greater Than'])%></option>'
-                tmp+='                  <option value="<"><%-cleanLang(lang['Less Than'])%></option>'
-                tmp+='                  <option value="<="><%-cleanLang(lang['Less Than or Equal to'])%></option>'
+                tmp+='                  <option value=">=">'+lang['Greater Than or Equal to']+'</option>'
+                tmp+='                  <option value=">">'+lang['Greater Than']+'</option>'
+                tmp+='                  <option value="<">'+lang['Less Than']+'</option>'
+                tmp+='                  <option value="<=">'+lang['Less Than or Equal to']+'</option>'
                 tmp+='               </optgroup>'
                 tmp+='           </select>'
                 tmp+='       </label>'
                 tmp+='   </div>'
                 tmp+='   <div class="form-group col-md-3">'
                 tmp+='       <label>'
-                tmp+='           <input class="form-control" placeholder="Value" title="<%-cleanLang(lang.Value)%>" where="p3">'
+                tmp+='           <input class="form-control" placeholder="Value" title="'+lang.Value+'" where="p3">'
                 tmp+='       </label>'
                 tmp+='   </div>'
                 tmp+='   <div class="form-group col-md-3">'
                 tmp+='       <label>'
                 tmp+='           <select class="form-control" where="p4">'
-                tmp+='               <option value="&&" selected><%-cleanLang(lang['AND'])%></option>'
-                tmp+='               <option value="||"><%-cleanLang(lang['OR'])%></option>'
+                tmp+='               <option value="&&" selected>'+lang['AND']+'</option>'
+                tmp+='               <option value="||">'+lang['OR']+'</option>'
                 tmp+='           </select>'
                 tmp+='       </label>'
                 tmp+='   </div>'
@@ -1225,35 +1270,35 @@ switch($user.details.lang){
                 tmp+='   <div class="form-group col-md-4">';
                 tmp+='       <label>';
                 tmp+='           <select class="form-control" where="p1">';
-                tmp+='               <option value="mid" selected><%-cleanLang(lang['Monitor ID'])%></option>';
-                tmp+='               <option value="ext"><%-cleanLang(lang['File Type'])%></option>';
-                tmp+='               <option value="time"><%-cleanLang(lang['Start Time'])%></option>';
-                tmp+='               <option value="end"><%-cleanLang(lang['End Time'])%></option>';
-                tmp+='               <option value="size"><%-cleanLang(lang['Filesize'])%></option>';
-                tmp+='               <option value="status"><%-cleanLang(lang['Video Status'])%></option>';
+                tmp+='               <option value="mid" selected>'+lang['Monitor ID']+'</option>';
+                tmp+='               <option value="ext">'+lang['File Type']+'</option>';
+                tmp+='               <option value="time">'+lang['Start Time']+'</option>';
+                tmp+='               <option value="end">'+lang['End Time']+'</option>';
+                tmp+='               <option value="size">'+lang['Filesize']+'</option>';
+                tmp+='               <option value="status">'+lang['Video Status']+'</option>';
                 tmp+='           </select>';
                 tmp+='       </label>';
                 tmp+='   </div>';
                 tmp+='   <div class="form-group col-md-4">';
                 tmp+='       <label>';
                 tmp+='           <select class="form-control" where="p2">';
-                tmp+='               <option value="=" selected><%-cleanLang(lang['Equal to'])%></option>';
-                tmp+='               <option value="!="><%-cleanLang(lang['Not Equal to'])%></option>';
-                tmp+='               <option value=">="><%-cleanLang(lang['Greater Than or Equal to'])%></option>';
-                tmp+='               <option value=">"><%-cleanLang(lang['Greater Than'])%></option>';
-                tmp+='               <option value="<"><%-cleanLang(lang['Less Than'])%></option>';
-                tmp+='               <option value="<="><%-cleanLang(lang['Less Than or Equal to'])%></option>';
-                tmp+='               <option value="LIKE"><%-cleanLang(lang['Like'])%></option>';
-                tmp+='               <option value="=~"><%-cleanLang(lang['Matches'])%></option>';
-                tmp+='               <option value="!~"><%-cleanLang(lang['Not Matches'])%></option>';
-                tmp+='               <option value="=[]"><%-cleanLang(lang['In'])%></option>';
-                tmp+='               <option value="![]"><%-cleanLang(lang['Not In'])%></option>';
+                tmp+='               <option value="=" selected>'+lang['Equal to']+'</option>';
+                tmp+='               <option value="!=">'+lang['Not Equal to']+'</option>';
+                tmp+='               <option value=">=">'+lang['Greater Than or Equal to']+'</option>';
+                tmp+='               <option value=">">'+lang['Greater Than']+'</option>';
+                tmp+='               <option value="<">'+lang['Less Than']+'</option>';
+                tmp+='               <option value="<=">'+lang['Less Than or Equal to']+'</option>';
+                tmp+='               <option value="LIKE">'+lang['Like']+'</option>';
+                tmp+='               <option value="=~">'+lang['Matches']+'</option>';
+                tmp+='               <option value="!~">'+lang['Not Matches']+'</option>';
+                tmp+='               <option value="=[]">'+lang['In']+'</option>';
+                tmp+='               <option value="![]">'+lang['Not In']+'</option>';
                 tmp+='           </select>';
                 tmp+='       </label>';
                 tmp+='   </div>';
                 tmp+='   <div class="form-group col-md-4">';
                 tmp+='       <label>';
-                tmp+='           <input class="form-control" placeholder="Value" title="<%-cleanLang(lang.Value)%>" where="p3">';
+                tmp+='           <input class="form-control" placeholder="Value" title="'+lang.Value+'" where="p3">';
                 tmp+='       </label>';
                 tmp+='   </div>';
                 tmp+='</div>';
@@ -1265,10 +1310,10 @@ switch($user.details.lang){
                 if(!d.secure){d.secure="0"}
                 tmp+='<div class="linksGroup" links="'+d.host+'">'
                 tmp+='<h4 class="round-left">'+d.host+' <small>'+d.ke+'</small>&nbsp;<div class="pull-right"><a class="btn btn-danger btn-xs delete"><i class="fa fa-trash-o"></i></a></div></h4>'
-                tmp+='<div class="form-group"><label><div><span><%-lang.Host%></span></div><div><input class="form-control" link="host" value="'+d.host+'"></div></label></div>'
-                tmp+='<div class="form-group"><label><div><span><%-lang['Group Key']%></span></div><div><input class="form-control" link="ke" value="'+d.ke+'"></div></label></div>'
-                tmp+='<div class="form-group"><label><div><span><%-lang['API Key']%></span></div><div><input class="form-control" link="api" value="'+d.api+'"></div></label></div>'
-                tmp+='<div class="form-group"><label><div><span><%-lang.Secure%> (HTTPS/WSS)</span></div><div><select class="form-control" link="secure"><option value="1"><%-lang.Yes%></option><option selected value="0"><%-lang.No%></option></select></div></label></div>'
+                tmp+='<div class="form-group"><label><div><span>'+lang.Host+'</span></div><div><input class="form-control" link="host" value="'+d.host+'"></div></label></div>'
+                tmp+='<div class="form-group"><label><div><span>'+lang['Group Key']+'</span></div><div><input class="form-control" link="ke" value="'+d.ke+'"></div></label></div>'
+                tmp+='<div class="form-group"><label><div><span>'+lang['API Key']+'</span></div><div><input class="form-control" link="api" value="'+d.api+'"></div></label></div>'
+                tmp+='<div class="form-group"><label><div><span>'+lang.Secure+' (HTTPS/WSS)</span></div><div><select class="form-control" link="secure"><option value="1">'+lang.Yes+'</option><option selected value="0">'+lang.No+'</option></select></div></label></div>'
                 tmp+='</div>';
             break;
             case 'form-group'://Input Map Selector
@@ -1311,7 +1356,7 @@ switch($user.details.lang){
             case 'input-map-selector'://Input Map Selector
                 if(!d.map){d.map=''}
                 tmp+='     <div class="form-group map-row">'
-                tmp+='        <label><div><span><%-cleanLang(lang['Map'])%></span></div>'
+                tmp+='        <label><div><span>'+lang['Map']+'</span></div>'
                 tmp+='            <div>'
                 tmp+='            <div class="input-group input-group-sm">'
                 tmp+='<input class="form-control" map-input="map" value="'+d.map+'" placeholder="0">'
@@ -1340,47 +1385,47 @@ switch($user.details.lang){
 //                    },
                     {
                         name:'type',
-                        label:'<%-cleanLang(lang['Input Type'])%>',
+                        label:lang['Input Type'],
                         default:'h264',
                         attribute:'selector="h_i_'+tempID+'"',
                         type:'selector',
                         choices:[
-                            {label:'<%-cleanLang(lang['H.264 / H.265 / H.265+'])%>',value:'h264'},
-                            {label:'<%-cleanLang(lang['JPEG'])%>',value:'jpeg'},
-                            {label:'<%-cleanLang(lang['MJPEG'])%>',value:'mjpeg'},
-                            {label:'<%-cleanLang(lang['HLS (.m3u8)'])%>',value:'hls'},
-                            {label:'<%-cleanLang(lang['MPEG-4 (.mp4 / .ts)'])%>',value:'mp4'},
-                            {label:'<%-cleanLang(lang['Local'])%>',value:'local'},
-                            {label:'<%-cleanLang(lang['Raw'])%>',value:'raw'},
+                            {label:lang['H.264 / H.265 / H.265+'],value:'h264'},
+                            {label:lang['JPEG'],value:'jpeg'},
+                            {label:lang['MJPEG'],value:'mjpeg'},
+                            {label:lang['HLS (.m3u8)'],value:'hls'},
+                            {label:lang['MPEG-4 (.mp4 / .ts)'],value:'mp4'},
+                            {label:lang['Local'],value:'local'},
+                            {label:lang['Raw'],value:'raw'},
                         ]
                     },
                     {
                         name:'fulladdress',
-                        label:'<%-cleanLang(lang['Full URL Path'])%>',
+                        label:lang['Full URL Path'],
                         placeholder:'Example : rtsp://admin:password@123.123.123.123/stream/1',
                         type:'text',
                     },
                     {
                         name:'sfps',
-                        label:'<%-cleanLang(lang['Monitor Capture Rate'])%>',
+                        label:lang['Monitor Capture Rate'],
                         placeholder:'',
                         type:'text',
                     },
                     {
                         name:'aduration',
-                        label:'<%-cleanLang(lang['Analyzation Duration'])%>',
+                        label:lang['Analyzation Duration'],
                         placeholder:'Example : 1000000',
                         type:'text',
                     },
                     {
                         name:'probesize',
-                        label:'<%-cleanLang(lang['Probe Size'])%>',
+                        label:lang['Probe Size'],
                         placeholder:'Example : 1000000',
                         type:'text',
                     },
                     {
                         name:'stream_loop',
-                        label:'<%-cleanLang(lang['Loop Stream'])%>',
+                        label:lang['Loop Stream'],
                         class:'h_i_'+tempID+'_input h_i_'+tempID+'_mp4 h_i_'+tempID+'_raw',
                         hidden:true,
                         default:'0',
@@ -1392,7 +1437,7 @@ switch($user.details.lang){
                     },
                     {
                         name:'rtsp_transport',
-                        label:'<%-cleanLang(lang['RTSP Transport'])%>',
+                        label:lang['RTSP Transport'],
                         class:'h_i_'+tempID+'_input h_i_'+tempID+'_h264',
                         default:'0',
                         type:'selector',
@@ -1404,7 +1449,7 @@ switch($user.details.lang){
                     },
                     {
                         name:'accelerator',
-                        label:'<%-cleanLang(lang['Accelerator'])%>',
+                        label:lang['Accelerator'],
                         attribute:'selector="h_accel_'+tempID+'"',
                         default:'0',
                         type:'selector',
@@ -1415,46 +1460,57 @@ switch($user.details.lang){
                     },
                     {
                         name:'hwaccel',
-                        label:'<%-cleanLang(lang['hwaccel'])%>',
+                        label:lang['hwaccel'],
                         class:'h_accel_'+tempID+'_input h_accel_'+tempID+'_1',
                         hidden:true,
                         default:'',
                         type:'selector',
                         choices:[
-                            {label:'<%-cleanLang(lang['Auto'])%>',value:''},
-                            {label:'<%-cleanLang(lang['cuvid'])%>',value:'cuvid'},
-                            {label:'<%-cleanLang(lang['vaapi'])%>',value:'vaapi'},
-                            {label:'<%-cleanLang(lang['qsv'])%>',value:'qsv'},
-                            {label:'<%-cleanLang(lang['vdpau'])%>',value:'vdpau'},
-                            {label:'<%-cleanLang(lang['dxva2'])%>',value:'dxva2'},
-                            {label:'<%-cleanLang(lang['vdpau'])%>',value:'vdpau'},
-                            {label:'<%-cleanLang(lang['videotoolbox'])%>',value:'videotoolbox'},
+                            <% if(config.availableHWAccels) {
+                                    var methods = {
+                                        auto: {label:lang['Auto'],value:'auto'},
+                                        drm: {label:lang['drm'],value:'drm'},
+                                        cuvid: {label:lang['cuvid'],value:'cuvid'},
+                                        vaapi: {label:lang['vaapi'],value:'vaapi'},
+                                        qsv: {label:lang['qsv'],value:'qsv'},
+                                        vdpau: {label:lang['vdpau'],value:'vdpau'},
+                                        dxva2: {label:lang['dxva2'],value:'dxva2'},
+                                        vdpau: {label:lang['vdpau'],value:'vdpau'},
+                                        videotoolbox: {label:lang['videotoolbox'],value:'videotoolbox'}
+                                    }
+                                    config.availableHWAccels.forEach(function(availibleMethod){
+                                        if(methods[availibleMethod]){ %>
+                                            <%- JSON.stringify(methods[availibleMethod]) %>,
+                                        <% }
+                                    })
+                                }
+                             %>
                         ]
                     },
                     {
                         name:'hwaccel_vcodec',
-                        label:'<%-cleanLang(lang['hwaccel_vcodec'])%>',
+                        label:lang['hwaccel_vcodec'],
                         class:'h_accel_'+tempID+'_input h_accel_'+tempID+'_1',
                         hidden:true,
                         default:'auto',
                         type:'selector',
                         choices:[
-                            {label:'<%-cleanLang(lang['Auto'])%>',value:'auto'},
-                            {label:'<%-cleanLang(lang['h264_cuvid'])%>',value:'h264_cuvid',group:'NVIDIA'},
-                            {label:'<%-cleanLang(lang['hevc_cuvid'])%>',value:'hevc_cuvid',group:'NVIDIA'},
-                            {label:'<%-cleanLang(lang['mjpeg_cuvid'])%>',value:'mjpeg_cuvid',group:'NVIDIA'},
-                            {label:'<%-cleanLang(lang['mpeg4_cuvid'])%>',value:'mpeg4_cuvid',group:'NVIDIA'},
-                            {label:'<%-cleanLang(lang['h264_qsv'])%>',value:'h264_qsv',group:'Quick Sync Video'},
-                            {label:'<%-cleanLang(lang['hevc_qsv'])%>',value:'hevc_qsv',group:'Quick Sync Video'},
-                            {label:'<%-cleanLang(lang['mpeg2_qsv'])%>',value:'mpeg2_qsv',group:'Quick Sync Video'},
-                            {label:'<%-cleanLang(lang['h264_mmal'])%>',value:'h264_mmal',group:'Raspberry Pi'},
-                            {label:'<%-cleanLang(lang['mpeg2_mmal'])%>',value:'mpeg2_mmal',group:'Raspberry Pi'},
-                            {label:'<%-cleanLang(lang['mpeg4_mmal'])%>',value:'mpeg4_mmal',group:'Raspberry Pi'},
+                            {label:lang['Auto'],value:'auto'},
+                            {label:lang['h264_cuvid'],value:'h264_cuvid',group:'NVIDIA'},
+                            {label:lang['hevc_cuvid'],value:'hevc_cuvid',group:'NVIDIA'},
+                            {label:lang['mjpeg_cuvid'],value:'mjpeg_cuvid',group:'NVIDIA'},
+                            {label:lang['mpeg4_cuvid'],value:'mpeg4_cuvid',group:'NVIDIA'},
+                            {label:lang['h264_qsv'],value:'h264_qsv',group:'Quick Sync Video'},
+                            {label:lang['hevc_qsv'],value:'hevc_qsv',group:'Quick Sync Video'},
+                            {label:lang['mpeg2_qsv'],value:'mpeg2_qsv',group:'Quick Sync Video'},
+                            {label:lang['h264_mmal'],value:'h264_mmal',group:'Raspberry Pi'},
+                            {label:lang['mpeg2_mmal'],value:'mpeg2_mmal',group:'Raspberry Pi'},
+                            {label:lang['mpeg4_mmal'],value:'mpeg4_mmal',group:'Raspberry Pi'},
                         ]
                     },
                     {
                         name:'hwaccel_device',
-                        label:'<%-cleanLang(lang['hwaccel_device'])%>',
+                        label:lang['hwaccel_device'],
                         class:'h_accel_'+tempID+'_input h_accel_'+tempID+'_1',
                         hidden:true,
                         placeholder:'Example : /dev/dri/video0',
@@ -1462,7 +1518,7 @@ switch($user.details.lang){
                     },
                 ];
                 tmp+='<div class="form-group-group forestgreen input-map" section id="monSectionMap'+tempID+'">'
-                tmp+='  <h4><%-lang["Input"]%> <b><%-lang["Map"]%> : <span class="place">'+d.channel+'</span></b>'
+                tmp+='  <h4>'+lang["Input"]+' <b>'+lang["Map"]+' : <span class="place">'+d.channel+'</span></b>'
                 tmp+='  <div class="pull-right"><a class="btn btn-danger btn-xs delete"><i class="fa fa-trash-o"></i></a></div>'
                 tmp+='  </h4>'
                 $.each(fields,function(n,v){
@@ -1498,16 +1554,16 @@ switch($user.details.lang){
                     d.channel=numberOfChannelsDrawn
                 }
                 tmp+='<div class="form-group-group blue stream-channel" section id="monSectionChannel'+tempID+'">'
-                tmp+='  <h4><%-lang["Stream Channel"]%> <span class="place">'+d.channel+'</span>'
+                tmp+='  <h4>'+lang["Stream Channel"]+' <span class="place">'+d.channel+'</span>'
                 tmp+='  <div class="pull-right"><a class="btn btn-danger btn-xs delete"><i class="fa fa-trash-o"></i></a></div>'
                 tmp+='  </h4>'
 //                tmp+='      <div class="form-group">'
-//                tmp+='        <label><div><span><%-lang["Input Selector"]%></span></div>'
+//                tmp+='        <label><div><span>'+lang["Input Selector"]+'</span></div>'
 //                tmp+='            <div><input class="form-control" channel-detail="stream_map" placeholder="0"></div>'
 //                tmp+='        </label>'
 //                tmp+='      </div>'
                 tmp+='<div class="form-group-group forestgreen" input-mapping="stream_channel-'+d.channel+'">'
-                tmp+='    <h4><%-cleanLang(lang['Input Feed'])%>'
+                tmp+='    <h4>'+lang['Input Feed']
                 tmp+='        <div class="pull-right">'
                 tmp+='            <a class="btn btn-success btn-xs add_map_row"><i class="fa fa-plus-square-o"></i></a>'
                 tmp+='        </div>'
@@ -1515,137 +1571,137 @@ switch($user.details.lang){
                 tmp+='    <div class="choices"></div>'
                 tmp+='</div>'
                 tmp+='     <div class="form-group">'
-                tmp+='        <label><div><span><%-lang["Stream Type"]%></span></div>'
+                tmp+='        <label><div><span>'+lang["Stream Type"]+'</span></div>'
                 tmp+='            <div><select class="form-control" channel-detail="stream_type" selector="h_st_channel_'+tempID+'" triggerChange="#monSectionChannel'+tempID+' [channel-detail=stream_vcodec]" triggerChangeIgnore="b64,mjpeg">'
-                tmp+='                <option value="mp4"><%-lang["Poseidon"]%></option>'
-                tmp+='                <option value="rtmp"><%-lang["RTMP Stream"]%></option>'
-                tmp+='                <option value="flv"><%-lang["FLV"]%></option>'
-                tmp+='                <option value="h264"><%-lang["Raw H.264 Stream"]%></option>'
-                tmp+='                <option value="hls"><%-lang["HLS (includes Audio)"]%></option>'
-                tmp+='                <option value="mjpeg"><%-lang["MJPEG"]%></option>'
+                tmp+='                <option value="mp4">'+lang["Poseidon"]+'</option>'
+                tmp+='                <option value="rtmp">'+lang["RTMP Stream"]+'</option>'
+                tmp+='                <option value="flv">'+lang["FLV"]+'</option>'
+                tmp+='                <option value="h264">'+lang["Raw H.264 Stream"]+'</option>'
+                tmp+='                <option value="hls">'+lang["HLS (includes Audio)"]+'</option>'
+                tmp+='                <option value="mjpeg">'+lang["MJPEG"]+'</option>'
                 tmp+='            </select></div>'
                 tmp+='        </label>'
                 tmp+='      </div>'
                 tmp+='          <div class="h_st_channel_'+tempID+'_input h_st_channel_'+tempID+'_rtmp">'
                 tmp+='              <div class="form-group">'
-                tmp+='                <label><div><span><%-lang["Server URL"]%></span></div>'
+                tmp+='                <label><div><span>'+lang["Server URL"]+'</span></div>'
                 tmp+='                <div><input class="form-control" channel-detail="rtmp_server_url" placeholder="Example : rtmp://live-api.facebook.com:80/rtmp/"></div>'
                 tmp+='                </label>'
                 tmp+='              </div>'
                 tmp+='              <div class="form-group">'
-                tmp+='                <label><div><span><%-lang["Stream Key"]%></span></div>'
+                tmp+='                <label><div><span>'+lang["Stream Key"]+'</span></div>'
                 tmp+='                <div><input class="form-control" channel-detail="rtmp_stream_key" placeholder="Example : 1111111111?ds=1&a=xxxxxxxxxx"></div>'
                 tmp+='                </label>'
                 tmp+='              </div>'
                 tmp+='          </div>'
                 tmp+='      <div class="form-group h_st_channel_'+tempID+'_input h_st_channel_'+tempID+'_mjpeg" style="display:none">'
-                tmp+='        <label><div><span><%-lang["# of Allow MJPEG Clients"]%></span></div>'
+                tmp+='        <label><div><span>'+lang["# of Allow MJPEG Clients"]+'</span></div>'
                 tmp+='            <div><input class="form-control" channel-detail="stream_mjpeg_clients" placeholder="20"></div>'
                 tmp+='        </label>'
                 tmp+='      </div>'
                 tmp+='      <div class="h_st_channel_'+tempID+'_input h_st_channel_'+tempID+'_hls h_st_channel_'+tempID+'_rtmp h_st_channel_'+tempID+'_flv h_st_channel_'+tempID+'_mp4  h_st_channel_'+tempID+'_h264">'
                 tmp+='          <div class="form-group">'
-                tmp+='            <label><div><span><%-lang["HLS Video Encoder"]%></span></div>'
+                tmp+='            <label><div><span>'+lang["HLS Video Encoder"]+'</span></div>'
                 tmp+='                <div><select class="form-control" channel-detail="stream_vcodec" selector="h_hls_v_channel_'+tempID+'">'
-                tmp+='                    <option value="no" selected><%-lang["Auto"]%></option>'
-                tmp+='                    <option value="libx264"><%-lang["libx264"]%></option>'
-                tmp+='                    <option value="libx265"><%-lang["libx265"]%></option>'
-                tmp+='                    <option value="copy" selected><%-lang["copy"]%></option>'
-                tmp+='                    <optgroup label="<%-lang["Hardware Accelerated"]%>">'
-                tmp+='                        <option value="h264_vaapi"><%-lang["h264_vaapi"]%></option>'
-                tmp+='                        <option value="hevc_vaapi"><%-lang["hevc_vaapi"]%></option>'
-                tmp+='                        <option value="h264_nvenc"><%-lang["h264_nvenc"]%></option>'
-                tmp+='                        <option value="hevc_nvenc"><%-lang["hevc_nvenc"]%></option>'
-                tmp+='                        <option value="h264_qsv"><%-lang["h264_qsv"]%></option>'
-                tmp+='                        <option value="hevc_qsv"><%-lang["hevc_qsv"]%></option>'
-                tmp+='                        <option value="mpeg2_qsv"><%-lang["mpeg2_qsv"]%></option>'
-                tmp+='                        <option value="h264_omx"><%-lang["h264_omx"]%></option>'
+                tmp+='                    <option value="no" selected>'+lang["Auto"]+'</option>'
+                tmp+='                    <option value="libx264">'+lang["libx264"]+'</option>'
+                tmp+='                    <option value="libx265">'+lang["libx265"]+'</option>'
+                tmp+='                    <option value="copy" selected>'+lang["copy"]+'</option>'
+                tmp+='                    <optgroup label="'+lang["Hardware Accelerated"]+'">'
+                tmp+='                        <option value="h264_vaapi">'+lang["h264_vaapi"]+'</option>'
+                tmp+='                        <option value="hevc_vaapi">'+lang["hevc_vaapi"]+'</option>'
+                tmp+='                        <option value="h264_nvenc">'+lang["h264_nvenc"]+'</option>'
+                tmp+='                        <option value="hevc_nvenc">'+lang["hevc_nvenc"]+'</option>'
+                tmp+='                        <option value="h264_qsv">'+lang["h264_qsv"]+'</option>'
+                tmp+='                        <option value="hevc_qsv">'+lang["hevc_qsv"]+'</option>'
+                tmp+='                        <option value="mpeg2_qsv">'+lang["mpeg2_qsv"]+'</option>'
+                tmp+='                        <option value="h264_omx">'+lang["h264_omx"]+'</option>'
                 tmp+='                    </optgroup>'
                 tmp+='                </select></div>'
                 tmp+='            </label>'
                 tmp+='          </div>'
                 tmp+='          <div class="form-group">'
-                tmp+='            <label><div><span><%-lang["HLS Audio Encoder"]%></span></div>'
+                tmp+='            <label><div><span>'+lang["HLS Audio Encoder"]+'</span></div>'
                 tmp+='                <div><select class="form-control" channel-detail="stream_acodec">'
-                tmp+='                    <option value="no" selected><%-lang["No Audio"]%></option>'
-                tmp+='                    <option value=""><%-lang["Auto"]%></option>'
-                tmp+='                    <option value="aac"><%-lang["aac"]%></option>'
-                tmp+='                    <option value="ac3"><%-lang["ac3"]%></option>'
-                tmp+='                    <option value="libmp3lame"><%-lang["libmp3lame"]%></option>'
-                tmp+='                    <option value="copy"><%-lang["copy"]%></option>'
+                tmp+='                    <option value="no" selected>'+lang["No Audio"]+'</option>'
+                tmp+='                    <option value="">'+lang["Auto"]+'</option>'
+                tmp+='                    <option value="aac">'+lang["aac"]+'</option>'
+                tmp+='                    <option value="ac3">'+lang["ac3"]+'</option>'
+                tmp+='                    <option value="libmp3lame">'+lang["libmp3lame"]+'</option>'
+                tmp+='                    <option value="copy">'+lang["copy"]+'</option>'
                 tmp+='                </select></div>'
                 tmp+='            </label>'
                 tmp+='          </div>'
                 tmp+='      </div>'
                 tmp+='              <div class="form-group">'
-                tmp+='                <label><div><span><%-lang["Rate"]%></span></div>'
+                tmp+='                <label><div><span>'+lang["Rate"]+'</span></div>'
                 tmp+='                <div><input class="form-control" channel-detail="stream_fps" placeholder=""></div>'
                 tmp+='                </label>'
                 tmp+='              </div>'
                 tmp+='      <div class="h_st_channel_'+tempID+'_input h_st_channel_'+tempID+'_hls" style="display:none">'
                 tmp+='          <div class="form-group">'
-                tmp+='            <label><div><span><%-lang["HLS Segment Length"]%></span></div>'
+                tmp+='            <label><div><span>'+lang["HLS Segment Length"]+'</span></div>'
                 tmp+='                <div><input class="form-control" channel-detail="hls_time" placeholder="2"></div>'
                 tmp+='            </label>'
                 tmp+='          </div>'
                 tmp+='          <div class="form-group">'
-                tmp+='            <label><div><span><%-lang["HLS Preset"]%></span></div>'
+                tmp+='            <label><div><span>'+lang["HLS Preset"]+'</span></div>'
                 tmp+='                <div><input class="form-control" channel-detail="preset_stream" placeholder="ultrafast"></div>'
                 tmp+='            </label>'
                 tmp+='          </div>'
                 tmp+='          <div class="form-group">'
-                tmp+='            <label><div><span><%-lang["HLS List Size"]%></span></div>'
+                tmp+='            <label><div><span>'+lang["HLS List Size"]+'</span></div>'
                 tmp+='                <div><input class="form-control" channel-detail="hls_list_size" placeholder="2"></div>'
                 tmp+='            </label>'
                 tmp+='          </div>'
                 tmp+='      </div>'
                 tmp+='      <div class="h_st_channel_'+tempID+'_input h_st_channel_'+tempID+'_mjpeg h_st_channel_'+tempID+'_hls h_st_channel_'+tempID+'_rtmp h_st_channel_'+tempID+'_jsmpeg h_st_channel_'+tempID+'_flv h_st_channel_'+tempID+'_mp4  h_st_channel_'+tempID+'_h264 h_hls_v_channel_'+tempID+'_input h_hls_v_channel_'+tempID+'_libx264 h_hls_v_channel_'+tempID+'_libx265 h_hls_v_channel_'+tempID+'_h264_nvenc h_hls_v_channel_'+tempID+'_hevc_nvenc h_hls_v_channel_'+tempID+'_no" style="display:none">'
                 tmp+='              <div class="form-group">'
-                tmp+='                <label><div><span><%-lang["Quality"]%></span></div>'
+                tmp+='                <label><div><span>'+lang["Quality"]+'</span></div>'
                 tmp+='                <div><input class="form-control" placeholder="23" channel-detail="stream_quality"></div>'
                 tmp+='                </label>'
                 tmp+='              </div>'
                 tmp+='          <div class="h_st_channel_'+tempID+'_input h_st_channel_'+tempID+'_rtmp">'
                 tmp+='              <div class="form-group">'
-                tmp+='                <label><div><span><%-lang["Video Bit Rate"]%></span></div>'
+                tmp+='                <label><div><span>'+lang["Video Bit Rate"]+'</span></div>'
                 tmp+='                <div><input class="form-control" channel-detail="stream_v_br" placeholder=""></div>'
                 tmp+='                </label>'
                 tmp+='              </div>'
                 tmp+='              <div class="form-group">'
-                tmp+='                <label><div><span><%-lang["Audio Bit Rate"]%></span></div>'
+                tmp+='                <label><div><span>'+lang["Audio Bit Rate"]+'</span></div>'
                 tmp+='                <div><input class="form-control" channel-detail="stream_a_br" placeholder="128k"></div>'
                 tmp+='                </label>'
                 tmp+='              </div>'
                 tmp+='          </div>'
                 tmp+='              <div class="form-group">'
-                tmp+='                <label><div><span><%-lang["Width"]%></span></div>'
+                tmp+='                <label><div><span>'+lang["Width"]+'</span></div>'
                 tmp+='                <div><input class="form-control" type="number" min="1" channel-detail="stream_scale_x" placeholder="Example : 640"></div>'
                 tmp+='                </label>'
                 tmp+='              </div>'
                 tmp+='              <div class="form-group">'
-                tmp+='                <label><div><span><%-lang["Height"]%></span></div>'
+                tmp+='                <label><div><span>'+lang["Height"]+'</span></div>'
                 tmp+='                <div><input class="form-control" type="number" min="1" channel-detail="stream_scale_y" placeholder="Example : 480"></div>'
                 tmp+='                </label>'
                 tmp+='              </div>'
                 tmp+='          <div class="form-group">'
-                tmp+='            <label><div><span><%-lang["Rotate"]%></span></div>'
+                tmp+='            <label><div><span>'+lang["Rotate"]+'</span></div>'
                 tmp+='                    <div><select class="form-control" channel-detail="rotate_stream">'
-                tmp+='                        <option value="no" selected><%-lang["No Rotation"]%></option>'
-                tmp+='                        <option value="2,transpose=2"><%-lang["180 Degrees"]%></option>'
-                tmp+='                        <option value="0"><%-lang["90 Counter Clockwise and Vertical Flip (default)"]%></option>'
-                tmp+='                        <option value="1"><%-lang["90 Clockwise"]%></option>'
-                tmp+='                        <option value="2"><%-lang["90 Clockwise and Vertical Flip"]%></option>'
-                tmp+='                        <option value="3"><%-lang["90 Clockwise and Vertical Flip"]%></option>'
+                tmp+='                        <option value="no" selected>'+lang["No Rotation"]+'</option>'
+                tmp+='                        <option value="2,transpose=2">'+lang["180 Degrees"]+'</option>'
+                tmp+='                        <option value="0">'+lang["90 Counter Clockwise and Vertical Flip (default)"]+'</option>'
+                tmp+='                        <option value="1">'+lang["90 Clockwise"]+'</option>'
+                tmp+='                        <option value="2">'+lang["90 Clockwise and Vertical Flip"]+'</option>'
+                tmp+='                        <option value="3">'+lang["90 Clockwise and Vertical Flip"]+'</option>'
                 tmp+='                    </select></div>'
                 tmp+='              </label>'
                 tmp+='          </div>'
                 tmp+='          <div class="form-group">'
-                tmp+='            <label><div><span><%-lang["Video Filter"]%></span></div>'
+                tmp+='            <label><div><span>'+lang["Video Filter"]+'</span></div>'
                 tmp+='            <div><input class="form-control" channel-detail="svf"></div>'
                 tmp+='            </label>'
                 tmp+='          </div>'
                 tmp+='          <div class="form-group">'
-                tmp+='              <label><div><span><%-lang["Stream Flags"]%></span></div>'
+                tmp+='              <label><div><span>'+lang["Stream Flags"]+'</span></div>'
                 tmp+='              <div><input class="form-control" channel-detail="cust_stream"></div>'
                 tmp+='          </label>'
                 tmp+='          </div>'
@@ -1824,7 +1880,7 @@ switch($user.details.lang){
         return ii.o
     }
 //websocket functions
-$.users={}
+$.users = {}
 $.ccio.globalWebsocket=function(d,user){
     if(d.f!=='monitor_frame'&&d.f!=='os'&&d.f!=='video_delete'&&d.f!=='detector_trigger'&&d.f!=='detector_record_timeout_start'&&d.f!=='log'){$.ccio.log(d);}
     if(!user){
@@ -1953,6 +2009,12 @@ $.ccio.globalWebsocket=function(d,user){
             var attr = '[mid="'+d.mid+'"][ke="'+d.ke+'"][auth="'+user.auth_token+'"]'
             $.ccio.tm(4,d,'#logs,'+attr+'.monitor_item .logs:visible,'+attr+'#add_monitor:visible .logs',user)
         break;
+        case'camera_cpu_usage':
+            var el = $('.monitor_item[auth="'+user.auth_token+'"][ke="'+d.ke+'"][mid="'+d.id+'"] .camera_cpu_usage')
+            .attr('title',d.percent + '% ' + lang['CPU used by this stream'])
+            el.find('.progress-bar').css('width',d.percent)
+            el.find('.percent').html(d.percent + '%')
+        break;
         case'os'://indicator
             //cpu
             d.cpu=parseFloat(d.cpu).toFixed(0)+'%';
@@ -2042,23 +2104,7 @@ $.ccio.globalWebsocket=function(d,user){
             }
             d.o=$.ccio.op()[d.chosen_set];
             if(!d.o[d.ke]){d.o[d.ke]={}};d.o[d.ke][d.id]=0;$.ccio.op(d.chosen_set,d.o);
-            if($.ccio.mon[d.ke+d.id+user.auth_token]){
-                $.ccio.init('closeVideo',{mid:d.id,ke:d.ke},user);
-                $.ccio.init('jpegModeStop',{mid:d.id,ke:d.ke},user);
-                $.ccio.init('clearTimers',d,user)
-                clearInterval($.ccio.mon[d.ke+d.id+user.auth_token].signal);delete($.ccio.mon[d.ke+d.id+user.auth_token].signal);
-                $.ccio.mon[d.ke+d.id+user.auth_token].watch=0;
-                if($.ccio.mon[d.ke+d.id+user.auth_token].hls){$.ccio.mon[d.ke+d.id+user.auth_token].hls.destroy()}
-                if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){$.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.destroy()}
-                if($.ccio.mon[d.ke+d.id+user.auth_token].Base64){$.ccio.mon[d.ke+d.id+user.auth_token].Base64.disconnect()}
-                if($.ccio.mon[d.ke+d.id+user.auth_token].h265Socket){$.ccio.mon[d.ke+d.id+user.auth_token].h265Socket.disconnect()}
-                if($.ccio.mon[d.ke+d.id+user.auth_token].h265Player){$.ccio.mon[d.ke+d.id+user.auth_token].h265Player.stop()}
-                if($.ccio.mon[d.ke+d.id+user.auth_token].dash){$.ccio.mon[d.ke+d.id+user.auth_token].dash.reset()}
-                if($.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream && $.ccio.mon[d.ke+d.id+user.auth_token].abort){
-                    $.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream.abort()
-                }
-                $.grid.data().removeWidget($('#monitor_live_'+d.id+user.auth_token))
-            }
+            $.ccio.destroyStream(d,user,(d.f === 'monitor_watch_off'))
         break;
         case'monitor_watch_on':
             if(user===$user){
@@ -2085,16 +2131,7 @@ $.ccio.globalWebsocket=function(d,user){
             if($.ccio.op().jpeg_on===true){
                 $.ccio.init('jpegMode',$.ccio.mon[d.ke+d.id+user.auth_token]);
             }else{
-                var url = $.ccio.init('location',user);
-                var prefix = 'ws'
-                if(location.protocol==='https:'){
-                    prefix = 'wss'
-                }
-                if(url==''){
-                    url = prefix+'://'+location.host+location.pathname
-                }else{
-                    url = prefix+'://'+url.split('://')[1]
-                }
+                var path = tool.checkCorrectPathEnding(location.pathname)+'socket.io'
                 switch(d.d.stream_type){
                     case'jpeg':
                         $.ccio.init('jpegMode',$.ccio.mon[d.ke+d.id+user.auth_token]);
@@ -2103,7 +2140,7 @@ $.ccio.globalWebsocket=function(d,user){
                         if($.ccio.mon[d.ke+d.id+user.auth_token].Base64 && $.ccio.mon[d.ke+d.id+user.auth_token].Base64.connected){
                             $.ccio.mon[d.ke+d.id+user.auth_token].Base64.disconnect()
                         }
-                        $.ccio.mon[d.ke+d.id+user.auth_token].Base64 = io(url,{transports: ['websocket'], forceNew: false})
+                        $.ccio.mon[d.ke+d.id+user.auth_token].Base64 = io(location.origin,{ path: path, transports: ['websocket'], forceNew: false})
                         var ws = $.ccio.mon[d.ke+d.id+user.auth_token].Base64
                         var buffer
                         ws.on('diconnect',function(){
@@ -2111,7 +2148,6 @@ $.ccio.globalWebsocket=function(d,user){
                         })
                         ws.on('connect',function(){
                             ws.emit('Base64',{
-                                url: url,
                                 auth: user.auth_token,
                                 uid: user.uid,
                                 ke: d.ke,
@@ -2164,9 +2200,16 @@ $.ccio.globalWebsocket=function(d,user){
                     case'mp4':
                         setTimeout(function(){
                             var stream = d.e.find('.stream-element');
+                            var onPoseidonError = function(){
+                                // setTimeout(function(){
+                                    // $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
+                                // },5000)
+                            }
+                            if(!$.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount)$.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount = 0
+                            if($.ccio.mon[d.ke+d.id+user.auth_token].PoseidonErrorCount >= 5)return
                             if(d.d.stream_flv_type==='ws'){
                                 if($.ccio.mon[d.ke+d.id+user.auth_token].Poseidon){
-                                    $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.destroy()
+                                    $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.stop()
                                 }
                                 try{
                                     $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon = new Poseidon({
@@ -2175,14 +2218,14 @@ $.ccio.globalWebsocket=function(d,user){
                                         ke:d.ke,
                                         uid:user.uid,
                                         id:d.id,
-                                        url: url
-                                    });
+                                        url: location.origin,
+                                        path: path,
+                                        onError : onPoseidonError
+                                    })
                                     $.ccio.mon[d.ke+d.id+user.auth_token].Poseidon.start();
                                 }catch(err){
-                                    setTimeout(function(){
-                                        $.ccio.cx({f:'monitor',ff:'watch_on',id:d.id},user)
-                                    },5000)
-                                    console.log(err)
+                                    // onPoseidonError()
+                                    console.log('onTryPoseidonError',err)
                                 }
                             }else{
                                 stream.attr('src',$.ccio.init('location',user)+user.auth_token+'/mp4/'+d.ke+'/'+d.id+'/s.mp4')
@@ -2213,7 +2256,8 @@ $.ccio.globalWebsocket=function(d,user){
                                     id:d.id,
                                     maxLatency:d.d.stream_flv_maxLatency,
                                     hasAudio:false,
-                                    url: url
+                                    url: location.origin,
+                                    path: path
                                 }
                             }else{
                                 options = {
@@ -2290,14 +2334,13 @@ $.ccio.globalWebsocket=function(d,user){
                             $.ccio.mon[d.ke+d.id+user.auth_token].h265HttpStream.abort()
                         }
                         if(d.d.stream_flv_type==='ws'){
-                          $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket = io(url,{transports: ['websocket'], forceNew: false})
+                          $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket = io(location.origin,{ path: path, transports: ['websocket'], forceNew: false})
                           var ws = $.ccio.mon[d.ke+d.id+user.auth_token].h265Socket
                           ws.on('diconnect',function(){
                               console.log('h265Socket Stream Disconnected')
                           })
                           ws.on('connect',function(){
                               ws.emit('h265',{
-                                  url: url,
                                   auth: user.auth_token,
                                   uid: user.uid,
                                   ke: d.ke,
@@ -2421,7 +2464,9 @@ $.ccio.globalWebsocket=function(d,user){
             }
             $.ccio.init('monitorInfo',d)
             $.gR.drawList();
-            $.ccio.init('note',{title:'Monitor Saved',text:'<b>'+d.mon.name+'</b> <small>'+d.mon.mid+'</small> has been saved.',type:'success'});
+            if(!d.silenceNote){
+                $.ccio.init('note',{title:'Monitor Saved',text:'<b>'+d.mon.name+'</b> <small>'+d.mon.mid+'</small> has been saved.',type:'success'});
+            }
         break;
         case'monitor_starting':
 //            switch(d.mode){case'start':d.mode='Watch';break;case'record':d.mode='Record';break;}
@@ -2531,14 +2576,14 @@ $.ccio.globalWebsocket=function(d,user){
                         labels: labels,
                         datasets: [{
                             type: 'line',
-                            label: '<%-cleanLang(lang['Video and Time Span (Minutes)'])%>',
+                            label: lang['Video and Time Span (Minutes)'],
                             backgroundColor: color(window.chartColors.blue).alpha(0.2).rgbString(),
                             borderColor: window.chartColors.blue,
                             data: Dataset1,
                         }, {
                             type: 'bar',
                             showTooltip: false,
-                            label: '<%-cleanLang(lang['Counts of Motion'])%>',
+                            label: lang['Counts of Motion'],
                             backgroundColor: color(window.chartColors.red).alpha(0.5).rgbString(),
                             borderColor: window.chartColors.red,
                             data:Dataset2,
@@ -2548,7 +2593,7 @@ $.ccio.globalWebsocket=function(d,user){
                          maintainAspectRatio: false,
                         title: {
                             fontColor: "white",
-                            text:"<%-lang['Video Length (minutes) and Motion Count per video']%>"
+                            text: lang['Video Length (minutes) and Motion Count per video']
                         },
                         tooltips: {
                             callbacks: {
@@ -2584,7 +2629,7 @@ $.ccio.globalWebsocket=function(d,user){
     }
 }
 $user.ws=io(location.origin,{
-    path : location.pathname+'socket.io'
+    path : tool.checkCorrectPathEnding(location.pathname)+'socket.io'
 });
 $user.ws.on('connect',function (d){
     $(document).ready(function(e){
@@ -2632,20 +2677,24 @@ $user.ws.on('f',function (d){
     $.ccio.globalWebsocket(d)
     switch(d.f){
         case'api_key_deleted':
-            $.ccio.init('note',{title:'<%-cleanLang(lang['API Key Deleted'])%>',text:'<%-cleanLang(lang.APIKeyDeletedText)%>',type:'notice'});
-            $('[api_key="'+d.form.code+'"]').remove();
+            if($user.uid === d.uid){
+                $.ccio.init('note',{title:lang['API Key Deleted'],text:lang.APIKeyDeletedText,type:'notice'});
+                $('[api_key="'+d.form.code+'"]').remove()
+            }
         break;
         case'api_key_added':
-            $.ccio.init('note',{title:'<%-cleanLang(lang['API Key Added'])%>',text:'<%-cleanLang(lang.FiltersUpdatedText)%>',type:'success'});
-            $.ccio.tm(3,d.form,'#api_list')
+            if($user.uid === d.uid){
+                $.ccio.init('note',{title:lang['API Key Added'],text:lang.FiltersUpdatedText,type:'success'});
+                $.ccio.tm(3,d.form,'#api_list')
+            }
         break;
         case'filters_change':
-            $.ccio.init('note',{title:'<%-cleanLang(lang['Filters Updated'])%>',text:'<%-cleanLang(lang.FiltersUpdatedText)%>',type:'success'});
+            $.ccio.init('note',{title:lang['Filters Updated'],text:lang.FiltersUpdatedText,type:'success'});
             $user.details.filters=d.filters;
             $.ccio.init('filters');
         break;
         case'user_settings_change':
-            $.ccio.init('note',{title:'<%-cleanLang(lang['Settings Changed'])%>',text:'<%-cleanLang(lang.SettingsChangedText)%>',type:'success'});
+            $.ccio.init('note',{title:lang['Settings Changed'],text:lang.SettingsChangedText,type:'success'});
             $.ccio.init('id',d.form);
             d.form.details=JSON.parse(d.form.details)
             $('#custom_css').append(d.form.details.css)
@@ -2699,7 +2748,6 @@ $user.ws.on('f',function (d){
             d.currentlyEditing=$.aM.e.attr('mid')
             if(d.currentlyEditing&&d.currentlyEditing!==''){
                 d.currentlyEditing=JSON.parse(JSON.parse($.ccio.mon[d.currentlyEditing].details).detector_cascades)
-                console.log(d.currentlyEditing)
                 $.each(d.currentlyEditing,function(m,b){
                     d.e=$('.detector_cascade_selection[value="'+m+'"]').prop('checked',true)
                     d.p=d.e.parents('.mdl-js-switch')
@@ -2731,7 +2779,7 @@ $user.ws.on('f',function (d){
             d.pnote={title:'Monitor Not Saved',text:'<b>'+d.mon.name+'</b> <small>'+d.mon.mid+'</small> has not been saved.',type:'error'}
             switch(d.ff){
                 case'max_reached':
-                    d.pnote.text+=' <%-cleanLang(lang.monitorEditFailedMaxReached)%>'
+                    d.pnote.text+=' '+lang.monitorEditFailedMaxReached
                 break;
             }
             $.ccio.init('note',d.pnote);
@@ -2852,7 +2900,7 @@ $.gR.drawList=function(){
     e.tmp='';
     $.each($.ccio.init('monGroup'),function(n,v){
         if($user.mon_groups[n]){
-           e.tmp+='<li class="mdl-menu__item" group="'+n+'">'+$user.mon_groups[n].name+'</li>'
+           e.tmp+='<li class="mdl-menu__item" groups="'+n+'">'+$user.mon_groups[n].name+'</li>'
         }
     })
     $.gR.e.html(e.tmp)
@@ -2947,6 +2995,9 @@ $.zO.initCanvas=function(){
     if(!e.val){
         $.zO.f.find('[name="name"]').val('')
         $.zO.f.find('[name="sensitivity"]').val('')
+        $.zO.f.find('[name="max_sensitivity"]').val('')
+        $.zO.f.find('[name="threshold"]').val('')
+        $.zO.f.find('[name="color_threshold"]').val('')
         $.zO.rp.empty()
     }else{
         e.cord=$.zO.regionViewerDetails.cords[e.val];
@@ -2960,6 +3011,9 @@ $.zO.initCanvas=function(){
         $.zO.f.find('[name="name"]').val(e.val)
         $.zO.e.find('.cord_name').text(e.val)
         $.zO.f.find('[name="sensitivity"]').val(e.cord.sensitivity)
+        $.zO.f.find('[name="max_sensitivity"]').val(e.cord.max_sensitivity)
+        $.zO.f.find('[name="threshold"]').val(e.cord.threshold)
+        $.zO.f.find('[name="color_threshold"]').val(e.cord.color_threshold)
         $.zO.e.find('.canvas_holder canvas').remove();
 
         $.zO.initLiveStream()
@@ -2974,9 +3028,11 @@ $.zO.initCanvas=function(){
         e.e.change();
     }
 }
-$.zO.e.on('change','[name="sensitivity"]',function(e){
-    e.val=$(this).val();
-    $.zO.regionViewerDetails.cords[$.zO.rl.val()].sensitivity=e.val;
+$.zO.e.on('change','[name]:not([name="name"])',function(){
+    var el = $(this)
+    var val = el.val()
+    var key = el.attr('name')
+    $.zO.regionViewerDetails.cords[$.zO.rl.val()][key] = val
     $.zO.saveCoords()
 })
 $.zO.e.on('change','[name="name"]',function(e){
@@ -3062,7 +3118,7 @@ $.zO.e.on('click','.add',function(e){
         }
     })
     $.zO.regionViewerDetails.cords=e.save;
-    $.zO.regionViewerDetails.cords[e.gid]={name:e.gid,sensitivity:0.0005,points:[[0,0],[0,100],[100,0]]};
+    $.zO.regionViewerDetails.cords[e.gid]={name:e.gid,sensitivity:0.0005,max_sensitivity:'',threshold:1,color_threshold:9,points:[[0,0],[0,100],[100,0]]};
     $.zO.rl.append('<option value="'+e.gid+'">'+e.gid+'</option>');
     $.zO.rl.val(e.gid)
     $.zO.rl.change();
@@ -3124,6 +3180,8 @@ $.log.dateRange.daterangepicker({
     startDate:$.ccio.timeObject().subtract(moment.duration("5:00:00")),
     endDate:$.ccio.timeObject().add(moment.duration("24:00:00")),
     timePicker: true,
+    timePicker24Hour: true,
+    timePickerSeconds: true,
     timePickerIncrement: 30,
     locale: {
         format: 'MM/DD/YYYY h:mm A'
@@ -3158,7 +3216,7 @@ $.log.lm.change(function(){
         $.log.loaded.rows = d
         e.tmp='';
         if(d.length === 0){
-            e.tmp = '<tr class="text-center"><td><%-cleanLang(lang.NoLogsFoundForDateRange)%></td></tr>'
+            e.tmp = '<tr class="text-center"><td>'+lang.NoLogsFoundForDateRange+'</td></tr>'
         }else{
             $.each(d,function(n,v){
                 e.tmp+='<tr class="search-row"><td title="'+v.time+'" class="livestamp"></td><td>'+v.time+'</td><td>'+v.mid+'</td><td>'+$.ccio.init('jsontoblock',v.info)+'</td></tr>'
@@ -3192,8 +3250,8 @@ $.multimon.f.on('change','#multimon_select_all',function(e){
 $.multimon.e.find('.import_config').click(function(){
   var e={};e.e=$(this);e.mid=e.e.parents('[mid]').attr('mid');
     $.confirm.e.modal('show');
-    $.confirm.title.text('<%-cleanLang(lang['Import Monitor Configuration'])%>')
-    e.html='<%-cleanLang(lang.ImportMultiMonitorConfigurationText)%><div style="margin-top:15px"><div class="form-group"><textarea placeholder="<%-cleanLang(lang['Paste JSON here.'])%>" class="form-control"></textarea></div><label class="upload_file btn btn-primary btn-block"> Upload File <input class="upload" type=file name="files[]"></label></div>';
+    $.confirm.title.text(lang['Import Monitor Configuration'])
+    e.html=lang.ImportMultiMonitorConfigurationText+'<div style="margin-top:15px"><div class="form-group"><textarea placeholder="'+lang['Paste JSON here.']+'" class="form-control"></textarea></div><label class="upload_file btn btn-primary btn-block"> Upload File <input class="upload" type=file name="files[]"></label></div>';
     $.confirm.body.html(e.html)
     $.confirm.e.find('.upload').change(function(e){
         var files = e.target.files; // FileList object
@@ -3208,8 +3266,8 @@ $.multimon.e.find('.import_config').click(function(){
 //        setTimeout(function(){
 //            $.confirm.e.modal('show');
 //        },1000)
-//        $.confirm.title.text('<%-cleanLang(lang['Are you sure?'])%>')
-//        $.confirm.body.html('<%-cleanLang(lang.ImportMultiMonitorConfigurationText)%>')
+//        $.confirm.title.text(lang['Are you sure?'])
+//        $.confirm.body.html(lang.ImportMultiMonitorConfigurationText)
 //        $.confirm.click({title:'Save Set',class:'btn-danger'},function(){
             try{
                 var postMonitor = function(v){
@@ -3229,7 +3287,7 @@ $.multimon.e.find('.import_config').click(function(){
                             if(newMon.auto_host.indexOf('rtsp://') > -1 || newMon.auto_host.indexOf('rtmp://') > -1 || newMon.auto_host.indexOf('rtmps://') > -1){
                                 newMon.type = 'h264'
                             }else{
-                                $.ccio.init('note',{title:'<%-cleanLang(lang['Please Check Your Settings'])%>',text:'<%-cleanLang(lang.migrateText1)%>',type:'error'})
+                                $.ccio.init('note',{title:lang['Please Check Your Settings'],text:lang.migrateText1,type:'error'})
                             }
                         break;
                         case'local':
@@ -3272,7 +3330,7 @@ $.multimon.e.find('.import_config').click(function(){
                 }
             }catch(err){
                 $.ccio.log(err)
-                $.ccio.init('note',{title:'<%-cleanLang(lang['Invalid JSON'])%>',text:'<%-cleanLang(lang.InvalidJSONText)%>',type:'error'})
+                $.ccio.init('note',{title:lang['Invalid JSON'],text:lang.InvalidJSONText,type:'error'})
             }
 //        });
     });
@@ -3296,8 +3354,8 @@ $.multimon.e.find('.delete').click(function(){
         return
     }
     $.confirm.e.modal('show');
-    $.confirm.title.text('<%-cleanLang(lang['Delete'])%> <%-cleanLang(lang['Monitors'])%>')
-    e.html='<p><%-cleanLang(lang.DeleteMonitorsText)%></p>';
+    $.confirm.title.text(lang['Delete']+' '+lang['Monitors'])
+    e.html='<p>'+lang.DeleteMonitorsText+'</p>';
     $.confirm.body.html(e.html)
     $.confirm.click([
         {
@@ -3360,7 +3418,7 @@ $.multimon.e.on('shown.bs.modal',function() {
         tmp+='<td><div class="checkbox"><input id="multimonCheck_'+v.ke+v.mid+v.user.auth_token+'" type="checkbox" name="'+v.ke+v.mid+v.user.auth_token+'" value="1"><label for="multimonCheck_'+v.ke+v.mid+v.user.auth_token+'"></label></div></td>'
         tmp+='<td><a monitor="watch"><img class="small-square-img" src="'+img+'"></a></td><td>'+v.name+'<br><small>'+v.mid+'</small></td><td class="monitor_status">'+v.status+'</td><td>'+streamURL+'</td>'
         //buttons
-        tmp+='<td class="text-right"><a title="<%-cleanLang(lang.Pop)%>" monitor="pop" class="btn btn-primary"><i class="fa fa-external-link"></i></a> <a title="<%-cleanLang(lang.Calendar)%>" monitor="calendar" class="btn btn-default"><i class="fa fa-calendar"></i></a> <a title="<%-cleanLang(lang['Power Viewer'])%>" class="btn btn-default" monitor="powerview"><i class="fa fa-map-marker"></i></a> <a title="<%-cleanLang(lang['Time-lapse'])%>" class="btn btn-default" monitor="timelapse"><i class="fa fa-angle-double-right"></i></a> <a title="<%-cleanLang(lang['Videos List'])%>" monitor="videos_table" class="btn btn-default"><i class="fa fa-film"></i></a> <a title="<%-cleanLang(lang['Monitor Settings'])%>" class="btn btn-default" monitor="edit"><i class="fa fa-wrench"></i></a></td>'
+        tmp+='<td class="text-right"><a title="'+lang.Pop+'" monitor="pop" class="btn btn-primary"><i class="fa fa-external-link"></i></a> <a title="'+lang.Calendar+'" monitor="calendar" class="btn btn-default"><i class="fa fa-calendar"></i></a> <a title="'+lang['Power Viewer']+'" class="btn btn-default" monitor="powerview"><i class="fa fa-map-marker"></i></a> <a title="'+lang['Time-lapse']+'" class="btn btn-default" monitor="timelapse"><i class="fa fa-angle-double-right"></i></a> <a title="'+lang['Videos List']+'" monitor="videos_table" class="btn btn-default"><i class="fa fa-film"></i></a> <a title="'+lang['Monitor Settings']+'" class="btn btn-default" monitor="edit"><i class="fa fa-wrench"></i></a></td>'
         tmp+='</tr>'
     })
     $.multimon.table.html(tmp)
@@ -3514,6 +3572,9 @@ $.aM.generateDefaultMonitorSettings=function(){
         "detector_use_detect_object": "0",
         "detector_frame": "0",
         "detector_sensitivity": "",
+        "detector_max_sensitivity": "",
+        "detector_threshold": "1",
+        "detector_color_threshold": "",
         "cords": "[]",
         "detector_buffer_vcodec": "auto",
         "detector_buffer_fps": "",
@@ -3819,7 +3880,7 @@ $.aM.f.submit(function(ee){
         var chosenMonitors = {};
 
         if(!copyMonitors||copyMonitors.length===0){
-            $.ccio.init('note',{title:'<%-cleanLang(lang['No Monitors Selected'])%>',text:'<%-cleanLang(lang.monSavedButNotCopied)%>'})
+            $.ccio.init('note',{title:lang['No Monitors Selected'],text:lang.monSavedButNotCopied})
             return
         }
 
@@ -4051,8 +4112,8 @@ $.aM.e.find('.probe_config').click(function(){
 $.aM.e.find('.import_config').click(function(e){
   var e={};e.e=$(this);e.mid=e.e.parents('[mid]').attr('mid');
     $.confirm.e.modal('show');
-    $.confirm.title.text('<%-cleanLang(lang['Import Monitor Configuration'])%>')
-    e.html='<%-cleanLang(lang.ImportMonitorConfigurationText)%><div style="margin-top:15px"><div class="form-group"><textarea placeholder="<%-cleanLang(lang['Paste JSON here.'])%>" class="form-control"></textarea></div><label class="upload_file btn btn-primary btn-block"> Upload File <input class="upload" type=file name="files[]"></label></div>';
+    $.confirm.title.text(lang['Import Monitor Configuration'])
+    e.html=lang.ImportMonitorConfigurationText+'<div style="margin-top:15px"><div class="form-group"><textarea placeholder="'+lang['Paste JSON here.']+'" class="form-control"></textarea></div><label class="upload_file btn btn-primary btn-block"> Upload File <input class="upload" type=file name="files[]"></label></div>';
     $.confirm.body.html(e.html)
     $.confirm.e.find('.upload').change(function(e){
         var files = e.target.files; // FileList object
@@ -4070,7 +4131,7 @@ $.aM.e.find('.import_config').click(function(e){
             $.aM.e.modal('show')
         }catch(err){
             $.ccio.log(err)
-            $.ccio.init('note',{title:'<%-cleanLang(lang['Invalid JSON'])%>',text:'<%-cleanLang(lang.InvalidJSONText)%>',type:'error'})
+            $.ccio.init('note',{title:lang['Invalid JSON'],text:lang.InvalidJSONText,type:'error'})
         }
     });
 });
@@ -4142,7 +4203,13 @@ $.apM.f.submit(function(e){
     if(!e.s.ip||e.s.ip.length<7){e.er.push('Enter atleast one IP')}
     if(e.er.length>0){$.apM.e.find('.msg').html(e.er.join('<br>'));return;}
     $.each(e.s,function(n,v){e.s[n]=v.trim()})
-    $.ccio.cx({f:'api',ff:'add',form:e.s})
+    // e.s = {
+    //     "ip": "",
+    //     "details": "{\"get_monitors\":\"1\",\"control_monitors\":\"1\",\"get_logs\":\"1\",\"watch_stream\":\"1\",\"watch_snapshot\":\"1\",\"watch_videos\":\"1\",\"delete_videos\":\"1\"}"
+    // }
+    $.post($.ccio.init('location',$user)+$user.auth_token+'/api/'+$user.ke+'/add',{data:JSON.stringify(e.s)},function(d){
+        $.ccio.log(d)
+    })
 });
 $.apM.e.on('click','.delete',function(e){
     e.e=$(this);e.p=e.e.parents('[api_key]'),e.code=e.p.attr('api_key');
@@ -4151,8 +4218,10 @@ $.apM.e.on('click','.delete',function(e){
     e.html='Do you want to delete this API key? You cannot recover it.';
     $.confirm.body.html(e.html);
     $.confirm.click({title:'Delete',class:'btn-danger'},function(){
-        $.ccio.cx({f:'api',ff:'delete',form:{code:e.code}})
-    });
+        $.post($.ccio.init('location',$user)+$user.auth_token+'/api/'+$user.ke+'/delete',{data:JSON.stringify({code:e.code})},function(d){
+            $.ccio.log(d)
+        })
+    })
 })
 //filters window
 if(!$user.details.filters)$user.details.filters={};
@@ -4182,7 +4251,7 @@ $('#saved_filters').change(function(e){
             $.fI.f.find('[name="'+n+'"]').val(v);
         });
     }else{
-        e.name='<%-cleanLang(lang['Add New'])%>';
+        e.name=lang['Add New'];
         $.fI.f.find('[name="id"]').val($.ccio.gid(5));
         $.ccio.tm('filters-where');
     }
@@ -4191,10 +4260,10 @@ $('#saved_filters').change(function(e){
 $.fI.f.find('.delete').click(function(e){
     e.s=$.fI.f.serializeObject();
     $.confirm.e.modal('show');
-    $.confirm.title.text('<%-cleanLang(lang['Delete Filter'])%>');
-    e.html='<%-cleanLang(lang.confirmDeleteFilter)%>';
+    $.confirm.title.text(lang['Delete Filter']);
+    e.html=lang.confirmDeleteFilter;
     $.confirm.body.html(e.html);
-    $.confirm.click({title:'<%-cleanLang(lang['Delete Filter'])%>',class:'btn-danger'},function(){
+    $.confirm.click({title:lang['Delete Filter'],class:'btn-danger'},function(){
         $.ccio.cx({f:'settings',ff:'filters',fff:'delete',form:e.s})
     });
 })
@@ -4247,6 +4316,11 @@ $.detectorFilters.e.on('change','[where="p1"]',function(e){
     var p3 = parent.find('[where="p3"]')
     var options = []
     switch(p1v){
+        case'time':
+            options = [
+                '00:00:00'
+            ]
+        break;
         case'reason':
             options = [
                 'licensePlate',
@@ -4317,7 +4391,7 @@ $('#detector_filters').change(function(){
             $.detectorFilters.f.find('[name="'+n+'"]').val(v);
         });
     }else{
-        e.name='<%-cleanLang(lang['Add New'])%>';
+        e.name=lang['Add New'];
         $.detectorFilters.f.find('[name="id"]').val($.ccio.gid(5));
         $.ccio.tm('detector-filters-where');
     }
@@ -4376,7 +4450,7 @@ $.sM.f.submit(function(e){
     $.sM.linkChange()
     e.e=$(this),e.s=e.e.serializeObject();
     e.er=[];
-    if(e.s.pass!==''&&e.password_again===e.s.pass){e.er.push("<%-lang["Passwords don't match"]%>")};
+    if(e.s.pass!==''&&e.password_again===e.s.pass){e.er.push(lang['Passwords don\'t match'])};
     if(e.er.length>0){$.sM.e.find('.msg').html(e.er.join('<br>'));return;}
     $.each(e.s,function(n,v){e.s[n]=v.trim()})
     $.ccio.cx({f:'settings',ff:'edit',form:e.s})
@@ -4394,13 +4468,14 @@ $.sM.g.change(function(e){
         $.sM.f.find('[group="'+n+'"]').val(v)
     })
 });
-$.sM.f.find('[group]').change(function(e){
-    e.v=$.sM.g.val();
+$.sM.f.find('[group]').change(function(){
+    e = {}
+    e.v = $.sM.g.val()
     if(!e.v||e.v==''){
-        e.e=$.sM.f.find('[group="name"]')
-        e.name=e.e.val()
+        e.e = $.sM.f.find('[group="name"]')
+        e.name = e.e.val()
         $('.mon_groups .add').click();
-        e.v=$.sM.g.val()
+        e.v = $.sM.g.val()
         e.e.val(e.name)
     }
     e.group=$user.mon_groups[e.v];
@@ -4447,13 +4522,37 @@ $.sM.e.find('.linkShinobi .add').click(function(){
     $.ccio.tm('link-set',{},'#linkShinobi')
     $.sM.linkChange()
 })
+//basic video window
+$.basicVideo = {
+
+}
 //videos window
-$.vidview={e:$('#videos_viewer'),pages:$('#videos_viewer_pages'),limit:$('#videos_viewer_limit'),dr:$('#videos_viewer_daterange'),preview:$('#videos_viewer_preview')};
+$.vidview={
+    e:$('#videos_viewer'),
+    pages:$('#videos_viewer_pages'),
+    limit:$('#videos_viewer_limit'),
+    dr:$('#videos_viewer_daterange'),
+    preview:$('#videos_viewer_preview'),
+    set:$('#videos_viewer_set')
+}
+$.vidview.set.change(function(){
+    var el = $(this)
+    var isCloud = (el.val() === 'cloud')
+    var zipDlButton = $.vidview.e.find('.export_selected')
+    if(isCloud){
+        zipDlButton.hide()
+    }else{
+        zipDlButton.show()
+    }
+
+})
 $.vidview.f=$.vidview.e.find('form')
 $.vidview.dr.daterangepicker({
     startDate:$.ccio.timeObject().subtract(moment.duration("24:00:00")),
     endDate:$.ccio.timeObject().add(moment.duration("24:00:00")),
     timePicker: true,
+    timePicker24Hour: true,
+    timePickerSeconds: true,
     timePickerIncrement: 30,
     locale: {
         format: 'MM/DD/YYYY h:mm A'
@@ -4477,7 +4576,7 @@ $.vidview.f.submit(function(e){
     $.vidview.launcher.click()
     return false;
 })
-$('#videos_viewer_limit,#videos_viewer_daterange').change(function(){
+$('#videos_viewer_limit,#videos_viewer_daterange,#videos_viewer_set').change(function(){
     $.vidview.f.submit()
 })
 $.vidview.getSelected = function(getArray){
@@ -4507,8 +4606,8 @@ $.vidview.e.find('.delete_selected').click(function(){
         return
     }
     $.confirm.e.modal('show');
-    $.confirm.title.text('<%-cleanLang(lang['Delete Selected Videos'])%>')
-    e.html='<%-cleanLang(lang.DeleteSelectedVideosMsg)%><div style="margin-bottom:15px"></div>'
+    $.confirm.title.text(lang['Delete Selected Videos'])
+    e.html=lang.DeleteSelectedVideosMsg+'<div style="margin-bottom:15px"></div>'
     var deleteLinks = []
     $.each(e.s,function(n,v){
         e.html+=n+'<br>';
@@ -4535,8 +4634,8 @@ $.vidview.e.find('.export_selected').click(function(){
         return
     }
     $.confirm.e.modal('show');
-    $.confirm.title.text('<%-cleanLang(lang['Export Selected Videos'])%>')
-    var html = '<%-cleanLang(lang.ExportSelectedVideosMsg)%><div style="margin-bottom:15px"></div>'
+    $.confirm.title.text(lang['Export Selected Videos'])
+    var html = lang.ExportSelectedVideosMsg+'<div style="margin-bottom:15px"></div>'
     $.each(videos,function(n,v){
         html+=v.filename+'<br>';
     })
@@ -4590,6 +4689,8 @@ $.timelapse.dr.daterangepicker({
     startDate:$.ccio.timeObject().subtract(moment.duration("24:00:00")),
     endDate:$.ccio.timeObject().add(moment.duration("24:00:00")),
     timePicker: true,
+    timePicker24Hour: true,
+    timePickerSeconds: true,
     timePickerIncrement: 30,
     locale: {
         format: 'MM/DD/YYYY h:mm A'
@@ -4918,6 +5019,8 @@ $.pwrvid.dr.daterangepicker({
     startDate:$.ccio.timeObject().subtract(moment.duration("24:00:00")),
     endDate:$.ccio.timeObject().add(moment.duration("24:00:00")),
     timePicker: true,
+    timePicker24Hour: true,
+    timePickerSeconds: true,
     timePickerIncrement: 30,
     locale: {
         format: 'MM/DD/YYYY h:mm A'
@@ -5070,7 +5173,7 @@ $.pwrvid.e.on('click','[preview]',function(e){
                 var colorNames = Object.keys(window.chartColors);
 
             }else{
-                $.pwrvid.mL.html('<div class="super-center text-center" style="width:auto"><%-cleanLang(lang['No Events found for this video'])%></div>')
+                $.pwrvid.mL.html('<div class="super-center text-center" style="width:auto">'+lang['No Events found for this video']+'</div>')
             }
             $.pwrvid.video={filename:e.filename,href:e.href,mid:e.mon.mid,ke:e.mon.ke}
             $.pwrvid.vpOnPlayPause=function(x,e){
@@ -5170,10 +5273,10 @@ $.pwrvid.drawTimeline=function(getData){
     }
     if(parseInt(e.eventLimit) >= 1000){
         $.confirm.e.modal('show');
-        $.confirm.title.text('<%-cleanLang(lang['Warning'])%>!')
-        e.html='<%-cleanLang(lang.powerVideoEventLimit)%>'
+        $.confirm.title.text(lang['Warning']+'!')
+        e.html=lang.powerVideoEventLimit
         $.confirm.body.html(e.html)
-        $.confirm.click({title:'<%-cleanLang(lang.Request)%>',class:'btn-primary'},function(){
+        $.confirm.click({title:lang.Request,class:'btn-primary'},function(){
             getTheData()
         });
     }else{
@@ -5281,7 +5384,6 @@ $('#monitors_list_search').keyup(function(){
     monitorBlocks.hide()
     $.each($.ccio.mon,function(n,monitor){
         var searchThis = JSON.stringify($.ccio.init('cleanMon',monitor)).toLowerCase().replace('"','');
-        console.log(searchTerms,searchThis)
         $.each(searchTerms,function(m,term){
             if(searchThis.indexOf(term) >-1 ){
                 $('.monitor_block[ke="'+monitor.ke+'"][mid="'+monitor.mid+'"]').show()
@@ -5333,15 +5435,20 @@ $('body')
     switch(e.a){
         case'launch':
             e.preventDefault();
-            e.href=$(this).attr('href'),
-            e.e=$('#video_viewer');
-            e.e.find('.modal-title span').html(e.mon.name+' - '+e.file)
-            e.e.find('.modal-body').html('<video class="video_video" video="'+e.href+'" autoplay loop controls><source src="'+e.href+'" type="video/'+e.mon.ext+'"></video>')
-            e.e.attr('mid',e.mid);
-            e.f=e.e.find('.modal-footer');
-            e.f.find('.download_link').attr('href',e.href).attr('download',e.file);
-            e.f.find('[monitor="download"][host="dropbox"]').attr('href',e.href);
-            e.e.modal('show')
+            e.href=$(this).attr('href')
+            var el = $('#video_viewer')
+            var modalBody = el.find('.modal-body')
+            el.find('.modal-title span').html(e.mon.name+' - '+e.file)
+            var html = '<video class="video_video" video="'+e.href+'" autoplay loop controls><source src="'+e.href+'" type="video/'+e.mon.ext+'"></video><br><small class="msg"></small>'
+            modalBody.html(html)
+            el.find('video')[0].onerror = function(){
+                modalBody.find('.msg').text(lang.h265BrowserText1)
+            }
+            el.attr('mid',e.mid);
+            footer = el.find('.modal-footer');
+            footer.find('.download_link').attr('href',e.href).attr('download',e.file);
+            footer.find('[monitor="download"][host="dropbox"]').attr('href',e.href);
+            el.modal('show')
                 .attr('ke',e.ke)
                 .attr('mid',e.mid)
                 .attr('auth',e.auth)
@@ -5363,8 +5470,8 @@ $('body')
             }
             console.log(href)
             $.confirm.e.modal('show');
-            $.confirm.title.text('<%-cleanLang(lang['Delete Video'])%> : '+e.file)
-            e.html='<%-cleanLang(lang.DeleteVideoMsg)%>'
+            $.confirm.title.text(lang['Delete Video']+' : '+e.file)
+            e.html=lang.DeleteVideoMsg
             e.html+='<video class="video_video" autoplay loop controls><source src="'+videoLink+'" type="video/'+e.mon.ext+'"></video>';
             $.confirm.body.html(e.html)
             $.confirm.click({title:'Delete Video',class:'btn-danger'},function(){
@@ -5379,7 +5486,7 @@ $('body')
                     <% if(config.DropboxAppKey){ %>
                 case'dropbox':
                     Dropbox.save(e.e.attr('href'),e.e.attr('download'),{progress: function (progress) {$.ccio.log(progress)},success: function () {
-                        $.ccio.log("<%-lang.dropBoxSuccess%>");
+                        $.ccio.log(lang.dropBoxSuccess);
                     }});
                 break;
                     <% } %>
@@ -5566,7 +5673,7 @@ $('body')
         break;
         case'region':
             if(!e.mon){
-                $.ccio.init('note',{title:'<%-cleanLang(lang['Unable to Launch'])%>',text:'<%-cleanLang(lang.UnabletoLaunchText)%>',type:'error'});
+                $.ccio.init('note',{title:lang['Unable to Launch'],text:lang.UnabletoLaunchText,type:'error'});
                 return;
             }
             e.d=JSON.parse(e.mon.details);
@@ -5591,7 +5698,7 @@ $('body')
             }
             if(!e.d.cords||e.d.cords===''){
                 e.d.cords={
-                    red:{ name:"red",sensitivity:0.0005, points:[[0,0],[0,100],[100,0]] },
+                    red:{ name:"red",sensitivity:0.0005, max_sensitivity:"",color_threshold:"",points:[[0,0],[0,100],[100,0]] },
                 }
             }
             $.zO.regionViewerDetails=e.d;
@@ -5609,7 +5716,7 @@ $('body')
             e.a=e.e.attr('control')
             $.ccio.cx({f:'monitor',ff:'control',direction:e.a,mid:e.mid,ke:e.ke},user)
         break;
-        case'videos_table':case'calendar'://call videos table or calendar
+        case'videos_table':case'calendar':case'video_grid'://call videos table or calendar or video grid
             $.vidview.launcher=$(this);
             e.limit=$.vidview.limit.val();
             if(!$.vidview.current_mid||$.vidview.current_mid!==e.mid){
@@ -5629,7 +5736,13 @@ $('body')
                 $.vidview.limit.val(e.limit)
             }
             e.dateRange=$('#videos_viewer_daterange').data('daterangepicker');
-            e.videoURL=$.ccio.init('location',user)+user.auth_token+'/videos/'+e.ke+'/'+e.mid+'?limit='+e.limit+'&start='+$.ccio.init('th',e.dateRange.startDate)+'&end='+$.ccio.init('th',e.dateRange.endDate);
+            var videoSet = 'videos'
+            switch($.vidview.set.val()){
+                case'cloud':
+                    videoSet = 'cloudVideos'
+                break;
+            }
+            e.videoURL=$.ccio.init('location',user)+user.auth_token+'/'+videoSet+'/'+e.ke+'/'+e.mid+'?limit='+e.limit+'&start='+$.ccio.init('th',e.dateRange.startDate)+'&end='+$.ccio.init('th',e.dateRange.endDate);
             $.getJSON(e.videoURL,function(d){
                 d.pages=d.total/100;
                 $('.video_viewer_total').text(d.total)
@@ -5652,6 +5765,7 @@ $('body')
                 e.t=e.v.find('.modal-title i');
                 switch(e.a){
                     case'calendar':
+                       $.vidview.e.removeClass('dark')
                        e.t.attr('class','fa fa-calendar')
                        e.ar=[];
                         if(d.videos[0]){
@@ -5684,29 +5798,68 @@ $('body')
                             });
                             setTimeout(function(){e.b.fullCalendar('changeView','month');e.b.find('.fc-scroller').css('height','auto')},500)
                         }else{
-                            e.b.html('<div class="text-center"><%-cleanLang(lang.NoVideosFoundForDateRange)%></div>')
+                            e.b.html('<div class="text-center">'+lang.NoVideosFoundForDateRange+'</div>')
                         }
                     break;
+                    case'video_grid':
+                        $.vidview.e.addClass('dark')
+                        var tmp = '<di class="video_grid row">';
+                        $.each(d.videos,function(n,v){
+                            var href = $.ccio.init('videoUrlBuild',v)
+                            v.mon = $.ccio.mon[v.ke+v.mid+user.auth_token]
+                            var parentTag = 'ke="'+v.ke+'" status="'+v.status+'" mid="'+v.mid+'" file="'+v.filename+'" auth="'+v.mon.user.auth_token+'"'
+                            tmp += '<div class="col-md-2" '+parentTag+'>'
+                                tmp += '<div class="thumb">'
+                                    tmp += '<div class="title-strip">'+$.ccio.timeObject(v.time).format('h:mm:ss A, MMMM Do YYYY')+'</div>'
+                                    tmp += '<div class="button-strip">'
+                                        tmp += '<div class="btn-group">'
+                                            tmp += '<a class="btn btn-xs btn-primary" video="launch" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a>'
+                                            tmp += '<a class="btn btn-xs btn-default preview" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a>'
+                                            tmp += '<a class="btn btn-xs btn-default" download="'+v.mid+'-'+v.filename+'" href="'+href+'">&nbsp;<i class="fa fa-download"></i>&nbsp;</a>'
+                                        tmp += '</div>'
+                                    tmp += '</div>'
+                                tmp += '</div>'
+                            tmp += '</div>'
+                        })
+                        tmp += '</div>'
+                        e.b.html(tmp)
+                        var i = 0
+                        var getThumbnail = function(){
+                            var v = d.videos[i]
+                            if(v){
+                                tool.getVideoImage($.ccio.init('videoUrlBuild',v),0,function(err,base64){
+                                    if(base64){
+                                        $('[ke="'+v.ke+'"][mid="'+v.mid+'"][file="'+v.filename+'"] .thumb').css('background-image','url('+base64+')')
+                                    }
+                                    ++i
+                                    getThumbnail()
+                                })
+                            }
+                        }
+                        getThumbnail()
+                    break;
                     case'videos_table':
+                        $.vidview.e.removeClass('dark')
                         e.t.attr('class','fa fa-film')
-                        e.tmp='<table class="table table-striped" style="max-height:500px">';
-                        e.tmp+='<thead>';
-                        e.tmp+='<tr>';
-                        e.tmp+='<th><div class="checkbox"><input id="videos_select_all" type="checkbox"><label for="videos_select_all"></label></div></th>';
-                        e.tmp+='<th data-field="Closed" data-sortable="true"><%-cleanLang(lang.Closed)%></th>';
-                        e.tmp+='<th data-field="Ended" data-sortable="true"><%-cleanLang(lang.Ended)%></th>';
-                        e.tmp+='<th data-field="Started" data-sortable="true"><%-cleanLang(lang.Started)%></th>';
-                        e.tmp+='<th data-field="Monitor" data-sortable="true"><%-cleanLang(lang.Monitor)%></th>';
-                        e.tmp+='<th data-field="Filename" data-sortable="true"><%-cleanLang(lang.Filename)%></th>';
-                        e.tmp+='<th data-field="Size" data-sortable="true"><%-cleanLang(lang['Size (mb)'])%></th>';
-                        e.tmp+='<th data-field="Preview" data-sortable="true"><%-cleanLang(lang.Preview)%></th>';
-                        e.tmp+='<th data-field="Watch" data-sortable="true"><%-cleanLang(lang.Watch)%></th>';
-                        e.tmp+='<th data-field="Download" data-sortable="true"><%-cleanLang(lang.Download)%></th>';
-                        e.tmp+='<th class="permission_video_delete" data-field="Delete" data-sortable="true"><%-cleanLang(lang.Delete)%></th>';
-//                        e.tmp+='<th class="permission_video_delete" data-field="Fix" data-sortable="true"><%-cleanLang(lang.Fix)%></th>';
-                        e.tmp+='</tr>';
-                        e.tmp+='</thead>';
-                        e.tmp+='<tbody>';
+                        var tmp = '<table class="table table-striped" style="max-height:500px">';
+                        tmp+='<thead>';
+                        tmp+='<tr>';
+                        tmp+='<th><div class="checkbox"><input id="videos_select_all" type="checkbox"><label for="videos_select_all"></label></div></th>';
+                        tmp+='<th data-field="Thumbnail" data-sortable="true">'+lang.Thumbnail+'</th>';
+                        tmp+='<th data-field="Closed" data-sortable="true">'+lang.Closed+'</th>';
+                        tmp+='<th data-field="Ended" data-sortable="true">'+lang.Ended+'</th>';
+                        tmp+='<th data-field="Started" data-sortable="true">'+lang.Started+'</th>';
+                        tmp+='<th data-field="Monitor" data-sortable="true">'+lang.Monitor+'</th>';
+                        tmp+='<th data-field="Filename" data-sortable="true">'+lang.Filename+'</th>';
+                        tmp+='<th data-field="Size" data-sortable="true">'+lang['Size (mb)']+'</th>';
+                        tmp+='<th data-field="Preview" data-sortable="true">'+lang.Preview+'</th>';
+                        tmp+='<th data-field="Watch" data-sortable="true">'+lang.Watch+'</th>';
+                        tmp+='<th data-field="Download" data-sortable="true">'+lang.Download+'</th>';
+                        tmp+='<th class="permission_video_delete" data-field="Delete" data-sortable="true">'+lang.Delete+'</th>';
+//                        tmp+='<th class="permission_video_delete" data-field="Fix" data-sortable="true">'+lang.Fix+'</th>';
+                        tmp+='</tr>';
+                        tmp+='</thead>';
+                        tmp+='<tbody>';
                         $.each(d.videos,function(n,v){
                             if(v.status!==0){
                                 $.vidview.loadedVideos[v.filename] = Object.assign(v,{})
@@ -5714,25 +5867,40 @@ $('body')
                                 v.mon=$.ccio.mon[v.ke+v.mid+user.auth_token];
                                 v.start=v.time;
 //                                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
-                                e.tmp+='<tr data-ke="'+v.ke+'" data-status="'+v.status+'" data-mid="'+v.mid+'" data-file="'+v.filename+'" data-auth="'+v.mon.user.auth_token+'">';
-                                e.tmp+='<td><div class="checkbox"><input id="'+v.ke+'_'+v.filename+'" name="'+v.filename+'" value="'+v.mid+'" type="checkbox"><label for="'+v.ke+'_'+v.filename+'"></label></div></td>';
-                                e.tmp+='<td><span class="livestamp" title="'+$.ccio.timeObject(v.end).format('YYYY-MM-DD HH:mm:ss')+'"></span></td>';
-                                e.tmp+='<td title="'+v.end+'">'+$.ccio.timeObject(v.end).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
-                                e.tmp+='<td title="'+v.time+'">'+$.ccio.timeObject(v.time).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
-                                e.tmp+='<td>'+v.mon.name+'</td>';
-                                e.tmp+='<td>'+v.filename+'</td>';
-                                e.tmp+='<td>'+(parseInt(v.size)/1000000).toFixed(2)+'</td>';
-                                e.tmp+='<td><a class="btn btn-sm btn-default preview" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a></td>';
-                                e.tmp+='<td><a class="btn btn-sm btn-primary" video="launch" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a></td>';
-                                e.tmp+='<td><a class="btn btn-sm btn-success" download="'+v.mid+'-'+v.filename+'" href="'+href+'">&nbsp;<i class="fa fa-download"></i>&nbsp;</a></td>';
-                                e.tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-danger" video="delete" href="'+$.ccio.init('videoHrefToDelete',href)+'">&nbsp;<i class="fa fa-trash"></i>&nbsp;</a></td>';
-//                                e.tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-warning" video="fix">&nbsp;<i class="fa fa-wrench"></i>&nbsp;</a></td>';
-                                e.tmp+='</tr>';
+                                tmp+='<tr data-ke="'+v.ke+'" data-status="'+v.status+'" data-mid="'+v.mid+'" data-file="'+v.filename+'" data-auth="'+v.mon.user.auth_token+'">';
+                                tmp+='<td><div class="checkbox"><input id="'+v.ke+'_'+v.filename+'" name="'+v.filename+'" value="'+v.mid+'" type="checkbox"><label for="'+v.ke+'_'+v.filename+'"></label></div></td>';
+                                tmp+='<td class="text-center"><img class="thumbnail"></td>';
+                                tmp+='<td><span class="livestamp" title="'+$.ccio.timeObject(v.end).format('YYYY-MM-DD HH:mm:ss')+'"></span></td>';
+                                tmp+='<td title="'+v.end+'">'+$.ccio.timeObject(v.end).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
+                                tmp+='<td title="'+v.time+'">'+$.ccio.timeObject(v.time).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
+                                tmp+='<td>'+v.mon.name+'</td>';
+                                tmp+='<td>'+v.filename+'</td>';
+                                tmp+='<td>'+(parseInt(v.size)/1000000).toFixed(2)+'</td>';
+                                tmp+='<td><a class="btn btn-sm btn-default preview" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a></td>';
+                                tmp+='<td><a class="btn btn-sm btn-primary" video="launch" href="'+href+'">&nbsp;<i class="fa fa-play-circle"></i>&nbsp;</a></td>';
+                                tmp+='<td><a class="btn btn-sm btn-success" download="'+v.mid+'-'+v.filename+'" href="'+href+'">&nbsp;<i class="fa fa-download"></i>&nbsp;</a></td>';
+                                tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-danger" video="delete" href="'+$.ccio.init('videoHrefToDelete',href)+'">&nbsp;<i class="fa fa-trash"></i>&nbsp;</a></td>';
+//                                tmp+='<td class="permission_video_delete"><a class="btn btn-sm btn-warning" video="fix">&nbsp;<i class="fa fa-wrench"></i>&nbsp;</a></td>';
+                                tmp+='</tr>';
                             }
                         })
-                        e.tmp+='</tbody>';
-                        e.tmp+='</table>';
-                        e.b.html(e.tmp);delete(e.tmp)
+                        tmp+='</tbody>';
+                        tmp+='</table>';
+                        e.b.html(tmp)
+                        var i = 0
+                        var getThumbnail = function(){
+                            var v = d.videos[i]
+                            if(v){
+                                tool.getVideoImage($.ccio.init('videoUrlBuild',v),0,function(err,base64){
+                                    if(base64){
+                                        $('[data-ke="'+v.ke+'"][data-mid="'+v.mid+'"][data-file="'+v.filename+'"] .thumbnail')[0].src = base64
+                                    }
+                                    ++i
+                                    getThumbnail()
+                                })
+                            }
+                        }
+                        getThumbnail()
                         $.ccio.init('ls');
                         $.vidview.e.find('table').bootstrapTable();
                     break;
@@ -5755,7 +5923,28 @@ $('body')
         break;
         case'control_toggle':
             e.e=e.p.find('.PTZ_controls');
-            if(e.e.length>0){e.e.remove()}else{e.p.append('<div class="PTZ_controls"><div class="pad"><div class="control top" monitor="control" control="up"></div><div class="control left" monitor="control" control="left"></div><div class="control right" monitor="control" control="right"></div><div class="control bottom" monitor="control" control="down"></div><div class="control middle" monitor="control" control="center"></div></div><div class="btn-group btn-group-sm btn-group-justified"><a title="<%-cleanLang(lang['Zoom In'])%>" class="zoom_in btn btn-default" monitor="control" control="zoom_in"><i class="fa fa-search-plus"></i></a><a title="<%-cleanLang(lang['Zoom Out'])%>" class="zoom_out btn btn-default" monitor="control" control="zoom_out"><i class="fa fa-search-minus"></i></a></div><div class="btn-group btn-group-sm btn-group-justified"><a title="<%-cleanLang(lang['Enable Nightvision'])%>" class="nv_enable btn btn-default" monitor="control" control="enable_nv"><i class="fa fa-moon-o"></i></a><a title="<%-cleanLang(lang['Disable Nightvision'])%>" class="nv_disable btn btn-default" monitor="control" control="disable_nv"><i class="fa fa-sun-o"></i></a></div></div>')}
+            if(e.e.length>0){
+                e.e.remove()
+            }else{
+                var html = '<div class="PTZ_controls">'
+                html += '<div class="pad">'
+                    html += '<div class="control top" monitor="control" control="up"></div>'
+                    html += '<div class="control left" monitor="control" control="left"></div>'
+                    html += '<div class="control right" monitor="control" control="right"></div>'
+                    html += '<div class="control bottom" monitor="control" control="down"></div>'
+                    html += '<div class="control middle" monitor="control" control="center"></div>'
+                html += '</div>'
+                html += '<div class="btn-group btn-group-sm btn-group-justified">'
+                    html += '<a title="'+lang['Zoom In']+'" class="zoom_in btn btn-default" monitor="control" control="zoom_in"><i class="fa fa-search-plus"></i></a>'
+                    html += '<a title="'+lang['Zoom Out']+'" class="zoom_out btn btn-default" monitor="control" control="zoom_out"><i class="fa fa-search-minus"></i></a>'
+                html += '</div>'
+                    html += '<div class="btn-group btn-group-sm btn-group-justified">'
+                        html += '<a title="'+lang['Enable Nightvision']+'" class="nv_enable btn btn-default" monitor="control" control="enable_nv"><i class="fa fa-moon-o"></i></a>'
+                        html += '<a title="'+lang['Disable Nightvision']+'" class="nv_disable btn btn-default" monitor="control" control="disable_nv"><i class="fa fa-sun-o"></i></a>'
+                    html += '</div>'
+                html += '</div>'
+                e.p.append(html)
+            }
         break;
         case'watch':
             if($("#monitor_live_"+e.mid+user.auth_token).length===0||$.ccio.mon[e.ke+e.mid+user.auth_token].watch!==1){
@@ -5769,8 +5958,8 @@ $('body')
         break;
         case'delete':
             e.m=$('#confirm_window').modal('show');e.f=e.e.attr('file');
-            $.confirm.title.text('<%-cleanLang(lang['Delete Monitor'])%> : '+e.mon.name)
-            e.html='<%-cleanLang(lang.DeleteMonitorText)%>'
+            $.confirm.title.text(lang['Delete Monitor']+' : '+e.mon.name)
+            e.html=lang.DeleteMonitorText
             e.html+='<table class="info-table table table-striped"><tr>';
             $.each($.ccio.init('cleanMon',e.mon),function(n,v,g){
                 if(n==='host'&&v.indexOf('@')>-1){g=v.split('@')[1]}else{g=v};
@@ -5815,7 +6004,7 @@ $('body')
                 e.p.find('.am_notice_edit').show()
                 //edit monitor
                 e.p.find('[monitor="delete"]').show()
-                e.mt.find('span').text('<%-cleanLang(lang.Edit)%>');
+                e.mt.find('span').text(lang.Edit);
                 e.mt.find('i').attr('class','fa fa-wrench');
                 e.values=$.ccio.mon[e.ke+e.mid+user.auth_token];
             }
@@ -5918,14 +6107,14 @@ $('body')
         })
     }
     //set dropdown toggle preferences
-    e.o=$.ccio.op().dropdown_toggle;
+    e.o = $.ccio.op().dropdown_toggle
     if(e.o){
         $.each(e.o,function(n,v){
             $('[dropdown_toggle="'+n+'"]').val(v).change()
         })
     }
     //set localStorage input values
-    e.o=$.ccio.op();
+    e.o = $.ccio.op()
     if(e.o){
         $.each(e.o,function(n,v){
             if(typeof v==='string'){

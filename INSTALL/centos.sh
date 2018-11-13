@@ -33,7 +33,7 @@ echo "Shinobi - Do you want to Install FFMPEG?"
 echo "(y)es or (N)o"
 read ffmpeginstall
 if [ "$ffmpeginstall" = "y" ] || [ "$ffmpeginstall" = "Y" ]; then
-    echo "Shinobi - Do you want to Install FFMPEG with `apt` or download a static version provided with `npm`?"
+    echo "Shinobi - Do you want to Install FFMPEG with yum or download a static version provided with npm?"
     echo "(a)pt or (N)pm"
     echo "Press [ENTER] for default (npm)"
     read ffmpegstaticinstall
@@ -45,7 +45,7 @@ if [ "$ffmpeginstall" = "y" ] || [ "$ffmpeginstall" = "Y" ]; then
         sudo rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-1.el7.nux.noarch.rpm
         sudo yum install ffmpeg ffmpeg-devel -y
     else
-        sudo npm install ffmpeg-static@2.2.1
+        sudo npm install ffbinaries
     fi
 fi
 echo "Shinobi - Do you want to Install Node.js?"
@@ -99,49 +99,21 @@ else
         read sqlpass
         sudo mysql -u $sqluser -p$sqlpass -e "source sql/user.sql" || true
         sudo mysql -u $sqluser -p$sqlpass -e "source sql/framework.sql" || true
-        echo "Shinobi - Do you want to create a new user for viewing and managing cameras in Shinobi? You can do this later in the Superuser panel."
-        echo "(y)es or (N)o"
-        read mysqlDefaultData
-        if [ "$mysqlDefaultData" = "y" ] || [ "$mysqlDefaultData" = "Y" ]; then
-            escapeReplaceQuote='\\"'
-            groupKey=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 7 | head -n 1)
-            userID=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
-            userEmail=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)"@"$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)".com"
-            userPasswordPlain=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
-            userPasswordMD5=$(echo   -n   "$userPasswordPlain" | md5sum | awk '{print $1}')
-            userDetails='{"days":"10"}'
-            userDetails=$(echo "$userDetails" | sed -e 's/"/'$escapeReplaceQuote'/g')
-            echo $userDetailsNew
-            apiIP='0.0.0.0'
-            apiKey=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-            apiDetails='{"auth_socket":"1","get_monitors":"1","control_monitors":"1","get_logs":"1","watch_stream":"1","watch_snapshot":"1","watch_videos":"1","delete_videos":"1"}'
-            apiDetails=$(echo "$apiDetails" | sed -e 's/"/'$escapeReplaceQuote'/g')
-            rm sql/default_user.sql || true
-            echo "USE ccio;INSERT INTO Users (\`ke\`,\`uid\`,\`auth\`,\`mail\`,\`pass\`,\`details\`) VALUES (\"$groupKey\",\"$userID\",\"$apiKey\",\"$userEmail\",\"$userPasswordMD5\",\"$userDetails\");INSERT INTO API (\`code\`,\`ke\`,\`uid\`,\`ip\`,\`details\`) VALUES (\"$apiKey\",\"$groupKey\",\"$userID\",\"$apiIP\",\"$apiDetails\");" > "sql/default_user.sql"
-            sudo mysql -u $sqluser -p$sqlpass --database ccio -e "source sql/default_user.sql" > "INSTALL/log.txt"
-            echo "The following details will be shown again at the end of the installation."
-            echo "====================================="
-            echo "=======   Login Credentials   ======="
-            echo "|| Username : $userEmail"
-            echo "|| Password : $userPasswordPlain"
-            echo "|| API Key : $apiKey"
-            echo "====================================="
-            echo "====================================="
-            echo "** To change these settings login to either to the Superuser panel or login to the dashboard as the user that was just created and open the Settings window. **"
-        fi
     fi
 fi
 echo "============="
 echo "Shinobi - Install NPM Libraries"
 sudo npm i npm -g
 sudo npm install --unsafe-perm
-sudo npm audit fix --unsafe-perm
+sudo npm audit fix --force
 echo "============="
 echo "Shinobi - Install PM2"
 sudo npm install pm2 -g
 echo "Shinobi - Finished"
 sudo chmod -R 755 .
 touch INSTALL/installed.txt
+dos2unix /home/Shinobi/INSTALL/shinobi
+ln -s /home/Shinobi/INSTALL/shinobi /usr/bin/shinobi
 if [ "$mysqlDefaultData" = "y" ] || [ "$mysqlDefaultData" = "Y" ]; then
     echo "=====================================" > INSTALL/installed.txt
     echo "=======   Login Credentials   =======" >> INSTALL/installed.txt

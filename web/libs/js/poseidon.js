@@ -19,7 +19,8 @@ var Poseidon = function () {
             uid: options.uid,
             ke: options.ke,
             id: options.id,
-            channel: options.channel
+            channel: options.channel,
+            errorCallback: options.onError
         };
         _classCallCheck(this, Poseidon);
 
@@ -28,10 +29,11 @@ var Poseidon = function () {
         } else {
             this._callback = function (err, msg) {
                 if (err) {
-                    console.error('Poseidon Error: ' + err);
+                    if(_monitor.errorCallback)_monitor.errorCallback(err)
+                    console.error('Poseidon Error: ' + err,options);
                     return;
                 }
-                console.log('Poseidon Message: ' + msg);
+                console.log('Poseidon Message: ' + msg,options);
             };
         }
         if (!options.video || !(options.video instanceof HTMLVideoElement)) {
@@ -241,7 +243,7 @@ var Poseidon = function () {
             }
             this._playing = true;
             var _this = this;
-            this._socket = io(_this._monitor.url, { transports: ['websocket'], forceNew: false });
+            this._socket = io(_this._monitor.url, { path: _this._monitor.path, transports: ['websocket'], forceNew: false });
             this._addSocketEvents();
             if (this._startstop) {
                 this._startstop.disabled = false;
@@ -467,7 +469,7 @@ var Poseidon = function () {
     }, {
         key: '_onSocketDisconnect',
         value: function _onSocketDisconnect(event) {
-            this._callback(null, 'socket disconnect "' + event + '"');
+            this._callback(true, 'socket disconnect "' + event + '"');
             this.stop();
         }
     }, {
@@ -502,6 +504,7 @@ var Poseidon = function () {
     }, {
         key: '_onSegment',
         value: function _onSegment(data) {
+            if(!this._mediaSource)this_.socket.disconnect()
             if (this._sourceBuffer.buffered.length) {
                 var lag = this._sourceBuffer.buffered.end(0) - this._video.currentTime;
                 if (lag > 0.5) {

@@ -248,11 +248,15 @@
             "info": [
                {
                   "name": "detail=stream_type",
-                  "field": "Stream  Type",
+                  "field": "Stream Type",
                   "description": "The method that will used to consume the video stream.",
                   "default": "HLS",
                   "example": "",
                   "possible": [
+                     {
+                        "name": "Poseidon",
+                        "info": "Simulates a streaming MP4 file but using the data of a live stream. Includes Audio. Some browsers can play it like a regular MP4 file. Streams over HTTP or WebSocket."
+                     },
                      {
                         "name": "MJPEG",
                         "info": "Standard Motion JPEG image. No audio."
@@ -285,8 +289,8 @@
                },
                {
                   "name": "detail=stream_flv_type",
-                  "field": "FLV Stream Type",
-                  "description": "The method you will view your FLV stream. Both methods are always active for each stream regardless of your viewing choice for the Shinobi Dashboard.",
+                  "field": "Connection Type",
+                  "description": "The method you will view your stream. Both methods are always active regardless of your viewing choice for the Dashboard.",
                   "default": "10",
                   "example": "",
                   "possible": ""
@@ -733,7 +737,7 @@
                {
                   "name": "detail=detector",
                   "field": "Enabled",
-                  "description": "This will add another output in the FFMPEG command for the motion detector. A detector plugin must be connected for this to have any effect.",
+                  "description": "This will add another output in the FFMPEG command for the motion detector.",
                   "default": "No",
                   "example": "",
                   "possible": ""
@@ -872,10 +876,34 @@
                {
                   "name": "detail=detector_sensitivity",
                   "field": "Indifference",
-                  "description": "How much Shinobi doesn't care about motion before doing something. The opposite of sensitivity; a lower number means it will trigger sooner. The value ranges up to 15(+) decimal places.  10 is default, 0.005 is pretty sensitive to motion changes.  Note: If using Region Editor, leave this blank, and set indifference in the Region Editor (above).",
-                  "default": "10",
+                  "description": "This can mean multiple things depending on the detector used. Built-In Motion Detection defines this as \"Percentage Changed in View or Region\"",
+                  "default": "0.005",
                   "example": "10",
                   "possible": ""
+               },
+               {
+                  "name": "detail=detector_max_sensitivity",
+                  "field": "Max Indifference",
+                  "description": "An upperbound to indifference. Any value over this amount will be ignored.",
+                  "default": "",
+                  "example": "75",
+                  "possible": "Any number."
+               },
+               {
+                  "name": "detail=detector_threshold",
+                  "field": "Trigger Threshold",
+                  "description": "Minimum number of detections to fire a motion event. Detections must be within the detector the threshold divided by detector fps seconds. For example, if detector fps is 2 and trigger threshold is 3, then three detections must occur within 1.5 seconds to trigger a motion event. This threshold is per detection region.",
+                  "default": "1",
+                  "example": "3",
+                  "possible": "Any non-negative integer."
+               },
+               {
+                  "name": "detail=detector_color_threshold",
+                  "field": "Color Threshold",
+                  "description": "The amount of difference allowed in a pixel before it is considered motion.",
+                  "default": "9",
+                  "example": "9",
+                  "possible": "Any non-negative integer."
                },
                {
                   "name": "detail=detector_webhook",

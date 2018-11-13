@@ -6,7 +6,7 @@
    position: relative;
    min-height: 1px;
    padding-right: 15px;
-   padding-left: 15px; 
+   padding-left: 15px;
 }
 
 .col-5ths {
@@ -24,7 +24,7 @@
       -ms-flex: 0 0 20%;
       flex: 0 0 20%;
       max-width: 20%;
-   } 
+   }
 }
 
 @media (min-width: 768px) {
@@ -34,7 +34,7 @@
       -ms-flex: 0 0 20%;
       flex: 0 0 20%;
       max-width: 20%;
-   } 
+   }
 }
 ::-webkit-scrollbar-thumb:hover {
     background-color:#bd9565;
@@ -90,6 +90,9 @@ img{max-width:100%}
 }
 
 .monitor_item .stream-hud{opacity:0;position:absolute;top:0;left:0;width:100%;height:100%;z-index:2}
+.monitor_item .stream-hud .camera_cpu_usage{position:absolute;top:0;left:0;width: 100%;}
+.monitor_item .stream-hud .camera_cpu_usage .progress{width: 100%;}
+.monitor_item .stream-hud .camera_cpu_usage:hover .progress{height:20px;transition:0.2s}
 .monitor_item .stream-hud .controls{position:absolute;top:10px;left:10px;}
 .monitor_item .stream-hud:hover{opacity:1}
 .monitor_item .stream-hud .bottom-text{position:absolute;bottom:0;left:0;width:100%;padding:5px;text-shadow: 0 0 10px #333;}
@@ -114,8 +117,7 @@ img{max-width:100%}
 .monitor_item.fullscreen img.stream-element{height:100%;width:auto}
 .monitor_item.fullscreen canvas.stream-element{height:auto;width:auto;background-color:black;}
 .monitor_item .stream-element{border: 0;object-fit: fill;height: 100%;width:100%}
-.monitor_item{position:relative;padding:0;}
-.monitor_item{transition:none;}
+.monitor_item{position:relative;padding:0;transition:none;background:#000}
 .monitor_item .mdl-card{min-height:auto;border:1px solid #272727;border-radius:0px;overflow:hidden}
 .monitor_item .mdl-card__media{position:relative;padding:0!important;display:block!important;background:#000;}
 .monitor_item.selected .stream-element{height:600px}
@@ -124,7 +126,7 @@ img{max-width:100%}
 .monitor_item.detector_triggered .detector-fade{opacity:1}
 .monitor_item .detector-fade{opacity:0}
 .monitor_item .indifference{position:absolute;width:100%;left:0;top:0;transition:0.2s;}
-.monitor_item .indifference .progress{width:100%;background:#333;box-shadow:0;}
+.monitor_item .progress{width:100%;background:#333;box-shadow:0;}
 .monitor_item .indifference:hover .progress{height:20px;transition:0.2s}
 .hide_indifference .indifference{display:none!important}
 .hide_indifference [class_toggle="hide_indifference"]{color:#d9534f!important}
@@ -330,9 +332,16 @@ form.modal-body{margin:0}
 .timelapse_hud .controlBar{position: absolute;background:rgba(22,22,22,0.8);width:100%;left:0;bottom:0;}
 .timelapse_hud .hover-hide{opacity:0}
 .timelapse_hud:hover .hover-hide{opacity:1;z-index:5}
-
+.video_grid{overflow: auto;height: 100%;display: block;}
+.video_grid .col-md-2{padding-left:5px;padding-right:5px;padding-bottom:10px}
+.video_grid .thumb{width:100%;height:150px;display:inline-block;background-size:cover;position:relative;overflow:hidden;border-radius:4px;border:1px solid #000;box-shadow:0 0 10px #151515}
+.video_grid .thumb .title-strip, .video_grid .thumb .button-strip{width:100%;position:absolute;left:0;background:rgba(0,0,0,0.7);color:#fff;padding:4px}
+.video_grid .thumb .title-strip{top:0;opacity:0.5}
+.video_grid .thumb .button-strip{bottom:0;opacity:0}
+.video_grid .thumb:hover .title-strip, .video_grid .thumb:hover .button-strip{opacity:1}
 
 .table-striped>tbody>tr>td{vertical-align:middle}
+.table-striped .thumbnail{width:100px;height:80px;border-radius:5px;margin:0;display:inline-block;}
 #motion_list{height:155px;overflow:auto;border-radius:5px;border:1px solid #444;position:relative;background: #222;margin:0}
 .dark .list-group-item{border-color: #444;background:#222}
 .dark .list-group-item.active{background:#c49a68;border-color:#a7865f}
@@ -456,7 +465,7 @@ ul.msg_list li .message {
 .nav>li>a:focus, .nav>li>a:hover,.nav .open>a, .nav .open>a:focus, .nav .open>a:hover{background:#867560}
 
 .mdl-js-layout.hide-side:not(.is-small-screen){
-    
+
 }
 @media screen and (min-width: 1025px){
     .mdl-js-layout.hide-side:not(.is-small-screen)>.mdl-layout__drawer {
@@ -639,7 +648,7 @@ ul.msg_list li .message {
 }
 
 /*animations*/
-@keyframes blink {  
+@keyframes blink {
   0% { opacity:1 }
   50% { opacity:0 }
   100% { opacity:1 }
