@@ -649,6 +649,8 @@
    "Thumbnail": "Thumbnail",
    "Host Type": "Host Type",
    "Edit": "Edit",
+   "Show Matrices": "Show Matrices",
+   "Show Matrix": "Show Matrix",
    "No Monitor ID Present in Form": "No Monitor ID Present in Form",
    "State Configuration has no monitors associated": "State Configuration has no monitors associated",
    "State Configuration Not Found": "State Configuration Not Found",

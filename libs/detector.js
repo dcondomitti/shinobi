@@ -53,7 +53,11 @@ module.exports = function(s,config){
 
         var regions = s.createPamDiffRegionArray(regionJson,globalColorThreshold,globalSensitivity,fullFrame)
 
-        s.group[e.ke].mon[e.id].pamDiff = new PamDiff({grayscale: 'luminosity', regions : regions.forPam});
+        s.group[e.ke].mon[e.id].pamDiff = new PamDiff({
+            grayscale: 'luminosity',
+            regions : regions.forPam,
+            drawMatrix : e.details.detector_show_matrix
+        });
         s.group[e.ke].mon[e.id].p2p = new P2P();
         var sendTrigger = function(trigger){
             var detectorObject = {

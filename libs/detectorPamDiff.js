@@ -44,6 +44,7 @@ class PamDiff extends Transform {
         this.difference = PamDiff._parseOptions('difference', options);//global option, can be overridden per region
         this.percent = PamDiff._parseOptions('percent', options);//global option, can be overridden per region
         this.regions = PamDiff._parseOptions('regions', options);//can be no regions or a single region or multiple regions. if no regions, all pixels will be compared.
+        this.drawMatrix = PamDiff._parseOptions('drawMatrix', options);//can be no regions or a single region or multiple regions. if no regions, all pixels will be compared.
         this.callback = callback;//callback function to be called when pixel difference is detected
         this._parseChunk = this._parseFirstChunk;//first parsing will be reading settings and configuring internal pixel reading
     }
@@ -331,7 +332,7 @@ class PamDiff extends Transform {
      * @param chunk
      * @private
      */
-    _grayScalePixelDiff(chunk) {
+    _grayScalePixelDiffWithMatrices(chunk) {
         this._newPix = chunk.pixels;
         for (let j = 0; j < this._regionsLength; j++) {
             this._regions[j].topLeft = {
@@ -429,6 +430,71 @@ class PamDiff extends Transform {
         }
         this._oldPix = this._newPix;
     }
+
+    /**
+     *
+     * @param chunk
+     * @private
+     */
+     _grayScalePixelDiff(chunk) {
+         this._newPix = chunk.pixels;
+         for (let y = 0, i = 0; y < this._height; y++) {
+             for (let x = 0; x < this._width; x++, i++) {
+                 if (this._oldPix[i] !== this._newPix[i]) {
+                     const diff = Math.abs(this._oldPix[i] - this._newPix[i]);
+                     if (this._regions && diff >= this._minDiff) {
+                         for (let j = 0; j < this._regionsLength; j++) {
+                             if (this._pointsInPolygons[j][i] && diff >= this._regions[j].difference) {
+                                 this._regions[j].diffs++;
+                             }
+                         }
+                     } else {
+                         if (diff >= this._difference) {
+                             this._diffs++;
+                         }
+                     }
+                 }
+             }
+         }
+         if (this._regions) {
+             const regionDiffArray = [];
+             for (let i = 0; i < this._regionsLength; i++) {
+                 const percent = Math.floor(100 * this._regions[i].diffs / this._regions[i].pointsLength);
+                 if (percent >= this._regions[i].percent) {
+                     regionDiffArray.push({name: this._regions[i].name, percent: percent});
+                 }
+                 this._regions[i].diffs = 0;
+             }
+             if (regionDiffArray.length > 0) {
+                 const data = {trigger: regionDiffArray, pam: chunk.pam};
+                 if (this._callback) {
+                     this._callback(data);
+                 }
+                 if (this._readableState.pipesCount > 0) {
+                     this.push(data);
+                 }
+                 if (this.listenerCount('diff') > 0) {
+                     this.emit('diff', data);
+                 }
+             }
+         } else {
+             const percent = Math.floor(100 * this._diffs / this._length);
+             if (percent >= this._percent) {
+                 const data = {trigger: [{name: 'percent', percent: percent}], pam: chunk.pam};
+                 if (this._callback) {
+                     this._callback(data);
+                 }
+                 if (this._readableState.pipesCount > 0) {
+                     this.push(data);
+                 }
+                 if (this.listenerCount('diff') > 0) {
+                     this.emit('diff', data);
+                 }
+             }
+             this._diffs = 0;
+         }
+         this._oldPix = this._newPix;
+     }
 
     /**
      *
@@ -576,7 +642,11 @@ class PamDiff extends Transform {
                 this._parseChunk = this._blackAndWhitePixelDiff;
                 break;
             case 'grayscale' :
-                this._parseChunk = this._grayScalePixelDiff;
+                if(this.drawMatrix === "1"){
+                    this._parseChunk = this._grayScalePixelDiffWithMatrices;
+                }else{
+                    this._parseChunk = this._grayScalePixelDiff;
+                }
                 break;
             case 'rgb' :
                 this._parseChunk = this._rgbPixelDiff;
