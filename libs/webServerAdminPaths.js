@@ -364,6 +364,36 @@ module.exports = function(s,config,lang,app){
         },res,req)
     })
     /**
+    * API : Administrator : Get Monitor State Presets List
+    */
+    app.get([
+        config.webPaths.apiPrefix+':auth/monitorStates/:ke',
+        config.webPaths.adminApiPrefix+':auth/monitorStates/:ke'
+    ],function (req,res){
+        s.auth(req.params,function(user){
+            var endData = {
+                ok : false
+            }
+            if(user.details.sub){
+                endData.msg = user.lang['Not Permitted']
+                s.closeJsonResponse(res,endData)
+                return
+            }
+            s.sqlQuery("SELECT * FROM Presets WHERE ke=? AND type=?",[req.params.ke,'monitorStates'],function(err,presets){
+                if(presets && presets[0]){
+                    endData.ok = true
+                    presets.forEach(function(preset){
+                        preset.details = JSON.parse(preset.details)
+                    })
+                    endData.presets = presets
+                }else{
+                    endData.msg = user.lang['State Configuration Not Found']
+                }
+                s.closeJsonResponse(res,endData)
+            })
+        })
+    })
+    /**
     * API : Administrator : Change Group Preset. Currently affects Monitors only.
     */
     app.all([
