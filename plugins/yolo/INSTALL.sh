@@ -19,8 +19,15 @@ if [ ! -d "/usr/local/cuda" ]; then
     exit 1
 else
     echo "CUDA Toolkit found..."
-    export PATH=/usr/local/cuda/bin:$PATH
-    export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+    echo "============="
+    echo "Shinobi - Do you want to install the plugin with CUDA support?"
+    echo "Do this if you installed NVIDIA Drivers, CUDA Toolkit, and CuDNN"
+    echo "(y)es or (N)o"
+    read usecuda
+    if [ "$usecuda" = "y" ] || [ "$usecuda" = "Y" ]; then
+        export PATH=/usr/local/cuda/bin:$PATH
+        export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+    fi
 fi
 echo "-----------------------------------"
 if ! [ -x "$(command -v opencv_version)" ]; then
@@ -71,17 +78,6 @@ if [ ! -e "./conf.json" ]; then
     sudo cp conf.sample.json conf.json
 else
     echo "conf.json already exists..."
-fi
-echo "-----------------------------------"
-echo "Getting Imagemagick"
-if [ -f /etc/redhat-release ]; then
-  yum update
-  yum install imagemagick -y
-fi
-
-if [ -f /etc/lsb-release ]; then
-  apt update -y
-  apt install imagemagick -y
 fi
 echo "-----------------------------------"
 echo "Getting node-gyp to build C++ modules"
