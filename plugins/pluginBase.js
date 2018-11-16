@@ -217,12 +217,20 @@ module.exports = function(__dirname,config){
     }else{
         var retryConnection = 0
         maxRetryConnection = config.maxRetryConnection || 5
-        plugLog('Plugin starting as Client, Port : '+config.port)
+        plugLog('Plugin starting as Client, Host Address : '+'ws://'+config.host+':'+config.port)
         //start plugin as client
         if(!config.host){config.host='localhost'}
-        console.log('ws://'+config.host+':'+config.port)
-        var io = require('socket.io-client')('ws://'+config.host+':'+config.port,{transports:['websocket']});//connect to master
-        s.cx = function(x){x.pluginKey=config.key;x.plug=config.plug;return io.emit('ocv',x)}
+        var io = require('socket.io-client')('ws://'+config.host+':'+config.port,{
+            transports: ['websocket']
+        });
+        //connect to master
+        s.cx = function(x){
+            var sendData = Object.assign(x,{
+                pluginKey : config.key,
+                plug : config.plug
+            })
+            return io.emit('ocv',sendData)
+        }
         io.on('connect_error', function(err){
             plugLog('ws://'+config.host+':'+config.port)
             plugLog('Connection Failed')
