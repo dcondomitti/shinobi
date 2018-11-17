@@ -18,6 +18,7 @@ module.exports = function(s,config,lang,app,io){
     s.renderPage = function(req,res,paths,passables,callback){
         passables.window = {}
         passables.originalURL = s.getOriginalUrl(req)
+        passables.config = config
         res.render(paths,passables,callback)
     }
     //child node proxy check

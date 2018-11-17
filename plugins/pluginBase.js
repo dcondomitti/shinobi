@@ -217,11 +217,25 @@ module.exports = function(__dirname,config){
     }else{
         var retryConnection = 0
         maxRetryConnection = config.maxRetryConnection || 5
-        plugLog('Plugin starting as Client')
+        plugLog('Plugin starting as Client, Host Address : '+'ws://'+config.host+':'+config.port)
         //start plugin as client
         if(!config.host){config.host='localhost'}
-        var io = require('socket.io-client')('ws://'+config.host+':'+config.port);//connect to master
-        s.cx=function(x){x.pluginKey=config.key;x.plug=config.plug;return io.emit('ocv',x)}
+        var io = require('socket.io-client')('ws://'+config.host+':'+config.port,{
+            transports: ['websocket']
+        });
+        //connect to master
+        s.cx = function(x){
+            var sendData = Object.assign(x,{
+                pluginKey : config.key,
+                plug : config.plug
+            })
+            return io.emit('ocv',sendData)
+        }
+        io.on('connect_error', function(err){
+            plugLog('ws://'+config.host+':'+config.port)
+            plugLog('Connection Failed')
+            plugLog(err)
+        })
         io.on('connect',function(d){
             s.cx({f:'init',plug:config.plug,notice:config.notice,type:config.type,connectionType:config.connectionType});
         })

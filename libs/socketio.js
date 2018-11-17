@@ -59,14 +59,14 @@ module.exports = function(s,config,lang,io){
         var tx;
         //set "client" detector plugin event function
         cn.on('ocv',function(d){
-            if(!cn.pluginEngine&&d.f==='init'){
-                if(config.pluginKeys[d.plug]===d.pluginKey){
+            if(!cn.pluginEngine && d.f === 'init'){
+                if(config.pluginKeys[d.plug] === d.pluginKey){
                     s.pluginInitiatorSuccess("client",d,cn)
                 }else{
                     s.pluginInitiatorFail("client",d,cn)
                 }
             }else{
-                if(config.pluginKeys[d.plug]===d.pluginKey){
+                if(config.pluginKeys[d.plug] === d.pluginKey){
                     s.pluginEventController(d)
                 }else{
                     cn.disconnect()
