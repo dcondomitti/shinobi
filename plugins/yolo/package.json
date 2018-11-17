@@ -8,7 +8,8 @@
     "express": "^4.16.2",
     "moment": "^2.19.2",
     "socket.io": "^2.0.4",
-    "node-yolo-shinobi": "^2.0.1"
+    "imagickal": "^4.0.0",
+    "node-yolo-shinobi": "^2.0.3"
   },
   "devDependencies": {},
   "scripts": {

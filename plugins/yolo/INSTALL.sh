@@ -80,12 +80,23 @@ else
     echo "conf.json already exists..."
 fi
 echo "-----------------------------------"
+if [ -f /etc/redhat-release ]; then
+  yum update
+  yum install imagemagick -y
+fi
+
+if [ -f /etc/lsb-release ]; then
+  apt update -y
+  apt install imagemagick -y
+fi
+echo "-----------------------------------"
 echo "Getting node-gyp to build C++ modules"
 npm install node-gyp -g --unsafe-perm
 echo "-----------------------------------"
 echo "Getting C++ module : node-yolo-shinobi"
 echo "https://www.npmjs.com/package/node-yolo-shinobi is a fork of https://github.com/rcaceiro/node-yolo"
 npm install --unsafe-perm
+npm install node-yolo-shinobi --unsafe-perm
 npm audit fix --force
 echo "-----------------------------------"
 echo "Start the plugin with pm2 like so :"
