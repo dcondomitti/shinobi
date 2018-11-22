@@ -230,11 +230,6 @@ module.exports = function(s,config,lang){
                         })
                     })
                 })
-                fs.chmod(videoSnap,0o777,function(err){
-                    if(!err){
-                        fs.unlink(videoSnap,function(err){})
-                    }
-                })
             }else{
                 console.log(new Error())
                 console.log(lang['Database row does not exist'],queryValues)

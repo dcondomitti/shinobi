@@ -884,6 +884,9 @@ module.exports = function(s,config,onFinish){
         ffmpeg.buildMainStream(e,x)
         ffmpeg.buildMainRecording(e,x)
         ffmpeg.buildMainDetector(e,x)
+        s.onFfmpegCameraStringCreationExtensions.forEach(function(extender){
+            extender(e,x)
+        })
         ffmpeg.assembleMainPieces(e,x)
         ffmpeg.createPipeArray(e,x)
         //hold ffmpeg command for log stream

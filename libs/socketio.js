@@ -477,6 +477,9 @@ module.exports = function(s,config,lang,io){
                             console.log(err)
                         }
                     })
+                    s.onSocketAuthenticationExtensions.forEach(function(extender){
+                        extender(r,cn)
+                    })
                 }
                 s.sqlQuery('SELECT ke,uid,auth,mail,details FROM Users WHERE ke=? AND auth=? AND uid=?',[d.ke,d.auth,d.uid],function(err,r) {
                     if(r&&r[0]){

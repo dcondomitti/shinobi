@@ -1,5 +1,10 @@
 module.exports = function(s,config){
     ////// USER //////
+    s.onSocketAuthenticationExtensions = []
+    s.onSocketAuthentication = function(callback){
+        s.onSocketAuthenticationExtensions.push(callback)
+    }
+    //
     s.loadGroupAppExtensions = []
     s.loadGroupAppExtender = function(callback){
         s.loadGroupAppExtensions.push(callback)
@@ -51,8 +56,15 @@ module.exports = function(s,config){
     s.onMonitorInit = function(callback){
         s.onMonitorInitExtensions.push(callback)
     }
+    //
     s.onDetectorNoTriggerTimeoutExtensions = []
     s.onDetectorNoTriggerTimeout = function(callback){
         s.onDetectorNoTriggerTimeoutExtensions.push(callback)
     }
+    //
+    s.onFfmpegCameraStringCreationExtensions = []
+    s.onFfmpegCameraStringCreation = function(callback){
+        s.onFfmpegCameraStringCreationExtensions.push(callback)
+    }
+    //
 }
