@@ -326,7 +326,7 @@ module.exports = function(s,config,lang){
         }else{
             detector_timeout = parseFloat(currentConfig.detector_timeout)
         }
-        if(currentConfig.watchdog_reset !== '1' || !s.group[d.ke].mon[d.id].eventBasedRecording.timeout){
+        if(currentConfig.watchdog_reset === '1' || !s.group[d.ke].mon[d.id].eventBasedRecording.timeout){
             clearTimeout(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
             s.group[d.ke].mon[d.id].eventBasedRecording.timeout = setTimeout(function(){
                 s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd = true
