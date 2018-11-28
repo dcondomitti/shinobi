@@ -336,23 +336,12 @@ module.exports = function(s,config,lang){
             },detector_timeout * 1000 * 60)
         }
         if(!s.group[d.ke].mon[d.id].eventBasedRecording.process){
-            if(!d.auth){
-                d.auth = s.gid(60)
-            }
-            if(!s.api[d.auth]){
-                s.api[d.auth] = {
-                    system: 1,
-                    ip: '0.0.0.0',
-                    details: {},
-                    lang: lang
-                }
-            }
             s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd = false;
             var runRecord = function(){
                 var filename = s.formattedTime()+'.mp4'
                 s.userLog(d,{type:"Traditional Recording",msg:"Started"})
                 //-t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+'
-                s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i http://'+config.ip+':'+config.port+'/'+d.auth+'/hls/'+d.ke+'/'+d.id+'/detectorStream.m3u8 -c:v copy -strftime 1 "'+s.getVideoDirectory(d.mon) + filename + '"')))
+                s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i "'+s.dir.streams+'/'+d.ke+'/'+d.id+'/detectorStream.m3u8" -c:v copy -strftime 1 "'+s.getVideoDirectory(d.mon) + filename + '"')))
                 var ffmpegError='';
                 var error
                 s.group[d.ke].mon[d.id].eventBasedRecording.process.stderr.on('data',function(data){
@@ -368,7 +357,6 @@ module.exports = function(s,config,lang){
                         file : filename
                     })
                     s.userLog(d,{type:"Traditional Recording",msg:"Detector Recording Complete"})
-                    delete(s.api[d.auth])
                     s.userLog(d,{type:"Traditional Recording",msg:'Clear Recorder Process'})
                     delete(s.group[d.ke].mon[d.id].eventBasedRecording.process)
                     clearTimeout(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
