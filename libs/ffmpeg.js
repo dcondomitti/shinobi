@@ -884,6 +884,9 @@ module.exports = function(s,config,onFinish){
         ffmpeg.buildMainStream(e,x)
         ffmpeg.buildMainRecording(e,x)
         ffmpeg.buildMainDetector(e,x)
+        s.onFfmpegCameraStringCreationExtensions.forEach(function(extender){
+            extender(e,x)
+        })
         ffmpeg.assembleMainPieces(e,x)
         ffmpeg.createPipeArray(e,x)
         //hold ffmpeg command for log stream
@@ -895,9 +898,9 @@ module.exports = function(s,config,onFinish){
     }
     if(!config.ffmpegDir){
         ffmpeg.checkForWindows(function(){
-            ffmpeg.checkForUnix(function(){
-                ffmpeg.checkForFfbinary(function(){
-                    ffmpeg.checkForNpmStatic(function(){
+            ffmpeg.checkForFfbinary(function(){
+                ffmpeg.checkForNpmStatic(function(){
+                    ffmpeg.checkForUnix(function(){
                         console.log('No FFmpeg found.')
                     })
                 })
