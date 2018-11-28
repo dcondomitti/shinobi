@@ -898,9 +898,9 @@ module.exports = function(s,config,onFinish){
     }
     if(!config.ffmpegDir){
         ffmpeg.checkForWindows(function(){
-            ffmpeg.checkForUnix(function(){
-                ffmpeg.checkForFfbinary(function(){
-                    ffmpeg.checkForNpmStatic(function(){
+            ffmpeg.checkForFfbinary(function(){
+                ffmpeg.checkForNpmStatic(function(){
+                    ffmpeg.checkForUnix(function(){
                         console.log('No FFmpeg found.')
                     })
                 })
