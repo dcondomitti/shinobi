@@ -1865,4 +1865,13 @@ module.exports = function(s,config,lang,app,io){
             s.closeJsonResponse(res,endData)
         },res,req)
     })
+    /**
+    * Robots.txt
+    */
+    app.get('/robots.txt', function (req,res){
+        res.on('finish',function(){
+            res.end()
+        })
+        fs.createReadStream(s.mainDirectory + '/web/pages/robots.txt').pipe(res)
+    })
 }
