@@ -319,6 +319,7 @@ module.exports = function(s,config,lang){
         s.tx(d.cx,'DETECTOR_'+d.ke+d.id);
     }
     s.createEventBasedRecording = function(d){
+        d.mon = s.group[d.ke].mon_conf[d.id]
         var currentConfig = s.group[d.ke].mon[d.id].details
         var detector_timeout
         if(!currentConfig.detector_timeout||currentConfig.detector_timeout===''){
@@ -339,25 +340,25 @@ module.exports = function(s,config,lang){
             s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd = false;
             var runRecord = function(){
                 var filename = s.formattedTime()+'.mp4'
-                s.userLog(d,{type:"Traditional Recording",msg:"Started"})
+                s.userLog(d,{type:lang["Traditional Recording"],msg:lang["Started"]})
                 //-t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+'
                 s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i "'+s.dir.streams+'/'+d.ke+'/'+d.id+'/detectorStream.m3u8" -c:v copy -strftime 1 "'+s.getVideoDirectory(d.mon) + filename + '"')))
                 var ffmpegError='';
                 var error
                 s.group[d.ke].mon[d.id].eventBasedRecording.process.stderr.on('data',function(data){
-                    s.userLog(d,{type:"Traditional Recording",msg:data.toString()})
+                    s.userLog(d,{type:lang["Traditional Recording"],msg:data.toString()})
                 })
                 s.group[d.ke].mon[d.id].eventBasedRecording.process.on('close',function(){
                     if(!s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd){
-                        s.userLog(d,{type:"Traditional Recording",msg:"Detector Recording Process Exited Prematurely. Restarting."})
+                        s.userLog(d,{type:lang["Traditional Recording"],msg:lang["Detector Recording Process Exited Prematurely. Restarting."]})
                         runRecord()
                         return
                     }
                     s.insertCompletedVideo(d.mon,{
                         file : filename
                     })
-                    s.userLog(d,{type:"Traditional Recording",msg:"Detector Recording Complete"})
-                    s.userLog(d,{type:"Traditional Recording",msg:'Clear Recorder Process'})
+                    s.userLog(d,{type:lang["Traditional Recording"],msg:lang["Detector Recording Complete"]})
+                    s.userLog(d,{type:lang["Traditional Recording"],msg:lang["Clear Recorder Process"]})
                     delete(s.group[d.ke].mon[d.id].eventBasedRecording.process)
                     clearTimeout(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
                     delete(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
@@ -373,5 +374,12 @@ module.exports = function(s,config,lang){
             s.group[e.ke].mon[e.id].eventBasedRecording.allowEnd = true;
             s.group[e.ke].mon[e.id].eventBasedRecording.process.kill('SIGTERM');
         }
+        // var stackedProcesses = s.group[e.ke].mon[e.id].eventBasedRecording.stackable
+        // Object.keys(stackedProcesses).forEach(function(key){
+        //     var item = stackedProcesses[key]
+        //     clearTimeout(item.timeout)
+        //     item.allowEnd = true;
+        //     item.process.kill('SIGTERM');
+        // })
     }
 }

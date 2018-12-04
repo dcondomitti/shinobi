@@ -116,6 +116,9 @@ module.exports = function(s,config){
         s.tx({f:'log',ke:e.ke,mid:e.mid,log:x,time:s.timeObject()},'GRPLOG_'+e.ke);
     }
     s.loadGroup = function(e){
+        s.loadGroupExtensions.forEach(function(extender){
+            extender(e)
+        })
         if(!s.group[e.ke]){
             s.group[e.ke]={}
         }
@@ -145,7 +148,7 @@ module.exports = function(s,config){
                 ar=JSON.parse(r.details);
                 //load extenders
                 s.loadGroupAppExtensions.forEach(function(extender){
-                    extender(r)
+                    extender(r,ar)
                 })
                 //disk Used Emitter
                 if(!s.group[e.ke].diskUsedEmitter){
