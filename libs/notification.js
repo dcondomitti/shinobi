@@ -21,16 +21,27 @@ module.exports = function(s,config,lang){
                       text: "Shinobi Systems"
                     }
                 },data)
-                bot.channels.get(s.group[groupKey].init.discordbot_channel).send({
-                    embed: sendBody,
-                    files: files
-                }).catch(err => {
-                    if(err){
-                        s.userLog({ke:groupKey,mid:'$USER'},{type:lang.DiscordErrorText,msg:err})
-                        s.group[groupKey].discordBot = null
-                        s.loadGroupApps({ke:groupKey})
-                    }
-                })
+                var discordChannel = bot.channels.get(s.group[groupKey].init.discordbot_channel)
+                if(discordChannel && discordChannel.send){
+                    discordChannel.send({
+                        embed: sendBody,
+                        files: files
+                    }).catch(err => {
+                        if(err){
+                            s.userLog({ke:groupKey,mid:'$USER'},{type:lang.DiscordErrorText,msg:err})
+                            s.group[groupKey].discordBot = null
+                            s.loadGroupApps({ke:groupKey})
+                        }
+                    })
+                }else{
+                    s.userLog({
+                        ke: groupKey,
+                        mid: '$USER'
+                    },{
+                        type: lang.DiscordErrorText,
+                        msg: 'Check the Channel ID'
+                    })
+                }
             }
             var onEventTriggerBeforeFilterForDiscord = function(d,filter){
                 filter.discord = true
