@@ -181,7 +181,7 @@ module.exports = function(s,config,lang,app,io){
                 s.renderPage(req,res,config.renderPaths.index,{
                     failedLogin: true,
                     message: lang.failedLoginText1,
-                    lang: lang,
+                    lang: s.copySystemDefaultLanguage(),
                     config: config,
                     screen: screenChooser(req.params.screen)
                 },function(err,html){
@@ -239,7 +239,7 @@ module.exports = function(s,config,lang,app,io){
                 s.renderPage(req,res,config.renderPaths.index,{
                     failedLogin: true,
                     message: lang.failedLoginText2,
-                    lang: lang,
+                    lang: s.copySystemDefaultLanguage(),
                     config: config,
                     screen: screenChooser(req.params.screen)
                 },function(err,html){
