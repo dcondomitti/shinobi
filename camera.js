@@ -63,6 +63,8 @@ loadLib('ffmpeg')(s,config,function(){
     loadLib('cloudUploaders')(s,config,lang)
     //notifiers : discord..
     loadLib('notification')(s,config,lang)
+    //custom module loader
+    loadLib('customAutoLoad')(s,config,lang,app,io)
     //on-start actions, daemon(s) starter
     loadLib('startup')(s,config,lang)
 })
