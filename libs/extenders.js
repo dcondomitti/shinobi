@@ -62,6 +62,21 @@ module.exports = function(s,config){
         s.onMonitorInitExtensions.push(callback)
     }
     //
+    s.onMonitorStartExtensions = []
+    s.onMonitorStart = function(callback){
+        s.onMonitorStartExtensions.push(callback)
+    }
+    //
+    s.onMonitorStopExtensions = []
+    s.onMonitorStop = function(callback){
+        s.onMonitorStopExtensions.push(callback)
+    }
+    //
+    s.onMonitorUnexpectedExitExtensions = []
+    s.onMonitorUnexpectedExit = function(callback){
+        s.onMonitorUnexpectedExitExtensions.push(callback)
+    }
+    //
     s.onDetectorNoTriggerTimeoutExtensions = []
     s.onDetectorNoTriggerTimeout = function(callback){
         s.onDetectorNoTriggerTimeoutExtensions.push(callback)
@@ -70,6 +85,17 @@ module.exports = function(s,config){
     s.onFfmpegCameraStringCreationExtensions = []
     s.onFfmpegCameraStringCreation = function(callback){
         s.onFfmpegCameraStringCreationExtensions.push(callback)
+    }
+    //
+    s.onMonitorPingFailedExtensions = []
+    s.onMonitorPingFailed = function(callback){
+        s.onMonitorPingFailedExtensions.push(callback)
+    }
+
+    ///////// SYSTEM ////////
+    s.onProcessReadyExtensions = []
+    s.onProcessReady = function(callback){
+        s.onProcessReadyExtensions.push(callback)
     }
     //
 }

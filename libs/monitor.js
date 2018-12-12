@@ -741,6 +741,9 @@ module.exports = function(s,config,lang){
                 }
                 s.fatalCameraError(e,'Process Unexpected Exit');
                 s.orphanedVideoCheck(e,2,null,true)
+                s.onMonitorUnexpectedExitExtensions.forEach(function(extender){
+                    extender(Object.assign(s.group[e.ke].mon_conf[e.id],{}),e)
+                })
             }
         }
         s.group[e.ke].mon[e.id].spawn.on('end',s.group[e.ke].mon[e.id].spawn_exit)
@@ -1094,11 +1097,17 @@ module.exports = function(s,config,lang){
                         ){
                             s.cameraFilterFfmpegLog(e)
                         }
+                        s.onMonitorStartExtensions.forEach(function(extender){
+                            extender(Object.assign(s.group[e.ke].mon_conf[e.id],{}),e)
+                        })
                       }else{
+                          s.onMonitorPingFailedExtensions.forEach(function(extender){
+                              extender(Object.assign(s.group[e.ke].mon_conf[e.id],{}),e)
+                          })
                           s.userLog(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
                           s.fatalCameraError(e,"Ping Failed");return;
-                    }
-                }
+                      }
+                  }
                 if(
                     e.type !== 'socket' &&
                     e.type !== 'dashcam' &&
@@ -1136,6 +1145,9 @@ module.exports = function(s,config,lang){
                     if(o.success === true){
                         startVideoProcessor()
                     }else{
+                        s.onMonitorPingFailedExtensions.forEach(function(extender){
+                            extender(Object.assign(s.group[e.ke].mon_conf[e.id],{}),e)
+                        })
                         s.userLog(e,{type:lang["Ping Failed"],msg:lang.skipPingText1});
                         s.fatalCameraError(e,"Ping Failed");return;
                     }
@@ -1399,6 +1411,9 @@ module.exports = function(s,config,lang){
                     var wantedStatus = lang.Idle
                 }
                 s.sendMonitorStatus({id:e.id,ke:e.ke,status:wantedStatus})
+                s.onMonitorStopExtensions.forEach(function(extender){
+                    extender(Object.assign(s.group[e.ke].mon_conf[e.id],{}),e)
+                })
             break;
             case'start':case'record'://watch or record monitor url
                 s.initiateMonitorObject({ke:e.ke,mid:e.id})
