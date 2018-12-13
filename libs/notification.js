@@ -142,7 +142,13 @@ module.exports = function(s,config,lang){
                   ){
                     s.group[user.ke].discordBot = new Discord.Client()
                     s.group[user.ke].discordBot.on('ready', () => {
-                        console.log(`${user.mail} : Discord Bot Logged in as ${s.group[user.ke].discordBot.user.tag}!`)
+                        s.userLog({
+                            ke: user.ke,
+                            mid: '$USER'
+                        },{
+                            type: lang.DiscordLoggedIn,
+                            msg: s.group[user.ke].discordBot.user.tag
+                        })
                     })
                     s.group[user.ke].discordBot.login(ar.discordbot_token)
                 }
