@@ -185,6 +185,10 @@ module.exports = function(s,config,lang){
         if(userFound === true){
             return true
         }else{
+            if(res)res.end(s.prettyPrint({
+                ok: false,
+                msg: lang['Not Authorized']
+            }))
             return false
         }
     }
