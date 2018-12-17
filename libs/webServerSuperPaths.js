@@ -288,6 +288,7 @@ module.exports = function(s,config,lang,app){
                                     ]
                                 )
                                 s.tx({f:'add_account',details:form.details,ke:form.ke,uid:form.uid,mail:form.mail},'$')
+                                endData.user = Object.assign(form,{})
                                 //init user
                                 s.loadGroup(form)
                             }
@@ -324,7 +325,7 @@ module.exports = function(s,config,lang,app){
                         r = r[0]
                         var details = JSON.parse(r.details)
                         if(form.pass && form.pass !== ''){
-                           if(form.pass === form.password_again){
+                           if(form.pass === form.password_again || form.pass_again){
                                form.pass = s.createHash(form.pass);
                            }else{
                                endData.msg = lang["Passwords Don't Match"]
@@ -335,11 +336,18 @@ module.exports = function(s,config,lang,app){
                             delete(form.pass);
                         }
                         delete(form.password_again);
+                        delete(form.pass_again);
                         var keys = Object.keys(form)
                         var set = []
                         var values = []
                         keys.forEach(function(v,n){
-                            if(set==='ke'||set==='password_again'||!form[v]){return}
+                            if(
+                                set === 'ke' ||
+                                !form[v]
+                            ){
+                                //skip
+                                return
+                            }
                             set.push(v+'=?')
                             if(v === 'details'){
                                 form[v] = s.stringJSON(Object.assign(details,s.parseJSON(form[v])))
@@ -360,6 +368,9 @@ module.exports = function(s,config,lang,app){
                             }
                             close()
                         })
+                    }else{
+                        endData.msg = lang['User Not Found']
+                        close()
                     }
                 })
             }else{
@@ -413,35 +424,46 @@ module.exports = function(s,config,lang,app){
     */
     app.all(config.webPaths.superApiPrefix+':auth/export/system', function (req,res){
         s.superAuth(req.params,function(resp){
+            s.systemLog('Copy of the Database Exported',{
+                by: resp.$user.mail,
+                ip: resp.ip
+            })
             var endData = {
                 ok : true
             }
-            s.sqlQuery('SELECT * FROM Users',[],function(err,users){
-                s.sqlQuery('SELECT * FROM Monitors',[],function(err,monitors){
-                    s.sqlQuery('SELECT * FROM API',[],function(err,api){
-                        s.sqlQuery('SELECT * FROM Videos',[],function(err,videos){
-                            s.sqlQuery('SELECT * FROM Logs',[],function(err,logs){
-                                s.sqlQuery('SELECT * FROM Files',[],function(err,files){
-                                    s.sqlQuery('SELECT * FROM Presets',[],function(err,presets){
-                                        s.sqlQuery('SELECT * FROM `Cloud Videos`',[],function(err,cloudVideos){
-                                            endData.database = {
-                                                "API": api,
-                                                "Users": users,
-                                                "Monitors": monitors,
-                                                "Videos": videos,
-                                                "Presets": presets,
-                                                "Logs": logs,
-                                                "Files": files,
-                                                "Cloud Videos": cloudVideos
-                                            }
-                                            s.closeJsonResponse(res,endData)
-                                        })
-                                    })
-                                })
-                            })
+            // var database = s.getPostData(req,'database')
+            endData.database = {}
+            var tableNames = [
+                'Users',
+                'Monitors',
+                'API',
+                'Videos',
+                'Cloud Videos',
+                'Logs',
+                'Files',
+                'Presets',
+            ]
+            var completedTables = 0
+            var tableExportLoop = function(callback){
+                var tableName = tableNames[completedTables]
+                if(tableName){
+                    var tableIsSelected = s.getPostData(req,tableName) == 1
+                    if(tableIsSelected){
+                        s.sqlQuery('SELECT * FROM `' + tableName +'`',[],function(err,dataRows){
+                            endData.database[tableName] = dataRows
+                            ++completedTables
+                            tableExportLoop(callback)
                         })
-                    })
-                })
+                    }else{
+                        ++completedTables
+                        tableExportLoop(callback)
+                    }
+                }else{
+                    callback()
+                }
+            }
+            tableExportLoop(function(){
+                s.closeJsonResponse(res,endData)
             })
         },res,req)
     })
@@ -453,9 +475,11 @@ module.exports = function(s,config,lang,app){
             var endData = {
                 ok : false
             }
+            console.log(req.files)
+            // insert data
             var data = s.getPostData(req)
             var database = s.getPostData(req,'database')
-            if(data.database)database = data.database
+            if(data && data.database)database = data.database
             if(database){
                 var rowsExistingAlready = {}
                 var countOfRowsInserted = {}
@@ -593,7 +617,6 @@ module.exports = function(s,config,lang,app){
                     s.closeJsonResponse(res,endData)
                 })
             }else{
-                endData.database = lang['Database Not Found']
                 endData.msg = lang['Database Not Found']
                 s.closeJsonResponse(res,endData)
             }

@@ -1,4 +1,7 @@
 module.exports = function(s,config){
+    s.onBeforeDatabaseLoadExtensions.forEach(function(extender){
+        extender(config)
+    })
     //sql/database connection with knex
     s.databaseOptions = {
       client: config.databaseType,
@@ -77,21 +80,43 @@ module.exports = function(s,config){
         s.databaseEngine = require('knex')(s.databaseOptions)
     }
     s.preQueries = function(){
-        //add Cloud Videos table, will remove in future
-        s.sqlQuery('CREATE TABLE IF NOT EXISTS `Cloud Videos` (`mid` varchar(50) NOT NULL,`ke` varchar(50) DEFAULT NULL,`href` text NOT NULL,`size` float DEFAULT NULL,`time` timestamp NULL DEFAULT NULL,`end` timestamp NULL DEFAULT NULL,`status` int(1) DEFAULT \'0\' COMMENT \'0:Complete,1:Read,2:Archive\',`details` text) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;',[],function(err){
-            // if(err)console.log(err)
+        var knex = s.databaseEngine
+        var mySQLtail = ''
+        if(config.databaseType === 'mysql'){
+            mySQLtail = ' ENGINE=InnoDB DEFAULT CHARSET=utf8'
+        }
+        //add Presets table and modernize
+        var createPresetsTableQuery = 'CREATE TABLE IF NOT EXISTS `Presets` (  `ke` varchar(50) DEFAULT NULL,  `name` text,  `details` text,  `type` varchar(50) DEFAULT NULL);'
+        s.sqlQuery( createPresetsTableQuery + mySQLtail + ';',[],function(err){
+            if(err)console.error(err)
+            if(config.databaseType === 'sqlite3'){
+                var aQuery = "ALTER TABLE Presets RENAME TO _Presets_old;"
+                    aQuery += createPresetsTableQuery
+                    aQuery += "INSERT INTO Presets (`ke`, `name`, `details`, `type`) SELECT `ke`, `name`, `details`, `type` FROM _Presets_old;COMMIT;DROP TABLE _Presets_old;"
+            }else{
+                s.sqlQuery('ALTER TABLE `Presets` CHANGE COLUMN `type` `type` VARCHAR(50) NULL DEFAULT NULL AFTER `details`;',[],function(err){
+                    if(err)console.error(err)
+                },true)
+            }
         },true)
-        //add monitorStates to Preset ENUM
-        s.sqlQuery('ALTER TABLE `Presets` CHANGE COLUMN `type` `type` VARCHAR(50) NULL DEFAULT NULL AFTER `details`;',[],function(err){
-            // if(err)console.log(err)
+        //add Cloud Videos table, will remove in future
+        s.sqlQuery('CREATE TABLE IF NOT EXISTS `Cloud Videos` (`mid` varchar(50) NOT NULL,`ke` varchar(50) DEFAULT NULL,`href` text NOT NULL,`size` float DEFAULT NULL,`time` timestamp NULL DEFAULT NULL,`end` timestamp NULL DEFAULT NULL,`status` int(1) DEFAULT \'0\',`details` text)' + mySQLtail + ';',[],function(err){
+            if(err)console.error(err)
         },true)
         //create Files table
-        s.sqlQuery('CREATE TABLE IF NOT EXISTS `Files` (`ke` varchar(50) NOT NULL,`mid` varchar(50) NOT NULL,`name` tinytext NOT NULL,`size` float NOT NULL DEFAULT \'0\',`details` text NOT NULL,`status` int(1) NOT NULL DEFAULT \'0\') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;',[],function(err){
-            // if(err)console.log(err)
+        var createFilesTableQuery = "CREATE TABLE IF NOT EXISTS `Files` (`ke` varchar(50) NOT NULL,`mid` varchar(50) NOT NULL,`name` tinytext NOT NULL,`size` float NOT NULL DEFAULT '0',`details` text NOT NULL,`status` int(1) NOT NULL DEFAULT '0',`time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+        s.sqlQuery(createFilesTableQuery + mySQLtail + ';',[],function(err){
+            if(err)console.error(err)
             //add time column to Files table
-            s.sqlQuery('ALTER TABLE `Files`	ADD COLUMN `time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `status`;',[],function(err){
-                // if(err)console.log(err)
-            },true)
+            if(config.databaseType === 'sqlite3'){
+                var aQuery = "ALTER TABLE Files RENAME TO _Files_old;"
+                    aQuery += createPresetsTableQuery
+                    aQuery += "INSERT INTO Files (`ke`, `mid`, `name`, `details`, `size`, `status`, `time`) SELECT `ke`, `mid`, `name`, `details`, `size`, `status`, `time` FROM _Files_old;COMMIT;DROP TABLE _Files_old;"
+            }else{
+                s.sqlQuery('ALTER TABLE `Files`	ADD COLUMN `time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `status`;',[],function(err){
+                    if(err)console.error(err)
+                },true)
+            }
         },true)
         delete(s.preQueries)
     }

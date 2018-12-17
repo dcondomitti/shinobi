@@ -15,14 +15,16 @@ var loadLib = function(lib){
 }
 //process handlers
 var s = loadLib('process')(process,__dirname)
+//load extender functions
+loadLib('extenders')(s)
 //configuration loader
 var config = loadLib('config')(s)
 //language loader
 var lang = loadLib('language')(s,config)
+//code test module
+loadLib('codeTester')(s,config,lang,io)
 //basic functions
 loadLib('basic')(s,config)
-//load extender functions
-loadLib('extenders')(s,config)
 //video processing engine
 loadLib('ffmpeg')(s,config,function(){
     //database connection : mysql, sqlite3..

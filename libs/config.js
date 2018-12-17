@@ -51,6 +51,5 @@ module.exports = function(s){
         if(config.childNodes.key === undefined)config.childNodes.key = [
             '3123asdasdf1dtj1hjk23sdfaasd12asdasddfdbtnkkfgvesra3asdsd3123afdsfqw345'
         ];
-
     return config
 }

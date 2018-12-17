@@ -98,4 +98,19 @@ module.exports = function(s,config){
         s.onProcessReadyExtensions.push(callback)
     }
     //
+    s.onProcessExitExtensions = []
+    s.onProcessExit = function(callback){
+        s.onProcessExitExtensions.push(callback)
+    }
+    //
+    s.onBeforeDatabaseLoadExtensions = []
+    s.onBeforeDatabaseLoad = function(callback){
+        s.onBeforeDatabaseLoadExtensions.push(callback)
+    }
+    //
+    s.onFFmpegLoadedExtensions = []
+    s.onFFmpegLoaded = function(callback){
+        s.onFFmpegLoadedExtensions.push(callback)
+    }
+    //
 }
