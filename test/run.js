@@ -263,7 +263,7 @@ module.exports = function(s,config,lang,io){
                     next()
                 })
             },
-            "/ (Login to Admin)" : function(next){
+            "/ (Login via API)" : function(next){
                 var userData = getAdministratorAccountData()
                 var builtURL = getBaseURL() + '?json=true'
                 request.post(builtURL,{
@@ -272,11 +272,11 @@ module.exports = function(s,config,lang,io){
                     var response = s.parseJSON(body)
                     if(response.ok !== true)console.log(response)
                     administratorAccountData.auth = response.$user.auth_token
-                    checkResult('API : Login to Dashboard',true,response.ok)
+                    checkResult('API : / (Login via API)',true,response.ok)
                     next()
                 })
             },
-            "Create API Key" : function(next){
+            "/api/add" : function(next){
                 var userData = getAdministratorAccountData()
                 var builtURL = buildRegularApiRequestURL(administratorAccountData.auth,'api',administratorAccountData.ke) + 'add'
                 request.post(builtURL,{
@@ -427,6 +427,33 @@ module.exports = function(s,config,lang,io){
                     next()
                 })
             },
+            "/monitor/[MONITOR_ID]/[MODE] (Mode Switch to Disabled)" : function(next){
+                var userData = getAdministratorAccountData()
+                var builtURL = buildRegularApiRequestURL(administratorAccountData.auth,'monitor',administratorAccountData.ke) + temp.monitorId + '/stop'
+                request.get(builtURL,function(err, httpResponse, body){
+                    var response = s.parseJSON(body)
+                    checkResult('API : /monitor/[MONITOR_ID] (Mode Switch to Disabled)',true,response.ok)
+                    next()
+                })
+            },
+            "/monitor/[MONITOR_ID]/[MODE] (Mode Switch to Watch-Only)" : function(next){
+                var userData = getAdministratorAccountData()
+                var builtURL = buildRegularApiRequestURL(administratorAccountData.auth,'monitor',administratorAccountData.ke) + temp.monitorId + '/start'
+                request.get(builtURL,function(err, httpResponse, body){
+                    var response = s.parseJSON(body)
+                    checkResult('API : /monitor/[MONITOR_ID] (Mode Switch to Watch-Only)',true,response.ok)
+                    next()
+                })
+            },
+            "/monitor/[MONITOR_ID]/[MODE] (Mode Switch to Record)" : function(next){
+                var userData = getAdministratorAccountData()
+                var builtURL = buildRegularApiRequestURL(administratorAccountData.auth,'monitor',administratorAccountData.ke) + temp.monitorId + '/record'
+                request.get(builtURL,function(err, httpResponse, body){
+                    var response = s.parseJSON(body)
+                    checkResult('API : /monitor/[MONITOR_ID] (Mode Switch to Record)',true,response.ok)
+                    next()
+                })
+            },
             "/monitor (Get All)" : function(next){
                 var userData = getAdministratorAccountData()
                 var builtURL = buildRegularApiRequestURL(administratorAccountData.auth,'monitor',administratorAccountData.ke)
@@ -435,6 +462,16 @@ module.exports = function(s,config,lang,io){
                     if(!checkResult('API : /monitor (Get All)',2,response.length)){
                         console.log(Object.keys(response))
                     }
+                    next()
+                })
+            },
+            "/configureMonitor (Delete)" : function(next){
+                var userData = getAdministratorAccountData()
+                var builtURL = buildRegularApiRequestURL(administratorAccountData.auth,'configureMonitor',administratorAccountData.ke) + temp.monitorId2 + '/delete'
+                request.post(builtURL,function(err, httpResponse, body){
+                    var response = s.parseJSON(body)
+                    if(response.ok !== true)console.log(builtURL,response)
+                    checkResult('API : /configureMonitor (Delete)',true,response.ok)
                     next()
                 })
             },

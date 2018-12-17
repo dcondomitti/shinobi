@@ -86,7 +86,7 @@ module.exports = function(s,config){
             mySQLtail = ' ENGINE=InnoDB DEFAULT CHARSET=utf8'
         }
         //add Presets table and modernize
-        var createPresetsTableQuery = 'CREATE TABLE IF NOT EXISTS `Presets` (  `ke` varchar(50) DEFAULT NULL,  `name` text,  `details` text,  `type` varchar(50) DEFAULT NULL);'
+        var createPresetsTableQuery = 'CREATE TABLE IF NOT EXISTS `Presets` (  `ke` varchar(50) DEFAULT NULL,  `name` text,  `details` text,  `type` varchar(50) DEFAULT NULL)'
         s.sqlQuery( createPresetsTableQuery + mySQLtail + ';',[],function(err){
             if(err)console.error(err)
             if(config.databaseType === 'sqlite3'){
@@ -114,7 +114,7 @@ module.exports = function(s,config){
                     aQuery += "INSERT INTO Files (`ke`, `mid`, `name`, `details`, `size`, `status`, `time`) SELECT `ke`, `mid`, `name`, `details`, `size`, `status`, `time` FROM _Files_old;COMMIT;DROP TABLE _Files_old;"
             }else{
                 s.sqlQuery('ALTER TABLE `Files`	ADD COLUMN `time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `status`;',[],function(err){
-                    if(err)console.error(err)
+                    if(err && err.sqlMessage.indexOf('Duplicate') === -1)console.error(err)
                 },true)
             }
         },true)
