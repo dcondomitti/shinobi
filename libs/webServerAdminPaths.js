@@ -21,10 +21,10 @@ module.exports = function(s,config,lang,app){
                 return
             }
             var form = s.getPostData(req)
-            var uid = s.getPostData(req,'uid',false)
-            var mail = s.getPostData(req,'mail',false)
+            var uid = form.uid || s.getPostData(req,'uid',false)
+            var mail = form.mail || s.getPostData(req,'mail',false)
             if(form){
-                var keys = Object.keys(form)
+                var keys = ['details']
                 var condition = []
                 var value = []
                 keys.forEach(function(v){
@@ -68,8 +68,9 @@ module.exports = function(s,config,lang,app){
                 s.closeJsonResponse(res,endData)
                 return
             }
-            var uid = s.getPostData(req,'uid',false)
-            var mail = s.getPostData(req,'mail',false)
+            var form = s.getPostData(req)
+            var uid = form.uid || s.getPostData(req,'uid',false)
+            var mail = form.mail || s.getPostData(req,'mail',false)
             s.sqlQuery('DELETE FROM Users WHERE uid=? AND ke=? AND mail=?',[uid,req.params.ke,mail])
             s.sqlQuery("SELECT * FROM API WHERE ke=? AND uid=?",[req.params.ke,uid],function(err,rows){
                 if(rows && rows[0]){
@@ -132,6 +133,12 @@ module.exports = function(s,config,lang,app){
                                 uid: newId,
                                 mail: form.mail
                             },'ADM_'+req.params.ke)
+                            endData.user = {
+                                details: s.parseJSON(details),
+                                ke: req.params.ke,
+                                uid: newId,
+                                mail: form.mail
+                            }
                         }
                         res.end(s.prettyPrint(endData))
                     })
@@ -266,6 +273,7 @@ module.exports = function(s,config,lang,app){
                         },'GRP_' + req.params.ke)
                         endData.ok = true
                     }
+                    endData.api = insert
                     s.closeJsonResponse(res,endData)
                 })
             }else{
@@ -366,7 +374,7 @@ module.exports = function(s,config,lang,app){
     /**
     * API : Administrator : Get Monitor State Presets List
     */
-    app.get([
+    app.all([
         config.webPaths.apiPrefix+':auth/monitorStates/:ke',
         config.webPaths.adminApiPrefix+':auth/monitorStates/:ke'
     ],function (req,res){

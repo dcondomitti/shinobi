@@ -38,6 +38,7 @@ module.exports = function(s){
     if(config.hideCloudSaveUrls === undefined){config.hideCloudSaveUrls = true}
     if(config.insertOrphans === undefined){config.insertOrphans = true}
     if(config.orphanedVideoCheckMax === undefined){config.orphanedVideoCheckMax = 20}
+    if(config.detectorMergePamRegionTriggers === undefined){config.detectorMergePamRegionTriggers = false}
     //Child Nodes
     if(config.childNodes === undefined)config.childNodes = {};
         //enabled
@@ -50,6 +51,5 @@ module.exports = function(s){
         if(config.childNodes.key === undefined)config.childNodes.key = [
             '3123asdasdf1dtj1hjk23sdfaasd12asdasddfdbtnkkfgvesra3asdsd3123afdsfqw345'
         ];
-
     return config
 }

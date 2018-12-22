@@ -181,7 +181,7 @@ module.exports = function(s,config,lang,app,io){
                 s.renderPage(req,res,config.renderPaths.index,{
                     failedLogin: true,
                     message: lang.failedLoginText1,
-                    lang: lang,
+                    lang: s.copySystemDefaultLanguage(),
                     config: config,
                     screen: screenChooser(req.params.screen)
                 },function(err,html){
@@ -239,7 +239,7 @@ module.exports = function(s,config,lang,app,io){
                 s.renderPage(req,res,config.renderPaths.index,{
                     failedLogin: true,
                     message: lang.failedLoginText2,
-                    lang: lang,
+                    lang: s.copySystemDefaultLanguage(),
                     config: config,
                     screen: screenChooser(req.params.screen)
                 },function(err,html){
@@ -1864,5 +1864,14 @@ module.exports = function(s,config,lang,app,io){
             }
             s.closeJsonResponse(res,endData)
         },res,req)
+    })
+    /**
+    * Robots.txt
+    */
+    app.get('/robots.txt', function (req,res){
+        res.on('finish',function(){
+            res.end()
+        })
+        fs.createReadStream(s.mainDirectory + '/web/pages/robots.txt').pipe(res)
     })
 }

@@ -104,6 +104,9 @@ module.exports = function(s,config,onFinish){
     ffmpeg.completeCheck = function(){
         ffmpeg.checkVersion(function(){
             ffmpeg.checkHwAccelMethods(function(){
+                s.onFFmpegLoadedExtensions.forEach(function(extender){
+                    extender(ffmpeg)
+                })
                 onFinish(ffmpeg)
             })
         })
@@ -132,7 +135,7 @@ module.exports = function(s,config,onFinish){
                     string += ' -map '+v.map
                 })
             }else{
-                string += ' -map 0:0'
+                string += ' -map 0'
             }
         }
         return string;

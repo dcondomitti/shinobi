@@ -35,6 +35,10 @@ module.exports = function(s,config,lang){
         //check IP address of connecting user
         var finish=function(user){
             if(s.api[params.auth].ip.indexOf('0.0.0.0')>-1||s.api[params.auth].ip.indexOf(params.ip)>-1){
+                if(!user.lang){
+                    var details = s.parseJSON(user.details).lang
+                    user.lang = s.getDefinitonFile(user.details.lang) || s.copySystemDefaultLanguage()
+                }
                 cb(user);
             }else{
                 failed();
@@ -43,7 +47,10 @@ module.exports = function(s,config,lang){
         //check if auth key is user's temporary session key
         if(s.group[params.ke]&&s.group[params.ke].users&&s.group[params.ke].users[params.auth]){
             s.group[params.ke].users[params.auth].permissions={};
-            cb(s.group[params.ke].users[params.auth]);
+            if(!s.group[params.ke].users[params.auth].lang){
+                s.group[params.ke].users[params.auth].lang = s.copySystemDefaultLanguage()
+            }
+            cb(s.group[params.ke].users[params.auth])
         }else{
             //check if key is already in memory to save query time
             if(s.api[params.auth]&&s.api[params.auth].details){
@@ -185,6 +192,10 @@ module.exports = function(s,config,lang){
         if(userFound === true){
             return true
         }else{
+            if(res)res.end(s.prettyPrint({
+                ok: false,
+                msg: lang['Not Authorized']
+            }))
             return false
         }
     }

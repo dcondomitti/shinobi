@@ -31,12 +31,14 @@ module.exports = function(s,config){
         }
     }
     s.parseJSON = function(string){
+        var parsed
         try{
             string = JSON.parse(string)
         }catch(err){
 
         }
-        return string
+        if(!parsed)parsed = string
+        return parsed
     }
     s.stringJSON = function(json){
         try{
