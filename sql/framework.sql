@@ -125,6 +125,18 @@ CREATE TABLE IF NOT EXISTS `Files` (
     `status` int(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ALTER TABLE `Files`	ADD COLUMN `time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `status`;
+
+-- Data exporting was unselected.
+-- Dumping structure for table ccio.Schedules
+CREATE TABLE IF NOT EXISTS `Schedules` (
+  `ke` varchar(50) DEFAULT NULL,
+  `name` text,
+  `details` text,
+  `start` varchar(10) DEFAULT NULL,
+  `end` varchar(10) DEFAULT NULL,
+  `enabled` int(1) NOT NULL DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Data exporting was unselected.
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
 /*!40014 SET FOREIGN_KEY_CHECKS=IF(@OLD_FOREIGN_KEY_CHECKS IS NULL, 1, @OLD_FOREIGN_KEY_CHECKS) */;

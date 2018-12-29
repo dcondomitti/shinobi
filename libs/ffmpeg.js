@@ -735,6 +735,17 @@ module.exports = function(s,config,onFinish){
             x.record_string+=x.vcodec+x.record_fps+x.record_video_filters+x.record_dimensions+x.segment;
         }
     }
+    ffmpeg.buildAudioDetector = function(e,x){
+        if(e.details.detector_audio === '1'){
+            if(e.details.input_map_choices&&e.details.input_map_choices.detector_audio){
+                //add input feed map
+                x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector_audio)
+            }else{
+                x.pipe += ' -map 0:a'
+            }
+            x.pipe += ' -acodec pcm_s16le -f s16le -ac 1 -ar 16000 pipe:6'
+        }
+    }
     ffmpeg.buildMainDetector = function(e,x){
         //e = monitor object
         //x = temporary values
@@ -761,10 +772,10 @@ module.exports = function(s,config,onFinish){
                 if(e.details.detector_use_detect_object === '1'){
                     //for object detection
                     x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
-                    x.pipe += ' -f singlejpeg '+x.detector_vf+x.cust_detect+x.dratio+' pipe:4';
+                    x.pipe += ' -an -f singlejpeg '+x.detector_vf+x.cust_detect+x.dratio+' pipe:4';
                 }
             }else{
-                x.pipe+=' -f image2pipe '+x.detector_vf+x.cust_detect+x.dratio+' pipe:3';
+                x.pipe+=' -an -f image2pipe '+x.detector_vf+x.cust_detect+x.dratio+' pipe:3';
             }
         }
         //Traditional Recording Buffer
@@ -886,6 +897,7 @@ module.exports = function(s,config,onFinish){
         ffmpeg.buildMainInput(e,x)
         ffmpeg.buildMainStream(e,x)
         ffmpeg.buildMainRecording(e,x)
+        ffmpeg.buildAudioDetector(e,x)
         ffmpeg.buildMainDetector(e,x)
         s.onFfmpegCameraStringCreationExtensions.forEach(function(extender){
             extender(e,x)

@@ -33,7 +33,7 @@ module.exports = function(s,config){
     s.parseJSON = function(string){
         var parsed
         try{
-            string = JSON.parse(string)
+            parsed = JSON.parse(string)
         }catch(err){
 
         }

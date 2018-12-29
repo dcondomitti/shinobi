@@ -6,6 +6,7 @@ var Mp4Frag = require('mp4frag');
 var onvif = require('node-onvif');
 var request = require('request');
 var connectionTester = require('connection-tester')
+var SoundDetection = require('shinobi-sound-detection')
 var URL = require('url')
 module.exports = function(s,config,lang){
     s.initiateMonitorObject = function(e){
@@ -21,6 +22,7 @@ module.exports = function(s,config,lang){
         if(!s.group[e.ke].mon[e.mid].eventBasedRecording){s.group[e.ke].mon[e.mid].eventBasedRecording={}};
         if(!s.group[e.ke].mon[e.mid].watch){s.group[e.ke].mon[e.mid].watch={}};
         if(!s.group[e.ke].mon[e.mid].fixingVideos){s.group[e.ke].mon[e.mid].fixingVideos={}};
+        if(!s.group[e.ke].mon[e.mid].parsedObjects){s.group[e.ke].mon[e.mid].parsedObjects={}};
         if(!s.group[e.ke].mon[e.mid].isStarted){s.group[e.ke].mon[e.mid].isStarted = false};
         if(s.group[e.ke].mon[e.mid].delete){clearTimeout(s.group[e.ke].mon[e.mid].delete)}
         if(!s.group[e.ke].mon_conf){s.group[e.ke].mon_conf={}}
@@ -282,12 +284,20 @@ module.exports = function(s,config,lang){
     s.cameraCheckObjectsInDetails = function(e){
         //parse Objects
         (['detector_cascades','cords','detector_filters','input_map_choices']).forEach(function(v){
-            if(e.details&&e.details[v]&&(e.details[v] instanceof Object)===false){
+            if(e.details && e.details[v]){
                 try{
-                    if(e.details[v] === '') e.details[v] = '{}'
-                    e.details[v]=JSON.parse(e.details[v]);
-                    if(!e.details[v])e.details[v]={};
-                    s.group[e.ke].mon[e.id].details = e.details;
+                    if(!e.details[v] || e.details[v] === '')e.details[v] = '{}'
+                    e.details[v] = s.parseJSON(e.details[v])
+                    if(!e.details[v])e.details[v] = {}
+                    s.group[e.ke].mon[e.id].details = e.details
+                    switch(v){
+                        case'cords':
+                            s.group[e.ke].mon[e.id].parsedObjects[v] = Object.values(s.parseJSON(e.details[v]))
+                        break;
+                        default:
+                            s.group[e.ke].mon[e.id].parsedObjects[v] = s.parseJSON(e.details[v])
+                        break;
+                    }
                 }catch(err){
 
                 }
@@ -775,6 +785,46 @@ module.exports = function(s,config,lang){
         s.group[e.ke].mon[e.id].emitter = new events.EventEmitter().setMaxListeners(e.details.stream_mjpeg_clients);
         if(e.type==='jpeg'){
             s.cameraPullJpegStream(e)
+        }
+        if(e.details.detector_audio === '1'){
+            var triggerLevel
+            var triggerLevelMax
+            if(e.details.detector_audio_min_db && e.details.detector_audio_min_db !== ''){
+                triggerLevel = parseInt(e.details.detector_audio_min_db)
+            }else{
+                triggerLevel = 5
+            }
+            if(e.details.detector_audio_max_db && e.details.detector_audio_max_db !== ''){
+                triggerLevelMax = parseInt(e.details.detector_audio_max_db)
+            }
+            var audioDetector = new SoundDetection({
+                format: {
+                    bitDepth: 16,
+                    numberOfChannels: 1,
+                    signed: true
+                },
+                triggerLevel: triggerLevel,
+                triggerLevelMax: triggerLevelMax
+            },function(dB) {
+                s.triggerEvent({
+                    f:'trigger',
+                    id:e.id,
+                    ke:e.ke,
+                    name: 'db',
+                    details:{
+                        plug:'audio',
+                        name:'db',
+                        reason:'soundChange',
+                        confidence:dB
+                    },
+                    plates:[],
+                    imgHeight:e.details.detector_scale_y,
+                    imgWidth:e.details.detector_scale_x
+                })
+            })
+            s.group[e.ke].mon[e.id].audioDetector = audioDetector
+            audioDetector.start()
+            s.group[e.ke].mon[e.id].spawn.stdio[6].pipe(audioDetector.streamDecoder)
         }
         if(e.details.detector === '1'){
             s.ocvTx({f:'init_monitor',id:e.id,ke:e.ke})
@@ -1435,7 +1485,7 @@ module.exports = function(s,config,lang){
                     s.group[e.ke].mon[e.mid].isRecording = false
                 }
                 //set up fatal error handler
-                if(e.details.fatal_max===''){
+                if(e.details.fatal_max === ''){
                     e.details.fatal_max = 10
                 }else{
                     e.details.fatal_max = parseFloat(e.details.fatal_max)
@@ -1453,5 +1503,49 @@ module.exports = function(s,config,lang){
             break;
         }
         if(typeof cn === 'function'){setTimeout(function(){cn()},1000)}
+    }
+    //
+    s.activateMonitorStates = function(groupKey,stateName,user,callback){
+        var endData = {
+            ok: false
+        }
+        s.findPreset([groupKey,'monitorStates',stateName],function(notFound,preset){
+            if(notFound === false){
+                var sqlQuery = 'SELECT * FROM Monitors WHERE ke=? AND '
+                var monitorQuery = []
+                var sqlQueryValues = [groupKey]
+                var monitorPresets = {}
+                preset.details.monitors.forEach(function(monitor){
+                    monitorQuery.push('mid=?')
+                    sqlQueryValues.push(monitor.mid)
+                    monitorPresets[monitor.mid] = monitor
+                })
+                sqlQuery += '('+monitorQuery.join(' OR ')+')'
+                s.sqlQuery(sqlQuery,sqlQueryValues,function(err,monitors){
+                    if(monitors && monitors[0]){
+                        monitors.forEach(function(monitor){
+                            s.checkDetails(monitor)
+                            s.checkDetails(monitorPresets[monitor.mid])
+                            var monitorPreset = monitorPresets[monitor.mid]
+                            monitorPreset.details = Object.assign(monitor.details,monitorPreset.details)
+                            monitor = s.cleanMonitorObjectForDatabase(Object.assign(monitor,monitorPreset))
+                            monitor.details = JSON.stringify(monitor.details)
+                            s.addOrEditMonitor(Object.assign(monitor,{}),function(err,endData){
+
+                            },user)
+                        })
+                        endData.ok = true
+                        s.tx({f:'change_group_state',ke:groupKey,name:stateName},'GRP_'+groupKey)
+                        callback(endData)
+                    }else{
+                        endData.msg = user.lang['State Configuration has no monitors associated']
+                        callback(endData)
+                    }
+                })
+            }else{
+                endData.msg = user.lang['State Configuration Not Found']
+                callback(endData)
+            }
+        })
     }
 }

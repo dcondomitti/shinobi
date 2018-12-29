@@ -4,16 +4,15 @@ var moment = require('moment');
 var crypto = require('crypto');
 var exec = require('child_process').exec;
 var execSync = require('child_process').execSync;
-module.exports = function(s,config,lang,io,processReady){
+module.exports = function(s,config,lang,io,){
     console.log('FFmpeg version : '+s.ffmpegVersion)
     console.log('Node.js version : '+execSync("node -v"))
     s.processReady = function(){
         s.systemLog(lang.startUpText5)
-        process.send('ready')
         s.onProcessReadyExtensions.forEach(function(extender){
             extender(true)
         })
-        if(processReady)processReady()
+        process.send('ready')
     }
     var loadedAccounts = []
     var loadMonitors = function(callback){

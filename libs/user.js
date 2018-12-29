@@ -308,4 +308,18 @@ module.exports = function(s,config){
             }
         })
     }
+    s.findPreset = function(presetQueryVals,callback){
+        //presetQueryVals = [ke, type, name]
+        s.sqlQuery("SELECT * FROM Presets WHERE ke=? AND type=? AND name=? LIMIT 1",presetQueryVals,function(err,presets){
+            var preset
+            var notFound = false
+            if(presets && presets[0]){
+                preset = presets[0]
+                s.checkDetails(preset)
+            }else{
+                notFound = true
+            }
+            callback(notFound,preset)
+        })
+    }
 }

@@ -115,15 +115,6 @@ sudo chmod -R 755 .
 touch INSTALL/installed.txt
 dos2unix /home/Shinobi/INSTALL/shinobi
 ln -s /home/Shinobi/INSTALL/shinobi /usr/bin/shinobi
-if [ "$mysqlDefaultData" = "y" ] || [ "$mysqlDefaultData" = "Y" ]; then
-    echo "=====================================" > INSTALL/installed.txt
-    echo "=======   Login Credentials   =======" >> INSTALL/installed.txt
-    echo "|| Username : $userEmail" >> INSTALL/installed.txt
-    echo "|| Password : $userPasswordPlain" >> INSTALL/installed.txt
-    echo "|| API Key : $apiKey" >> INSTALL/installed.txt
-    echo "=====================================" >> INSTALL/installed.txt
-    echo "=====================================" >> INSTALL/installed.txt
-fi
 echo "Shinobi - Start Shinobi and set to start on boot?"
 echo "(y)es or (N)o"
 read startShinobi
@@ -134,31 +125,14 @@ if [ "$startShinobi" = "y" ] || [ "$startShinobi" = "Y" ]; then
     sudo pm2 save
     sudo pm2 list
 fi
-if [ "$mysqlDefaultData" = "y" ] || [ "$mysqlDefaultData" = "Y" ]; then
-    echo "details written to INSTALL/installed.txt"
-    echo "====================================="
-    echo "=======   Login Credentials   ======="
-    echo "|| Username : $userEmail"
-    echo "|| Password : $userPasswordPlain"
-    echo "|| API Key : $apiKey"
-    echo "====================================="
-    echo "====================================="
-fi
-if [ ! "$sqliteormariadb" = "M" ] && [ ! "$sqliteormariadb" = "m" ]; then
-    echo "====================================="
-    echo "||=====   Install Completed   =====||"
-    echo "====================================="
-    echo "|| Login with the Superuser and create a new user!!"
-    echo "||==================================="
-    echo "|| Open http://$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1):8080/super in your web browser."
-    echo "||==================================="
-    echo "|| Default Superuser : admin@shinobi.video"
-    echo "|| Default Password : admin"
-    echo "====================================="
-    echo "====================================="
-else
-    echo "+=================================+"
-    echo "||=====   Install Completed   =====||"
-    echo "|| Access the main Shinobi panel at http://$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1):8080 in your web browser."
-    echo "+=================================+"
-fi
+echo "====================================="
+echo "||=====   Install Completed   =====||"
+echo "====================================="
+echo "|| Login with the Superuser and create a new user!!"
+echo "||==================================="
+echo "|| Open http://$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1):8080/super in your web browser."
+echo "||==================================="
+echo "|| Default Superuser : admin@shinobi.video"
+echo "|| Default Password : admin"
+echo "====================================="
+echo "====================================="

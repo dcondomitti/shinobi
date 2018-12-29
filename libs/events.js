@@ -45,6 +45,7 @@ module.exports = function(s,config,lang){
         }
         d.mon=s.group[d.ke].mon_conf[d.id];
         var currentConfig = s.group[d.ke].mon[d.id].details
+        var hasMatrices = (d.details.matrices && d.details.matrices.length > 0)
         //read filters
         if(
             currentConfig.use_detector_filters === '1' &&
@@ -160,7 +161,7 @@ module.exports = function(s,config,lang){
             })
             if(d.details.matrices && d.details.matrices.length === 0 || filter.halt === true){
                 return
-            }else if(d.details.matrices && d.details.matrices.length > 0){
+            }else if(hasMatrices){
                 var reviewedMatrix = []
                 d.details.matrices.forEach(function(matrix){
                     if(matrix)reviewedMatrix.push(matrix)
@@ -189,6 +190,16 @@ module.exports = function(s,config,lang){
                     clearTimeout(s.group[d.ke].mon[d.id].detector_lock_timeout)
                     delete(s.group[d.ke].mon[d.id].detector_lock_timeout)
                 },detector_lock_timeout)
+            }else{
+                return
+            }
+        }
+        // check if object should be in region
+        if(hasMatrices && currentConfig.detector_obj_region === '1'){
+            var regions = s.group[d.ke].mon[d.id].parsedObjects.cords
+            var isMatrixInRegions = s.isAtleastOneMatrixInRegion(regions,d.details.matrices)
+            if(isMatrixInRegions){
+                s.debugLog('Matrix in region!')
             }else{
                 return
             }
