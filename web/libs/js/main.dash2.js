@@ -1156,7 +1156,9 @@ switch($user.details.lang){
                 tmp+='</li>';
             break;
             case'option':
-                tmp+='<option auth="'+user.auth_token+'" value="'+d.id+'">'+d.name+'</option>'
+                var selected = ''
+                if(d.selected === true){selected = ' selected'}
+                tmp+='<option auth="'+user.auth_token+'"'+selected+' value="'+d.id+'">'+d.name+'</option>'
             break;
             case'stream-element':
                 try{k.d=JSON.parse(d.details);}catch(er){k.d=d.details}

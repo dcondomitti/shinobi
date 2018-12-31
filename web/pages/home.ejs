@@ -121,6 +121,8 @@
                 <% if(!details.sub){ %>
                 <li class="mdl-menu__item" data-toggle="modal" data-target="#onvif_probe"><div><i class="fa fa-rss"></i><div><%- lang.ONVIF %></div></div></li>
                 <li class="mdl-menu__item" data-toggle="modal" data-target="#probe"><div><i class="fa fa-search"></i><div><%- lang.FFprobe %></div></div></li>
+                <li class="mdl-menu__item" data-toggle="modal" data-target="#monitorStates"><div><i class="fa fa-align-right"></i><div><%- lang['Monitor States'] %></div></div></li>
+                <li class="mdl-menu__item" data-toggle="modal" data-target="#schedules"><div><i class="fa fa-clock-o"></i><div><%- lang['Schedules'] %></div></div></li>
                 <li class="mdl-menu__item" data-toggle="modal" data-target="#filters"><div><i class="fa fa-filter"></i><div><%- lang.Filters %></div></div></li>
                 <% } %>
                 <li class="mdl-menu__item permission_view_logs" data-toggle="modal" data-target="#logs_modal"><div><i class="fa fa-exclamation-triangle"></i><div><%- lang.Logs %></div></div></li>
@@ -167,6 +169,8 @@
 <% include blocks/probe.ejs %>
 <% include blocks/region.ejs %>
 <% include blocks/detectorfilters.ejs %>
+<% include blocks/monitorStates.ejs %>
+<% include blocks/schedules.ejs %>
 <% include blocks/confirm.ejs %>
 <% if(config.DropboxAppKey){ %>
 <!--Dropbox Library, Change data-app-key to your app key. -->

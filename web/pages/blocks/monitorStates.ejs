@@ -1,0 +1,182 @@
+<div class="modal dark fade" id="monitorStates" role="dialog" aria-labelledby="monitorStatesLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <form class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <h4 class="modal-title" id="monitorStatesLabel"><i class="fa fa-align-right"></i> &nbsp; <%-lang['Monitor States']%></h4>
+      </div>
+      <div class="modal-body">
+          <div class="form-group">
+              <label>
+                  <div><select class="form-control" id="monitorStatesSelector">
+                      <option value=""><%-lang['Add New']%></option>
+                      <optgroup label="<%-lang['Saved Presets']%>"></optgroup>
+                    </select></div>
+              </label>
+          </div>
+          <div class="form-group-group green">
+              <h4><%- lang['Preset'] %>
+                <div class="pull-right">
+                    <a class="btn btn-danger btn-xs delete" style="display:none">&nbsp;<i class="fa fa-trash-o"></i>&nbsp;</a>
+                </div>
+              </h4>
+              <div class="form-group">
+                <label><div><span><%-lang['Name']%></span></div>
+                    <div><input class="form-control" name="name"></div>
+                </label>
+              </div>
+          </div>
+        <div class="form-group-group blue">
+            <h4><%- lang['Monitors'] %>
+              <div class="pull-right">
+                  <a class="btn btn-default btn-xs add">&nbsp;<i class="fa fa-plus"></i>&nbsp;</a>
+              </div>
+            </h4>
+            <div id="monitorStatesMonitors">
+            </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default pull-left" data-dismiss="modal"><i class="fa fa-times"></i> <%-lang.Close%></button>
+        <button type="button" class="btn btn-default" data-toggle="modal" data-target="#schedules"><i class="fa fa-clock-o"></i> <%-lang.Schedules%></button>
+        <button type="submit" class="btn btn-success"><i class="fa fa-check"></i> <%-lang.Save%></button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+    $(document).ready(function(){
+        $.monitorStates = {
+            e: $('#monitorStates'),
+            selector: $('#monitorStatesSelector'),
+            monitors: $('#monitorStatesMonitors'),
+            loaded: {}
+        }
+        $.monitorStates.f = $.monitorStates.e.find('form')
+        $.monitorStates.loadPresets = function(callback){
+            $.get($.ccio.init('location',$user) + $user.auth_token + '/monitorStates/' + $user.ke,function(d){
+                var html = ''
+                $.each(d.presets,function(n,v){
+                    $.monitorStates.loaded[v.name] = v
+                    html += '<option value="' + v.name + '">' + v.name + '</option>'
+                })
+                $.monitorStates.selector.find('optgroup').html(html)
+                if(callback)callback()
+            })
+        }
+        $.monitorStates.e.on('shown.bs.modal', function (e) {
+            if($.monitorStates.selector.val() === '')$.monitorStates.loadPresets()
+        })
+        $.monitorStates.add = function(loaded,doAppend){
+            if(!loaded){
+                json = ''
+            }else{
+                json = JSON.stringify(loaded,null,3)
+            }
+            var html = '<div class="state-monitor-row"><h4 style="margin-top:7.5px;margin-bottom:7.5px"><small>&nbsp;</small><div class="pull-right"><a class="btn btn-danger btn-xs delete-monitor"><i class="fa fa-trash-o"></i></a></div></h4><textarea class="json form-control" style="width:100%;height:300px">' + json +'</textarea></div>'
+            if(doAppend)$.monitorStates.monitors.append(html)
+            return html
+        }
+        $.monitorStates.e.find('.add').click(function(e){
+            $.monitorStates.add(null,true)
+        })
+        $.monitorStates.e.on('change','.json',function(e){
+            var el = $(this)
+            var val = el.val()
+            try{
+                el.css('border-color','green')
+                var parsed = JSON.parse(val)
+                el.val(JSON.stringify(parsed,null,3))
+            }catch(err){
+                el.css('border-color','red')
+                return $.ccio.init('note',{title:lang['Invalid JSON'],text:lang.InvalidJSONText,type:'error'})
+            }
+        })
+        $.monitorStates.e.on('click','.delete',function(e){
+            $.confirm.e.modal('show');
+            $.confirm.title.text(lang['Delete Monitor States Preset']);
+            $.confirm.body.html(lang.deleteMonitorStateText1);
+            $.confirm.click({title:'Delete',class:'btn-danger'},function(){
+                var form = $.monitorStates.f.serializeObject()
+                $.post($.ccio.init('location',$user) + $user.auth_token + '/monitorStates/' + $user.ke + '/' + form.name + '/delete',function(d){
+                    $.ccio.log(d)
+                    if(d.ok === true){
+                        $.monitorStates.loadPresets()
+                        $.ccio.init('note',{title:lang.Success,text:d.msg,type:'success'})
+                    }
+                })
+            })
+        })
+        $.monitorStates.e.on('click','.delete-monitor',function(e){
+            var el = $(this).parents('.state-monitor-row')
+            $.confirm.e.modal('show');
+            $.confirm.title.text(lang['Delete Monitor State']);
+            $.confirm.body.html(lang.deleteMonitorStateText2)
+            $.confirm.click({title:'Delete',class:'btn-danger'},function(){
+                el.remove()
+            })
+        })
+        $.monitorStates.selector.change(function(e){
+            var selected = $(this).val()
+            var loaded = $.monitorStates.loaded[selected]
+            var namespace = $.monitorStates.e.find('[name="name"]')
+            var deleteButton = $.monitorStates.e.find('.delete')
+            if(loaded){
+                namespace.val(loaded.name)
+                var html = ''
+                $.each(loaded.details.monitors,function(n,v){
+                    html += $.monitorStates.add(v)
+                })
+                $.monitorStates.monitors.html(html)
+                deleteButton.show()
+            }else{
+                namespace.val('')
+                $.monitorStates.monitors.empty()
+                deleteButton.hide()
+            }
+        })
+        $.monitorStates.f.submit(function(e){
+            e.preventDefault()
+            var el = $(this)
+            var form = el.serializeObject()
+            var monitors = []
+            var failedToParseAJson = false
+            var rows = $.monitorStates.monitors.find('.state-monitor-row')
+            if(form.name === ''){
+                return $.ccio.init('note',{title:lang['Invalid Data'],text:lang['Name cannot be empty.'],type:'error'})
+            }
+            if(rows.length === 0){
+                return $.ccio.init('note',{title:lang['Invalid Data'],text:lang['Must be atleast one row'],type:'error'})
+            }
+            rows.each(function(n,v){
+                var el = $(v)
+                try{
+                    console.log(el.find('.json').val())
+                    var json = JSON.parse(el.find('.json').val())
+                    if(json.mid)monitors.push(json)
+                }catch(err){
+                    console.log(err)
+                    failedToParseAJson = true
+                }
+            })
+            if(failedToParseAJson === true){
+                return $.ccio.init('note',{title:lang['Invalid JSON'],text:lang.InvalidJSONText,type:'error'})
+            }
+            var data = {
+                monitors: monitors
+            }
+            $.post($.ccio.init('location',$user) + $user.auth_token + '/monitorStates/' + $user.ke + '/' + form.name + '/insert',{data:data},function(d){
+                $.ccio.log(d)
+                if(d.ok === true){
+                    $.monitorStates.loadPresets(function(){
+                        $.monitorStates.selector.val(form.name)
+                    })
+                    $.ccio.init('note',{title:lang.Success,text:d.msg,type:'success'})
+                }
+            })
+            return false;
+        })
+    })
+</script>
