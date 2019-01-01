@@ -121,13 +121,17 @@ module.exports = function(s,config,lang,app,io){
         },1000 * 60 * 5)
     }
     /**
-    * WebServerPath : API : Update Schedule
+    * WebServerPath : API : Get Schedule
     */
     app.all([
         config.webPaths.apiPrefix+':auth/schedule/:ke',
         config.webPaths.adminApiPrefix+':auth/schedule/:ke',
         config.webPaths.apiPrefix+':auth/schedule/:ke/:name',
         config.webPaths.adminApiPrefix+':auth/schedule/:ke/:name',
+        config.webPaths.apiPrefix+':auth/schedules/:ke',
+        config.webPaths.adminApiPrefix+':auth/schedules/:ke',
+        config.webPaths.apiPrefix+':auth/schedules/:ke/:name',
+        config.webPaths.adminApiPrefix+':auth/schedules/:ke/:name',
     ],function (req,res){
         s.auth(req.params,function(user){
             var endData = {
@@ -163,7 +167,9 @@ module.exports = function(s,config,lang,app,io){
     */
     app.all([
         config.webPaths.apiPrefix+':auth/schedule/:ke/:name/:action',
-        config.webPaths.adminApiPrefix+':auth/schedule/:ke/:name/:action'
+        config.webPaths.adminApiPrefix+':auth/schedule/:ke/:name/:action',
+        config.webPaths.apiPrefix+':auth/schedules/:ke/:name/:action',
+        config.webPaths.adminApiPrefix+':auth/schedules/:ke/:name/:action'
     ],function (req,res){
         s.auth(req.params,function(user){
             var endData = {
