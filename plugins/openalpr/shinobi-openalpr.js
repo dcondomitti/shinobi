@@ -26,7 +26,9 @@ try{
 }
 // Base Init />>
 // OpenALPR Init >>
-if(config.alprConfig===undefined){config.alprConfig=__dirname+'/openalpr.conf'}
+if(config.alprConfig === undefined){
+    config.alprConfig = __dirname + '/openalpr.conf'
+}
 // OpenALPR Init />>
 s.detectObject = function(buffer,d,tx,frameLocation){
     var detectStuff = function(frame){

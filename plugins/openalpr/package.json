@@ -4,7 +4,6 @@
   "description": "OpenALPR plugin for Shinobi",
   "main": "shinobi-openalpr.js",
   "dependencies": {
-    "canvas": "^1.6.7",
     "express": "^4.16.2",
     "moment": "^2.19.2",
     "socket.io": "^2.0.4"
