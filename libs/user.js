@@ -260,11 +260,11 @@ module.exports = function(s,config){
                     d.form.details.use_admin=d.d.use_admin
                     d.form.details.use_ldap=d.d.use_ldap
                     //check
-                    if(d.d.edit_days=="0"){
-                        d.form.details.days=d.d.days;
+                    if(d.d.edit_days == "0"){
+                        d.form.details.days = d.d.days;
                     }
-                    if(d.d.edit_size=="0"){
-                        d.form.details.size=d.d.size;
+                    if(d.d.edit_size == "0"){
+                        d.form.details.size = d.d.size;
                     }
                     if(d.d.sub){
                         d.form.details.sub=d.d.sub;

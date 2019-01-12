@@ -301,6 +301,8 @@
    "InvalidJSONText": "Please ensure this is a valid JSON string for Shinobi monitor configuration.",
    "Passwords don't match": "Passwords don't match",
    "Email address is in use.": "Email address is in use.",
+   "Group Key is in use.": "Group Key is in use.",
+   "Create Sub-Accounts at /admin": "Create Sub-Accounts at /admin",
    "No Events found for this video": "No Events found for this video",
    "Video and Time Span (Minutes)": "Video and Time Span (Minutes)",
    "Video Length (minutes) and Motion Count per video": "Video Length (minutes) and Motion Count per video",

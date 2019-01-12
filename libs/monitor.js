@@ -105,7 +105,7 @@ module.exports = function(s,config,lang){
                 var snapBuffer = []
                 var snapProcess = spawn(config.ffmpegDir,('-loglevel quiet -re -i '+url+options+' -frames:v 1 -f image2pipe pipe:1').split(' '),{detached: true})
                 snapProcess.stdout.on('data',function(data){
-                    snapBuffer.push(data)
+                    if(snapBuffer)snapBuffer.push(data)
                 })
                 snapProcess.stderr.on('data',function(data){
                     console.log(data.toString())
@@ -961,6 +961,9 @@ module.exports = function(s,config,lang){
         s.group[e.ke].mon[e.id].spawn.stderr.on('data',function(d){
             d=d.toString();
             switch(true){
+                // case checkLog(d,'No space left on device'):
+                //
+                // break;
                 case checkLog(d,'[hls @'):
                 case checkLog(d,'Past duration'):
                 case checkLog(d,'Last message repeated'):
@@ -1486,7 +1489,7 @@ module.exports = function(s,config,lang){
                 }
                 //set up fatal error handler
                 if(e.details.fatal_max === ''){
-                    e.details.fatal_max = 10
+                    e.details.fatal_max = 0
                 }else{
                     e.details.fatal_max = parseFloat(e.details.fatal_max)
                 }
