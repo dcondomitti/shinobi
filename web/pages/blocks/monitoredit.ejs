@@ -169,7 +169,7 @@
               </div>
               <div class="form-group">
                 <label><div><span><%-lang['Retry Connection']%></span></div>
-                    <div><input class="form-control" detail="fatal_max" placeholder="10"></div>
+                    <div><input class="form-control" detail="fatal_max" placeholder="0"></div>
                 </label>
               </div>
               <div class="form-group">
@@ -1106,16 +1106,6 @@
                             <div><input class="form-control" detail="detector_noise_filter_range" placeholder="6"></div>
                         </label>
                       </div>
-        <!--
-                        <div class="form-group">
-                            <label><div><span><%-lang['Show Regions of Interest']%></span></div>
-                                <div><select class="form-control" detail="detector_region_of_interest">
-                                    <option value="0" selected><%-lang.No%></option>
-                                    <option value="1"><%-lang.Yes%></option>
-                                </select></div>
-                            </label>
-                        </div>
-        -->
                       <div class="form-group-group orange" section id="monSectionNoMotionDetector">
                       <h4><%-lang['"No Motion" Detector']%></h4>
                           <div class="form-group">
@@ -1141,6 +1131,29 @@
                           </div>
                       </div>
                   </div>
+                  <!--     Start of Audio Detection     -->
+                              <div class="form-group-group orange" section id="monSectionAudioDetector">
+                                  <h4><%-lang['Audio Detector']%></h4>
+                                  <div class="form-group">
+                                    <label><div><span><%-lang['Enabled']%></span></div>
+                                        <div><select class="form-control" detail="detector_audio">
+                                            <option value="0" selected><%-lang.No%></option>
+                                            <option value="1"><%-lang.Yes%></option>
+                                        </select></div>
+                                    </label>
+                                  </div>
+                                  <div class="form-group">
+                                    <label><div><span><%-lang['Minimum dB']%></span></div>
+                                        <div><input class="form-control" detail="detector_audio_min_db" placeholder="5"></div>
+                                    </label>
+                                  </div>
+                                  <div class="form-group">
+                                    <label><div><span><%-lang['Maximum dB']%></span></div>
+                                        <div><input class="form-control" detail="detector_audio_max_db" placeholder=""></div>
+                                    </label>
+                                  </div>
+                              </div>
+                  <!--     END of Audio Detection     -->
                   <div class="form-group-group orange shinobi-detector-opencv shinobi-detector-openalpr shinobi-detector-yolo shinobi-detector-dlib shinobi-detector_plug" section id="monSectionDetectorObject">
                       <h4><%-lang['Object Detection']%> <small><%-lang['Plugin']%> : <b class="shinobi-detector_name"></b> <b class="shinobi-detector-invert"><%-lang['Not Connected']%></b><b class="shinobi-detector" style="display:none"><%-lang['Connected']%></b></small></h4>
                       <div class="form-group">
@@ -1294,29 +1307,6 @@
                       </div>
                   </div>
               </div>
-<!--     Start of Audio Detection     -->
-            <div class="form-group-group orange" section id="monSectionAudioDetector">
-                <h4><%-lang['Audio Detector']%></h4>
-                <div class="form-group">
-                  <label><div><span><%-lang['Enabled']%></span></div>
-                      <div><select class="form-control" detail="detector_audio">
-                          <option value="0" selected><%-lang.No%></option>
-                          <option value="1"><%-lang.Yes%></option>
-                      </select></div>
-                  </label>
-                </div>
-                <div class="form-group">
-                  <label><div><span><%-lang['Minimum dB']%></span></div>
-                      <div><input class="form-control" detail="detector_audio_min_db" placeholder="5"></div>
-                  </label>
-                </div>
-                <div class="form-group">
-                  <label><div><span><%-lang['Maximum dB']%></span></div>
-                      <div><input class="form-control" detail="detector_audio_max_db" placeholder=""></div>
-                  </label>
-                </div>
-            </div>
-<!--     END of Audio Detection     --/>
 <!--     END of Motion     -->
           <div class="form-group-group blue" section id="monSectionControl">
           <h4><%-lang['Control']%></h4>
@@ -1620,3 +1610,4 @@
     </form>
   </div>
 </div>
+<script src="<%-window.libURL%>libs/js/dash2.monitoredit.js"></script>
