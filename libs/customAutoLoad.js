@@ -5,13 +5,22 @@ module.exports = function(s,config,lang,app,io){
         fs.readdir(folderPath,function(err,folderContents){
             if(!err && folderContents){
                 folderContents.forEach(function(filename){
+                    var customModulePath = folderPath + '/' + filename
                     if(filename.indexOf('.js') > -1){
-                        var customModulePath = folderPath + '/' + filename
                         try{
                             require(customModulePath)(s,config,lang,app,io)
                         }catch(err){
                             console.log('Failed to Load Module : ' + filename)
                             console.log(err)
+                        }
+                    }else{
+                        if(fs.lstatSync(customModulePath).isDirectory()){
+                            try{
+                                require(customModulePath)(s,config,lang,app,io)
+                            }catch(err){
+                                console.log('Failed to Load Module : ' + filename)
+                                console.log(err)
+                            }
                         }
                     }
                 })
