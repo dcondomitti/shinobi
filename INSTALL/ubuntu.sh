@@ -49,7 +49,7 @@ fi
 if ! [ -x "$(command -v npm)" ]; then
     sudo apt install npm -y
 fi
-sudo apt install make -y
+sudo apt install make zip -y
 if ! [ -x "$(command -v ffmpeg)" ]; then
     if [ "$getubuntuversion" = "16" ] || [ "$getubuntuversion" < "16" ]; then
         echo "============="

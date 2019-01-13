@@ -14,6 +14,24 @@ module.exports = function(s,config,lang,io,){
         })
         process.send('ready')
     }
+    var checkForTerminalCommands = function(callback){
+        var next = function(){
+            if(callback)callback()
+        }
+        if(!s.isWin){
+            var etcPath = '/etc/shinobisystems/cctv.txt'
+            fs.stat(etcPath,function(err,stat){
+                if(err || !stat){
+                    exec('node '+ s.mainDirectory + '/INSTALL/terminalCommands.js',function(err){
+                        console.log(err)
+                    })
+                }
+                next()
+            })
+        }else{
+            next()
+        }
+    }
     var loadedAccounts = []
     var loadMonitors = function(callback){
         s.systemLog(lang.startUpText4)
@@ -157,11 +175,13 @@ module.exports = function(s,config,lang,io,){
         //run prerequsite queries
         s.preQueries()
         setTimeout(function(){
-            //load administrators (groups)
-            loadAdminUsers(function(){
-                //load monitors (for groups)
-                loadMonitors(function(){
-                    s.processReady()
+            checkForTerminalCommands(function(){
+                //load administrators (groups)
+                loadAdminUsers(function(){
+                    //load monitors (for groups)
+                    loadMonitors(function(){
+                        s.processReady()
+                    })
                 })
             })
         },1500)

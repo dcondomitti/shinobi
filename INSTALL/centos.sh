@@ -27,7 +27,7 @@ if [ ! -e "./super.json" ]; then
 fi
 echo "Shinobi - Run yum update"
 sudo yum update -y
-sudo yum install make -y
+sudo yum install make zip -y
 echo "============="
 echo "Shinobi - Do you want to Install FFMPEG?"
 echo "(y)es or (N)o"
