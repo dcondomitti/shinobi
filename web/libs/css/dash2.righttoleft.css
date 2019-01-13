@@ -1,0 +1,11 @@
+.right-to-left {text-align:right}
+.right-to-left select{direction: rtl;}
+.right-to-left input,.right-to-left textarea{direction: rtl;text-align:right}
+.right-to-left .form-group label span{padding-right:10px}
+.right-to-left .modal-footer{text-align:left}
+.right-to-left .mdl-menu__item>div>*{flex:1}
+.right-to-left .mdl-menu__item>div>i{margin-right:0;margin-left:5px}
+.right-to-left .mdl-menu__item{text-align:right}
+.right-to-left .mdl-menu__item i{float:right}
+.right-to-left .pull-right,.right-to-left .close{float:left!important}
+.right-to-left .pull-left,.right-to-left .mdl-menu__item span{float:right!important}

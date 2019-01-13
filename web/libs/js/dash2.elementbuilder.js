@@ -29,36 +29,31 @@ $.ccio.tm=function(x,d,z,user){
         break;
         case 1://monitor icon
             d.src=placeholder.getData(placeholder.plcimg({bgcolor:'#b57d00',text:'...'}));
-            tmp+='<div auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" title="'+d.mid+' : '+d.name+'" class="monitor_block glM'+d.mid+user.auth_token+' col-md-4"><img class="snapshot" src="'+d.src+'"><div class="box"><div class="title monitor_name truncate">'+d.name+'</div><div class="list-data"><div class="monitor_mid">'+d.mid+'</div><div><b>'+lang['Save as']+' :</b> <span class="monitor_ext">'+d.ext+'</span></div><div><b>Status :</b> <span class="monitor_status">'+d.status+'</span></div></div><div class="icons text-center">'
-            tmp+='<div><button id="icon-menu-'+d.mid+''+d.ke+'"\
-                        class="mdl-button mdl-js-button mdl-button--icon">\
-                  <i class="material-icons">more_vert</i>\
-                </button>\
-                <ul class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" for="icon-menu-'+d.mid+''+d.ke+'">'
+            tmp+='<div auth="'+user.auth_token+'" mid="'+d.mid+'" ke="'+d.ke+'" title="'+d.mid+' : '+d.name+'" class="monitor_block glM'+d.mid+user.auth_token+' col-md-4"><img monitor="watch" class="snapshot" src="'+d.src+'"><div class="box"><div class="title monitor_name truncate">'+d.name+'</div><div class="list-data"><div class="monitor_mid">'+d.mid+'</div><div><b>'+lang['Save as']+' :</b> <span class="monitor_ext">'+d.ext+'</span></div><div><b>Status :</b> <span class="monitor_status">'+d.status+'</span></div></div><div class="icons text-center">'
+            tmp+='<div class="btn-group btn-group-xs">'
                 var buttons = {
-                   "Launch": {
-                      "label": "Launch",
-                      "attr": "monitor=\"watch\"",
-                      "icon": "eye"
-                   },
                    "Pop": {
                       "label": "Pop",
                       "attr": "monitor=\"pop\"",
+                      "class": "default",
                       "icon": "external-link"
                    },
                    "Power Viewer": {
                       "label": "Power Viewer",
                       "attr": "monitor=\"powerview\"",
+                      "class": "default",
                       "icon": "map-marker"
                    },
                    "Videos List": {
                       "label": "Videos List",
                       "attr": "monitor=\"videos_table\"",
+                      "class": "default",
                       "icon": "film"
                    },
                    "Monitor Settings": {
                       "label": "Monitor Settings",
                       "attr": "monitor=\"edit\"",
+                      "class": "default",
                       "icon": "wrench"
                    }
                 }
@@ -70,9 +65,9 @@ $.ccio.tm=function(x,d,z,user){
                     delete(buttons["Monitor Settings"])
                 }
                 $.each(buttons,function(n,v){
-                    tmp+='<li class="mdl-menu__item"><a '+v.attr+'><i class="fa fa-'+v.icon+'"></i> '+v.label+'</a></li>'
+                    tmp+='<a class="btn btn-'+v.class+'" '+v.attr+' title="'+v.label+'"><i class="fa fa-'+v.icon+'"></i></a>'
                 })
-            tmp+='</ul>\
+            tmp+='</div>\
             </div></div></div>';
             delete(d.src);
         break;
@@ -85,13 +80,7 @@ $.ccio.tm=function(x,d,z,user){
             tmp+='<div class="stream-objects"></div>';
             tmp+='<div class="stream-hud">'
             tmp+='<div class="camera_cpu_usage"><div class="progress"><div class="progress-bar progress-bar-danger" role="progressbar"><span></span></div></div></div>';
-            tmp+='<div class="lamp" title="'+k.mode+'"><i class="fa fa-eercast"></i></div><div class="controls"><span title="'+lang['Currently viewing']+'" class="label label-default"><span class="viewers"></span></span> <a class="btn-xs btn-danger btn" monitor="mode" mode="record"><i class="fa fa-circle"></i> '+lang['Start Recording']+'</a> <a class="btn-xs btn-primary btn" monitor="mode" mode="start"><i class="fa fa-eye"></i> '+lang['Set to Watch Only']+'</a></div><div class="bottom-text monospace "><div class="detector-fade">'
-                $.each([
-                    {label:'Currently Detected',tag:'stream-detected-count'}
-                ],function(n,v){
-                    tmp+='<div>'+v.label+' : <span class="'+v.tag+'"></span></div>'
-                })
-            tmp+='</div></div></div></div>'
+            tmp+='<div class="lamp" title="'+k.mode+'"><i class="fa fa-eercast"></i></div><div class="controls"><span title="'+lang['Currently viewing']+'" class="label label-default"><span class="viewers"></span></span> <a class="btn-xs btn-danger btn" monitor="mode" mode="record"><i class="fa fa-circle"></i> '+lang['Start Recording']+'</a> <a class="btn-xs btn-primary btn" monitor="mode" mode="start"><i class="fa fa-eye"></i> '+lang['Set to Watch Only']+'</a></div></div></div></div>'
             tmp+='<div class="mdl-card__supporting-text text-center">';
             tmp+='<div class="indifference detector-fade"><div class="progress"><div class="progress-bar progress-bar-danger" role="progressbar"><span></span></div></div></div>';
             tmp+='<div class="monitor_details">';

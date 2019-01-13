@@ -43,16 +43,12 @@ $.ccio.globalWebsocket=function(d,user){
                     d.stream=d.e.find('.stream-element')
                     d.streamObjects=d.e.find('.stream-objects')
                     $.ccio.init('drawMatrices',d)
-                    d.e.find('.stream-detected-count').text(d.streamObjects.find('.stream-detected-object').length)
-                }else{
-                    d.e.find('.stream-detected-count').text(1)
                 }
                 if(d.details.points&&Object.keys(d.details.points).length>0){
                     d.monitorDetails=JSON.parse($.ccio.mon[d.ke+d.id+user.auth_token].details)
                     d.stream=d.e.find('.stream-element')
                     d.streamObjects=d.e.find('.stream-objects')
                     $.ccio.init('drawPoints',d)
-                    d.e.find('.stream-detected-count').text(d.streamObjects.find('.stream-detected-point').length)
                 }
                 if(d.details.confidence){
                     d.tt=d.details.confidence;

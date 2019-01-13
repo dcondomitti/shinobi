@@ -1,0 +1,89 @@
+/*Control Pad*/
+.PTZ_controls {
+    z-index: 111;
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    margin:0;
+    display: inline-block;
+    width: 120px;
+}
+.PTZ_controls .btn-group{margin-top:10px}
+.PTZ_controls .pad {
+  position: relative;
+  height: 120px;
+  width: 120px;
+  background: #b7b7b7;
+  border-radius: 50%;
+  box-shadow: inset 0 0 1px rgba(120, 120, 120, 0.6), inset 0 2px 2px rgba(0, 0, 0, 0.1), 0 2px 2px rgba(240, 240, 240, 0.4);
+}
+.PTZ_controls .control {
+  position: absolute;
+}
+.PTZ_controls .pad .control {
+    height: 30px;
+    width: 30px;
+    background: #636363;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(60, 60, 60, 0.2), 0 0 0 4px rgba(60, 60, 60, 0.2);
+    border-radius: 2px;
+}
+.PTZ_controls .zoom_in{
+  top: 0;
+  right: 0;
+}
+.PTZ_controls .zoom_out{
+  bottom: 0;
+  right: 0;
+}
+.PTZ_controls .nv_enabled{
+  top: 0;
+  right: 0;
+}
+.PTZ_controls .nv_disable{
+  bottom: 0;
+  right: 0;
+}
+.PTZ_controls .pad .top {
+  top: 15px;
+  left: 50%;
+  margin: 0 0 0 -15px;
+}
+.PTZ_controls .pad .left {
+  top: 45px;
+  left: 15px;
+}
+.PTZ_controls .pad .right {
+  top: 45px;
+  right: 15px;
+}
+.PTZ_controls .pad .control.right:before {
+  transform: rotate(90deg) translate(-3px, -5px);
+}
+.PTZ_controls .pad .bottom {
+  bottom: 15px;
+  left: 50%;
+  margin: 0 0 0 -15px;
+}
+/* Overlap the other controls to hide box-shadow */
+.PTZ_controls .pad .middle {
+  height: 34px;
+  width: 34px;
+  z-index: 5;
+  top: 43px;
+  left: 50%;
+  margin: 0 0 0 -17px;
+  box-shadow: none;
+  border-radius: 3px;
+}
+.PTZ_controls .pad .middle:after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: -35% 0 0 -35%;
+  content: '';
+  background: #636363;
+  height: 70%;
+  width: 70%;
+  border-radius: 100%;
+  box-shadow: inset 0 0 2px rgba(120, 120, 120, 0.6), inset 0 2px 8px rgba(0, 0, 0, 0.1), 0 2px 2px rgba(240, 240, 240, 0.2);
+}
