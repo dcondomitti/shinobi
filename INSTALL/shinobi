@@ -57,10 +57,10 @@ if [[ $@ == *'help'* ]] || [ ! "$1" ]; then
     echo "| clear, flush :"
     echo "|--> Clear all PM2 logs."
     echo "-"
-    echo "| startupEnable :"
+    echo "| bootupEnable :"
     echo "|--> Start Shinobi on OS reboot."
     echo "-"
-    echo "| startupDisable :"
+    echo "| bootupDisable :"
     echo "|--> Disable starting Shinobi on OS reboot."
     echo "-"
     echo "| kill :"
@@ -112,11 +112,11 @@ if [[ $@ == *'version'* ]]; then
     fi
     echo $currentBuild
 fi
-if [[ $@ == *'startupEnable'* ]] || [[ $@ == *'startupenable'* ]]; then
+if [[ $@ == *'bootupEnable'* ]] || [[ $@ == *'bootupenable'* ]]; then
     pm2 startup
     pm2 save
 fi
-if [[ $@ == *'startupDisable'* ]] || [[ $@ == *'startupdisable'* ]]; then
+if [[ $@ == *'bootupDisable'* ]] || [[ $@ == *'bootupdisable'* ]]; then
     pm2 unstartup
     pm2 save
 fi
