@@ -23,7 +23,7 @@ module.exports = function(s,config,lang,io,){
             fs.stat(etcPath,function(err,stat){
                 if(err || !stat){
                     exec('node '+ s.mainDirectory + '/INSTALL/terminalCommands.js',function(err){
-                        console.log(err)
+                        if(err)console.log(err)
                     })
                 }
                 next()

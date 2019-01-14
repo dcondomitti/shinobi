@@ -181,7 +181,7 @@ $.ccio.tm=function(x,d,z,user){
                 })
             tmp+='</div>';//end of btn list
             tmp+='</div>';//.stream-block
-            tmp+='<div class="mdl-data_window">';
+            tmp+='<div class="mdl-data_window pull-right">';
             tmp+='<div>';
             tmp+='<div class="data-menu col-md-6 no-padding videos_monitor_list glM'+d.mid+user.auth_token+' scrollable"><ul></ul></div>';
             tmp+='<div class="data-menu col-md-6 no-padding logs scrollable"></div>';

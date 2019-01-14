@@ -149,7 +149,7 @@ img{max-width:100%}
 #monitors_live .monitor_item .mdl-cell--8-col{width:100%;border:0;border-radius:0;margin:0;position:relative}
 #monitors_live .monitor_item .mdl-cell--4-col-desktop,.monitor_item .mdl-card__supporting-text{display:none}
 #monitors_live .monitor_item .mdl-card__supporting-text .monitor_details,#monitors_live .monitor_item .mdl-card__supporting-text .btn-group{display:none;text-align:center}
-#monitors_live .monitor_item .mdl-card__supporting-text:not(.meta){display:block;position:absolute;bottom:0;left:0;height:0;padding:0;}
+#monitors_live .monitor_item .mdl-card__supporting-text:not(.meta){display:block;position:absolute;bottom:0;left:0;height:0;padding:0;overflow:visible;}
 #monitors_live .monitor_item.show_data .mdl-card__supporting-text:not(.meta){width:50%}
 #monitors_live .monitor_item.detector_triggered .mdl-card__supporting-text:not(.meta) .indifference{opacity:0.5;}
 #monitors_live .monitor_item:hover .mdl-card__supporting-text:not(.meta){padding:15px;z-index:15;height:auto;}
