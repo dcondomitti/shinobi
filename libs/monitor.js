@@ -991,6 +991,7 @@ module.exports = function(s,config,lang){
                 case checkLog(d,'mjpeg_decode_dc'):
                 case checkLog(d,'bad vlc'):
                 case checkLog(d,'error dc'):
+                case checkLog(d,'No route to host'):
                     s.launchMonitorProcesses(e)
                 break;
                 case /T[0-9][0-9]-[0-9][0-9]-[0-9][0-9]./.test(d):
@@ -1550,5 +1551,20 @@ module.exports = function(s,config,lang){
                 callback(endData)
             }
         })
+    }
+    s.createMonitorTimeout = function(nameOftTimeout,timeoutLength,defaultLength,multiplier,callback){
+        var theTimeout
+        if(!multiplier)multiplier = 1000 * 60
+        if(!timeoutLength || timeoutLength === ''){
+            theTimeout = defaultLength
+        }else{
+            theTimeout = parseFloat(timeoutLength) * multiplier
+        }
+        clearTimeout(s.group[d.ke].mon[d.id][nameOftTimeout])
+        s.group[d.ke].mon[d.id][nameOftTimeout] = setTimeout(function(){
+            clearTimeout(s.group[d.ke].mon[d.id][nameOftTimeout])
+            delete(s.group[d.ke].mon[d.id][nameOftTimeout])
+            if(callback)callback()
+        },theTimeout)
     }
 }

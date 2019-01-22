@@ -4,6 +4,25 @@ var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var request = require('request');
 module.exports = function(s,config,lang){
+    var addEventDetailsToString = function(eventData,string,addOps){
+        //d = event data
+        if(!addOps)addOps = {}
+        var newString = string + ''
+        var d = Object.assign(eventData,addOps)
+        var detailString = s.stringJSON(d.details)
+        newString
+            .replace(/{{TIME}}/g,d.currentTimestamp)
+            .replace(/{{REGION_NAME}}/g,d.details.name)
+            .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
+            .replace(/{{MONITOR_ID}}/g,d.id)
+            .replace(/{{GROUP_KEY}}/g,d.ke)
+            .replace(/{{DETAILS}}/g,detailString)
+        if(d.details.confidence){
+            newString = newString
+            .replace(/{{CONFIDENCE}}/g,d.details.confidence)
+        }
+        return newString
+    }
     s.filterEvents = function(x,d){
         switch(x){
             case'archive':
@@ -221,12 +240,12 @@ module.exports = function(s,config,lang){
             })
         }else{
             //save this detection result in SQL, only coords. not image.
-            if(filter.save && currentConfig.detector_save==='1'){
+            if(filter.save && currentConfig.detector_save === '1'){
                 s.sqlQuery('INSERT INTO Events (ke,mid,details) VALUES (?,?,?)',[d.ke,d.id,detailString])
             }
             if(currentConfig.detector_notrigger === '1'){
                 var detector_notrigger_timeout
-                if(!currentConfig.detector_notrigger_timeout||currentConfig.detector_notrigger_timeout===''){
+                if(!currentConfig.detector_notrigger_timeout||currentConfig.detector_notrigger_timeout === ''){
                     detector_notrigger_timeout = 10
                 }
                 detector_notrigger_timeout = parseFloat(currentConfig.detector_notrigger_timeout)*1000*60;
@@ -281,17 +300,7 @@ module.exports = function(s,config,lang){
             })
 
             if(filter.webhook && currentConfig.detector_webhook === '1'){
-                var detector_webhook_url = currentConfig.detector_webhook_url
-                    .replace(/{{TIME}}/g,d.currentTimestamp)
-                    .replace(/{{REGION_NAME}}/g,d.details.name)
-                    .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
-                    .replace(/{{MONITOR_ID}}/g,d.id)
-                    .replace(/{{GROUP_KEY}}/g,d.ke)
-                    .replace(/{{DETAILS}}/g,detailString)
-                    if(d.details.confidence){
-                        detector_webhook_url = detector_webhook_url
-                        .replace(/{{CONFIDENCE}}/g,d.details.confidence)
-                    }
+                var detector_webhook_url = addEventDetailsToString(currentConfig.detector_webhook_url)
                 request({url:detector_webhook_url,method:'GET',encoding:null},function(err,data){
                     if(err){
                         s.userLog(d,{type:lang["Event Webhook Error"],msg:{error:err,data:data}})
@@ -300,28 +309,8 @@ module.exports = function(s,config,lang){
             }
 
             if(filter.command && currentConfig.detector_command_enable === '1' && !s.group[d.ke].mon[d.id].detector_command){
-                var detector_command_timeout
-                if(!currentConfig.detector_command_timeout||currentConfig.detector_command_timeout===''){
-                    detector_command_timeout = 1000*60*10;
-                }else{
-                    detector_command_timeout = parseFloat(currentConfig.detector_command_timeout)*1000*60;
-                }
-                s.group[d.ke].mon[d.id].detector_command=setTimeout(function(){
-                    clearTimeout(s.group[d.ke].mon[d.id].detector_command);
-                    delete(s.group[d.ke].mon[d.id].detector_command);
-
-                },detector_command_timeout);
-                var detector_command = currentConfig.detector_command
-                    .replace(/{{TIME}}/g,d.currentTimestamp)
-                    .replace(/{{REGION_NAME}}/g,d.details.name)
-                    .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
-                    .replace(/{{MONITOR_ID}}/g,d.id)
-                    .replace(/{{GROUP_KEY}}/g,d.ke)
-                    .replace(/{{DETAILS}}/g,detailString)
-                    if(d.details.confidence){
-                        detector_command = detector_command
-                        .replace(/{{CONFIDENCE}}/g,d.details.confidence)
-                    }
+                s.createMonitorTimeout('detector_command',currentConfig.detector_command_timeout,10)
+                var detector_command = addEventDetailsToString(currentConfig.detector_command)
                 exec(detector_command,{detached: true})
             }
         }
