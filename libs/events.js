@@ -300,7 +300,7 @@ module.exports = function(s,config,lang){
             })
 
             if(filter.webhook && currentConfig.detector_webhook === '1'){
-                var detector_webhook_url = addEventDetailsToString(currentConfig.detector_webhook_url)
+                var detector_webhook_url = addEventDetailsToString(d,currentConfig.detector_webhook_url)
                 request({url:detector_webhook_url,method:'GET',encoding:null},function(err,data){
                     if(err){
                         s.userLog(d,{type:lang["Event Webhook Error"],msg:{error:err,data:data}})
@@ -309,8 +309,8 @@ module.exports = function(s,config,lang){
             }
 
             if(filter.command && currentConfig.detector_command_enable === '1' && !s.group[d.ke].mon[d.id].detector_command){
-                s.createMonitorTimeout('detector_command',currentConfig.detector_command_timeout,10)
-                var detector_command = addEventDetailsToString(currentConfig.detector_command)
+                s.createTimeout(s.group[d.ke].mon[d.id].detector_command,currentConfig.detector_command_timeout,10)
+                var detector_command = addEventDetailsToString(d,currentConfig.detector_command)
                 exec(detector_command,{detached: true})
             }
         }

@@ -226,4 +226,19 @@ module.exports = function(s,config){
             break;
         }
     }
+    s.createTimeout = function(timeoutVar,timeoutLength,defaultLength,multiplier,callback){
+        var theTimeout
+        if(!multiplier)multiplier = 1000 * 60
+        if(!timeoutLength || timeoutLength === ''){
+            theTimeout = defaultLength
+        }else{
+            theTimeout = parseFloat(timeoutLength) * multiplier
+        }
+        clearTimeout(timeoutVar)
+        timeoutVar = setTimeout(function(){
+            clearTimeout(timeoutVar)
+            delete(timeoutVar)
+            if(callback)callback()
+        },theTimeout)
+    }
 }

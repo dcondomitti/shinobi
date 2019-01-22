@@ -1552,19 +1552,4 @@ module.exports = function(s,config,lang){
             }
         })
     }
-    s.createMonitorTimeout = function(nameOftTimeout,timeoutLength,defaultLength,multiplier,callback){
-        var theTimeout
-        if(!multiplier)multiplier = 1000 * 60
-        if(!timeoutLength || timeoutLength === ''){
-            theTimeout = defaultLength
-        }else{
-            theTimeout = parseFloat(timeoutLength) * multiplier
-        }
-        clearTimeout(s.group[d.ke].mon[d.id][nameOftTimeout])
-        s.group[d.ke].mon[d.id][nameOftTimeout] = setTimeout(function(){
-            clearTimeout(s.group[d.ke].mon[d.id][nameOftTimeout])
-            delete(s.group[d.ke].mon[d.id][nameOftTimeout])
-            if(callback)callback()
-        },theTimeout)
-    }
 }
