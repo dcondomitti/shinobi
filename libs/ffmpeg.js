@@ -780,6 +780,7 @@ module.exports = function(s,config,onFinish){
         }
         //Traditional Recording Buffer
         if(e.details.detector=='1'&&e.details.detector_trigger=='1'&&e.details.detector_record_method==='sip'){
+            if(e.details.cust_sip_record && e.details.cust_sip_record !== ''){x.pipe += ' ' + e.details.cust_sip_record}
             if(e.details.input_map_choices&&e.details.input_map_choices.detector_sip_buffer){
                 //add input feed map
                 x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector_sip_buffer)
@@ -863,6 +864,9 @@ module.exports = function(s,config,onFinish){
             case'mjpeg':
                 x.ffmpegCommandString += ' -reconnect 1 -f mjpeg'+x.cust_input+x.hwaccel+' -i "'+e.url+'"';
             break;
+            // case'rtmp':
+            //     x.ffmpegCommandString += x.cust_input+x.hwaccel+' -i -';
+            // break;
             case'h264':case'hls':case'mp4':
                 x.ffmpegCommandString += x.cust_input+x.hwaccel+' -i "'+e.url+'"';
             break;
