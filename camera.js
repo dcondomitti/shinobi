@@ -27,6 +27,8 @@ loadLib('codeTester')(s,config,lang,io)
 loadLib('basic')(s,config)
 //video processing engine
 loadLib('ffmpeg')(s,config,function(){
+    //ffmpeg coProcessor
+    loadLib('ffmpegCoProcessor')(s,config,lang)
     //database connection : mysql, sqlite3..
     loadLib('sql')(s,config)
     //working directories : videos, streams, fileBin..

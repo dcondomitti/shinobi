@@ -284,6 +284,14 @@
                     <div><input class="form-control" detail="hwaccel_device"></div>
                     </label>
                   </div>
+                  <div class="form-group">
+                      <label><div><span><%-lang['Use coProcessor']%></span></div>
+                              <div><select class="form-control" detail="use_coprocessor">
+                                  <option value="0" selected><%-lang.No%></option>
+                                  <option value="1"><%-lang.Yes%></option>
+                              </select></div>
+                        </label>
+                  </div>
               </div>
           </div>
 <!--     END of Input     -->
@@ -842,7 +850,7 @@
                 <div><input class="form-control" detail="cust_record"></div>
                 </label>
               </div>
-              <div class="h_rec_mtd_input h_rec_mtd_sip">
+              <div class="form-group h_rec_mtd_input h_rec_mtd_sip" style="display:none">
                 <label><div><span><%-lang['Traditional Recording Flags']%></span></div>
                 <div><input class="form-control" detail="cust_sip_record"></div>
                 </label>

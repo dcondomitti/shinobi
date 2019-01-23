@@ -268,6 +268,7 @@ module.exports = function(s,config,lang){
             if(s.group[e.ke].mon[e.id].childNode){
                 s.cx({f:'kill',d:s.cleanMonitorObject(e)},s.group[e.ke].mon[e.id].childNodeId)
             }else{
+                s.coSpawnClose(e)
                 if(!x||x===1){return};
                 p=x.pid;
                 if(s.group[e.ke].mon_conf[e.id].type===('dashcam'||'socket'||'jpeg'||'pipe')){
@@ -826,7 +827,7 @@ module.exports = function(s,config,lang){
             audioDetector.start()
             s.group[e.ke].mon[e.id].spawn.stdio[6].pipe(audioDetector.streamDecoder)
         }
-        if(e.details.detector === '1'){
+        if(e.details.detector === '1' && e.coProcessor === false){
             s.ocvTx({f:'init_monitor',id:e.id,ke:e.ke})
             //frames from motion detect
             if(e.details.detector_pam === '1'){
@@ -915,7 +916,11 @@ module.exports = function(s,config,lang){
            break;
         }
         if(e.frameToStream){
-            s.group[e.ke].mon[e.id].spawn.stdout.on('data',e.frameToStream)
+            if(e.coProcessor === true && e.details.stream_type === ('b64'||'mjpeg')){
+
+            }else{
+                s.group[e.ke].mon[e.id].spawn.stdout.on('data',e.frameToStream)
+            }
         }
         if(e.details.stream_channels && e.details.stream_channels !== ''){
             var createStreamEmitter = function(channel,number){
@@ -964,6 +969,9 @@ module.exports = function(s,config,lang){
                 // case checkLog(d,'No space left on device'):
                 //
                 // break;
+                case checkLog(d,'error while decoding'):
+                    s.userLog(e,{type:lang['Error While Decoding'],msg:lang.ErrorWhileDecodingText});
+                break;
                 case checkLog(d,'[hls @'):
                 case checkLog(d,'Past duration'):
                 case checkLog(d,'Last message repeated'):
@@ -1066,7 +1074,11 @@ module.exports = function(s,config,lang){
                         if(s.group[e.ke].mon[e.id].isStarted === true){
                             fs.stat(e.sdir+'s.jpg',function(err,snap){
                                 var notStreaming = function(){
-                                    s.launchMonitorProcesses(e)
+                                    if(e.coProcessor === true){
+                                        s.coSpawnLauncher(e)
+                                    }else{
+                                        s.launchMonitorProcesses(e)
+                                    }
                                     s.userLog(e,{type:lang['Camera is not streaming'],msg:{msg:lang['Restarting Process']}})
                                     s.orphanedVideoCheck(e,2,null,true)
                                 }
@@ -1150,6 +1162,11 @@ module.exports = function(s,config,lang){
                             e.type === 'local'
                         ){
                             s.cameraFilterFfmpegLog(e)
+                        }
+                        if(e.coProcessor === true){
+                            setTimeout(function(){
+                                s.coSpawnLauncher(e)
+                            },6000)
                         }
                         s.onMonitorStartExtensions.forEach(function(extender){
                             extender(Object.assign(s.group[e.ke].mon_conf[e.id],{}),e)

@@ -382,7 +382,16 @@ module.exports = function(s,config,onFinish){
         //x = temporary values
         //check if CUDA is enabled
         e.isStreamer = (e.type === 'dashcam'|| e.type === 'socket')
-        if(e.details.accelerator === '1' && e.details.hwaccel === 'cuvid' && e.details.hwaccel_vcodec === ('h264_cuvid' || 'hevc_cuvid' || 'mjpeg_cuvid' || 'mpeg4_cuvid')){
+        e.coProcessor = false
+        if(
+            e.details.use_coprocessor === '1' &&
+            e.details.accelerator === '1' &&
+            e.isStreamer === false &&
+            (!e.details.input_maps || e.details.input_maps.length === 0) &&
+            (e.details.snap === '1' || e.details.stream_type === 'mjpeg' || e.details.stream_type === 'b64' || e.details.detector === '1')
+          ){
+            e.coProcessor = true
+        }else if(e.details.accelerator === '1' && e.details.hwaccel === 'cuvid' && e.details.hwaccel_vcodec === ('h264_cuvid' || 'hevc_cuvid' || 'mjpeg_cuvid' || 'mpeg4_cuvid')){
             e.cudaEnabled = true
         }
         //
@@ -563,9 +572,11 @@ module.exports = function(s,config,onFinish){
                 x.pipe+=x.preset_stream+x.stream_acodec+x.stream_vcodec+' -f hls'+x.cust_stream+' -hls_time '+x.hls_time+' -hls_list_size '+x.hls_list_size+' -start_number 0 -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'s.m3u8"';
             break;
             case'mjpeg':
+                if(e.coProcessor === false){
                     if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
                     if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
                     x.pipe+=' -an -c:v mjpeg -f mpjpeg -boundary_tag shinobi'+x.cust_stream+x.stream_video_filters+' pipe:1';
+                }
             break;
             case'h265':
                 x.cust_stream+=' -movflags +frag_keyframe+empty_moov+default_base_moof -metadata title="Shinobi H.265 Stream" -reset_timestamps 1'
@@ -578,9 +589,11 @@ module.exports = function(s,config,onFinish){
                 x.pipe+=' -f hevc'+x.stream_acodec+x.stream_vcodec+x.cust_stream+' pipe:1';
             break;
             case'b64':case'':case undefined:case null://base64
-                if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
-                if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
-                x.pipe+=' -an -c:v mjpeg -f image2pipe'+x.cust_stream+x.stream_video_filters+' pipe:1';
+                if(e.coProcessor === false){
+                    if(e.details.stream_quality && e.details.stream_quality !== '')x.cust_stream+=' -q:v '+e.details.stream_quality;
+                    if(x.dimensions && x.cust_stream.indexOf('-s ')===-1){x.cust_stream+=' -s '+x.dimensions}
+                    x.pipe+=' -an -c:v mjpeg -f image2pipe'+x.cust_stream+x.stream_video_filters+' pipe:1';
+                }
             break;
             default:
                 x.pipe=''
@@ -588,11 +601,12 @@ module.exports = function(s,config,onFinish){
         }
         if(e.details.stream_channels){
             e.details.stream_channels.forEach(function(v,n){
+                // if(v.stream_type === 'mjpeg')e.coProcessor = true;
                 x.pipe += s.createStreamChannel(e,n+config.pipeAddition,v)
             })
         }
         //api - snapshot bin/ cgi.bin (JPEG Mode)
-        if(e.details.snap === '1'){
+        if(e.details.snap === '1' && e.coProcessor === false){
             if(e.details.input_map_choices&&e.details.input_map_choices.snap){
                 //add input feed map
                 x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.snap)
@@ -751,7 +765,7 @@ module.exports = function(s,config,onFinish){
         //x = temporary values
         x.cust_detect = ' '
         //detector - plugins, motion
-        if(e.details.detector === '1' && e.details.detector_send_frames === '1'){
+        if(e.details.detector === '1' && e.details.detector_send_frames === '1' && e.coProcessor === false){
             if(e.details.input_map_choices&&e.details.input_map_choices.detector){
                 //add input feed map
                 x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
@@ -848,6 +862,12 @@ module.exports = function(s,config,onFinish){
             x.pipe+=x.detector_buffer_fps+x.detector_buffer_acodec+' -c:v '+e.details.detector_buffer_vcodec+' -f hls -tune '+e.details.detector_buffer_tune+' -g '+e.details.detector_buffer_g+' -hls_time '+e.details.detector_buffer_hls_time+' -hls_list_size '+e.details.detector_buffer_hls_list_size+' -start_number '+e.details.detector_buffer_start_number+' -live_start_index '+e.details.detector_buffer_live_start_index+' -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'detectorStream.m3u8"'
         }
     }
+    ffmpeg.buildCoProcessorFeed = function(e,x){
+        if(e.coProcessor === true){
+            // the coProcessor ffmpeg consumes this HLS stream (no audio, frames only)
+            x.pipe += ' -q:v 1 -an -c:v copy -f hls -tune zerolatency -g 1 -hls_time 2 -hls_list_size 3 -start_number 0 -live_start_index 3 -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'coProcessor.m3u8"'
+        }
+    }
     ffmpeg.assembleMainPieces = function(e,x){
         //create executeable FFMPEG command
         x.ffmpegCommandString = x.loglevel+x.input_fps;
@@ -903,6 +923,7 @@ module.exports = function(s,config,onFinish){
         ffmpeg.buildMainRecording(e,x)
         ffmpeg.buildAudioDetector(e,x)
         ffmpeg.buildMainDetector(e,x)
+        ffmpeg.buildCoProcessorFeed(e,x)
         s.onFfmpegCameraStringCreationExtensions.forEach(function(extender){
             extender(e,x)
         })
