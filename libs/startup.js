@@ -168,6 +168,9 @@ module.exports = function(s,config,lang,io,){
             })
         })
     },10000)
+    //hourly check to see if sizePurge has failed to unlock
+    //checks to see if request count is the number of monitors + 10
+    s.checkForStalePurgeLocks()
     //run prerequsite queries, load users and monitors
     if(config.childNodes.mode !== 'child'){
         //sql/database connection with knex

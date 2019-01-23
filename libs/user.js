@@ -15,7 +15,7 @@ module.exports = function(s,config){
                         if(s.group[e.ke].sizePurgeQueue.length > 0){
                             checkQueue()
                         }else{
-                            s.group[e.ke].sizePurging=false
+                            s.group[e.ke].sizePurging = false
                             s.sendDiskUsedAmountToClients(e)
                         }
                     }
@@ -321,5 +321,21 @@ module.exports = function(s,config){
             }
             callback(notFound,preset)
         })
+    }
+    s.checkForStalePurgeLocks = function(){
+        clearTimeout(s.checkForStalePurgeLocksInterval)
+        s.checkForStalePurgeLocksInterval = setInterval(function(){
+            Object.keys(s.group).forEach(function(groupKey){
+                var userGroup = s.group[groupKey]
+                var monitorCount = Object.keys(userGroup.mon).length
+                var purgeRequestCount = userGroup.sizePurgeQueue.length
+                var isLocked = (userGroup.sizePurging === true)
+                if(isLocked && purgeRequestCount > monitorCount + 10){
+                    s.group[groupKey].sizePurgeQueue = []
+                    s.group[groupKey].sizePurging = false
+                    s.systemLog(lang.sizePugeLockedText + ' : ' + groupKey)
+                }
+            })
+        },1000 * 60 * 60)
     }
 }

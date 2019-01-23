@@ -622,4 +622,16 @@ module.exports = function(s,config,lang,app){
             }
         },res,req)
     })
+    /**
+    * API : Superuser : Force Check for Stale Purge Locks
+    */
+    app.all(config.webPaths.superApiPrefix+':auth/system/checkForStalePurgeLocks', function (req,res){
+        s.superAuth(req.params,function(resp){
+            var endData = {
+                ok : true
+            }
+            s.checkForStalePurgeLocks()
+            res.end(s.prettyPrint(endData))
+        },res,req)
+    })
 }
