@@ -27,6 +27,9 @@
 <link rel="stylesheet" href="<%-window.libURL%>libs/css/main.dash2.css">
 -->
 <link rel="stylesheet" href="<%-window.libURL%>libs/css/main.dash2.old.css">
+<% customAutoLoad.LibsCss.forEach(function(lib){ %>
+    <link rel="stylesheet" href="<%-window.libURL%>libs/css/<%-lib%>">
+<% }) %>
 <style id="theme">
 <% if(details.theme&&details.theme!==''){ %><%- include(__dirname+'/web/libs/themes/'+details.theme+'/style.css'); %><% } %>
 </style>
@@ -184,6 +187,9 @@
 <% include blocks/monitorStates.ejs %>
 <% include blocks/schedules.ejs %>
 <% include blocks/confirm.ejs %>
+<% customAutoLoad.PageBlocks.forEach(function(block){ %>
+    <%- include(block) %>
+<% }) %>
 <% if(config.DropboxAppKey){ %>
 <!--Dropbox Library, Change data-app-key to your app key. -->
 <script type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="<%= config.DropboxAppKey %>"></script>
@@ -222,4 +228,7 @@
 <script src="<%-window.libURL%>libs/js/dash2.elements.js"></script>
 <script src="<%-window.libURL%>libs/js/dash2.elementbuilder.js"></script>
 <script src="<%-window.libURL%>libs/js/dash2.init.js"></script>
+<% customAutoLoad.LibsJs.forEach(function(lib){ %>
+    <script src="<%-window.libURL%>libs/js/<%-lib%>"></script>
+<% }) %>
 <% include blocks/help.ejs %>
