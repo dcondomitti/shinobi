@@ -423,7 +423,7 @@
    "Preset": "Preset",
    "Presets": "Presets",
    "possibleInternalError": "Possible Internal Error",
-   "sizePugeLockedText": "The Size Purge Lock (deleteOverMax) appears to have failed to unlock. Unlocking now...",
+   "sizePurgeLockedText": "The Size Purge Lock (deleteOverMax) appears to have failed to unlock. Unlocking now...",
    "Use coProcessor": "Use coProcessor",
    "Audio Codec": "Audio Codec",
    "Video Record Rate": "Video Record Rate <small>(FPS)</small>",

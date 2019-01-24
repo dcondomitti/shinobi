@@ -334,7 +334,7 @@ module.exports = function(s,config){
                     if(isLocked && purgeRequestCount > monitorCount + 10){
                         s.group[groupKey].sizePurgeQueue = []
                         s.group[groupKey].sizePurging = false
-                        s.systemLog(lang.sizePugeLockedText + ' : ' + groupKey)
+                        s.systemLog(lang.sizePurgeLockedText + ' : ' + groupKey)
                     }
                 })
             }
