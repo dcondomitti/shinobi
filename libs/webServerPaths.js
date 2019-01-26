@@ -8,6 +8,7 @@ var execSync = require('child_process').execSync;
 var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var httpProxy = require('http-proxy');
+var onvif = require('node-onvif');
 var proxy = httpProxy.createProxyServer({})
 var ejs = require('ejs');
 var CircularJSON = require('circular-json');
