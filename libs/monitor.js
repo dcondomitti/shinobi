@@ -1061,7 +1061,7 @@ module.exports = function(s,config,lang){
                 e.detector_notrigger_timeout = parseFloat(e.details.detector_notrigger_timeout)*1000*60;
                 s.group[e.ke].mon[e.id].detector_notrigger_timeout_function = function(){
                     s.onDetectorNoTriggerTimeoutExtensions.forEach(function(extender){
-                        extender(r,e)
+                        extender(e)
                     })
                 }
                 clearInterval(s.group[e.ke].mon[e.id].detector_notrigger_timeout)
