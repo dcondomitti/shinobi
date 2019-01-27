@@ -83,6 +83,9 @@
         </div>
     </div>
 </div>
+<script>
+    var adminApiPrefix = "<%=originalURL%><%=config.webPaths.adminApiPrefix%>"
+</script>
 <% include blocks/confirm.ejs %>
 <% include blocks/subpermissions.ejs %>
 <% customAutoLoad.adminPageBlocks.forEach(function(block){ %>

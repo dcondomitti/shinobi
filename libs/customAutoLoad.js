@@ -44,7 +44,14 @@ module.exports = function(s,config,lang,app,io){
                                                     switch(name){
                                                         case'libs':
                                                         case'pages':
-                                                            if(name === 'libs')app.use("/libs", express.static(webFolder + "/libs"))
+                                                            if(name === 'libs'){
+                                                                if(config.webPaths.home !== '/'){
+                                                                    app.use('/libs',express.static(webFolder + '/libs'))
+                                                                }
+                                                                app.use(s.checkCorrectPathEnding(config.webPaths.home)+'libs',express.static(webFolder + '/libs'))
+                                                                app.use(s.checkCorrectPathEnding(config.webPaths.admin)+'libs',express.static(webFolder + '/libs'))
+                                                                app.use(s.checkCorrectPathEnding(config.webPaths.super)+'libs',express.static(webFolder + '/libs'))
+                                                            }
                                                             var libFolder = webFolder + name + '/'
                                                             fs.readdir(libFolder,function(err,webFolderContents){
                                                                 webFolderContents.forEach(function(libName){
@@ -88,6 +95,24 @@ module.exports = function(s,config,lang,app,io){
                                                                 })
                                                             })
                                                         break;
+                                                    }
+                                                })
+                                            })
+                                        break;
+                                        case'languages':
+                                            var languagesFolder = s.checkCorrectPathEnding(customModulePath) + 'languages/'
+                                            fs.readdir(languagesFolder,function(err,files){
+                                                if(err)return console.log(err);
+                                                files.forEach(function(filename){
+                                                    var fileData = require(languagesFolder + filename)
+                                                    var rule = filename.replace('.json','')
+                                                    if(config.language === rule){
+                                                        lang = Object.assign(lang,fileData)
+                                                    }
+                                                    if(s.loadedLanguages[rule]){
+                                                        s.loadedLanguages[rule] = Object.assign(s.loadedLanguages[rule],fileData)
+                                                    }else{
+                                                        s.loadedLanguages[rule] = Object.assign(s.copySystemDefaultLanguage(),fileData)
                                                     }
                                                 })
                                             })
