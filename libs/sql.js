@@ -10,6 +10,12 @@ module.exports = function(s,config){
     if(s.databaseOptions.client.indexOf('sqlite')>-1){
         s.databaseOptions.client = 'sqlite3';
         s.databaseOptions.useNullAsDefault = true;
+        try{
+            require('sqlite3')
+        }catch(err){
+            console.log('Installing SQlite3 Module...')
+            require('child_process').execSync('npm install sqlite3 --unsafe-perm')
+        }
     }
     if(s.databaseOptions.client === 'sqlite3' && s.databaseOptions.connection.filename === undefined){
         s.databaseOptions.connection.filename = s.mainDirectory+"/shinobi.sqlite"
@@ -98,6 +104,10 @@ module.exports = function(s,config){
                     if(err)console.error(err)
                 },true)
             }
+        },true)
+        //add Schedules table, will remove in future
+        s.sqlQuery("CREATE TABLE IF NOT EXISTS `Schedules` (`ke` varchar(50) DEFAULT NULL,`name` text,`details` text,`start` varchar(10) DEFAULT NULL,`end` varchar(10) DEFAULT NULL,`enabled` int(1) NOT NULL DEFAULT '1')" + mySQLtail + ';',[],function(err){
+            if(err)console.error(err)
         },true)
         //add Cloud Videos table, will remove in future
         s.sqlQuery('CREATE TABLE IF NOT EXISTS `Cloud Videos` (`mid` varchar(50) NOT NULL,`ke` varchar(50) DEFAULT NULL,`href` text NOT NULL,`size` float DEFAULT NULL,`time` timestamp NULL DEFAULT NULL,`end` timestamp NULL DEFAULT NULL,`status` int(1) DEFAULT \'0\',`details` text)' + mySQLtail + ';',[],function(err){

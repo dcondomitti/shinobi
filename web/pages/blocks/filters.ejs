@@ -28,8 +28,8 @@
           <div class="form-group-group blue where">
               <h4><%- lang['Find Where'] %>
                 <div class="pull-right">
-                    <a class="btn btn-default btn-xs add">&nbsp;<i class="fa fa-plus"></i>&nbsp;</a> 
-                    <a class="btn btn-danger btn-xs remove">&nbsp;<i class="fa fa-minus"></i>&nbsp;</a>  
+                    <a class="btn btn-default btn-xs add">&nbsp;<i class="fa fa-plus"></i>&nbsp;</a>
+                    <a class="btn btn-danger btn-xs remove">&nbsp;<i class="fa fa-minus"></i>&nbsp;</a>
                 </div>
               </h4>
               <div id="filters_where">
@@ -39,20 +39,20 @@
                     <div class="form-group col-md-4">
                         <label>
                             <div><select class="form-control" name="sort_by">
-                                <option value="time" selected><%- lang['Start Time'] %></option>  
-                                <option value="end"><%- lang['End Time'] %></option>  
+                                <option value="time" selected><%- lang['Start Time'] %></option>
+                                <option value="end"><%- lang['End Time'] %></option>
                                 <option value="mid"><%- lang['Monitor ID'] %></option>
-                                <option value="ext"><%- lang['File Type'] %></option>  
-                                <option value="size"><%- lang['Filesize'] %></option>  
-                                <option value="status"><%- lang['Video Status'] %></option>  
+                                <option value="ext"><%- lang['File Type'] %></option>
+                                <option value="size"><%- lang['Filesize'] %></option>
+                                <option value="status"><%- lang['Video Status'] %></option>
                                 </select></div>
                         </label>
                     </div>
                     <div class="form-group col-md-4">
                         <label>
                             <div><select class="form-control" name="sort_by_direction">
-                                <option value="ASC" selected><%- lang['ASC'] %></option>  
-                                <option value="DESC"><%- lang['DESC'] %></option>  
+                                <option value="ASC" selected><%- lang['ASC'] %></option>
+                                <option value="DESC"><%- lang['DESC'] %></option>
                                 </select></div>
                         </label>
                     </div>
@@ -68,8 +68,8 @@
                 <div class="form-group">
                     <label><div><span><%- lang['Enabled'] %></span></div>
                             <div><select class="form-control" name="enabled">
-                                <option value="0" selected><%- lang['No'] %></option>  
-                                <option value="1"><%- lang['Yes'] %></option>  
+                                <option value="0" selected><%- lang['No'] %></option>
+                                <option value="1"><%- lang['Yes'] %></option>
                                 </select></div>
                     </label>
                 </div>
@@ -77,24 +77,24 @@
                     <div class="form-group col-md-12 hidden">
                         <label><div><span><%- lang['Archive'] %></span></div>
                             <div><select class="form-control" name="archive">
-                                <option value="0" selected><%- lang['No'] %></option>  
-                                <option value="1"><%- lang['Yes'] %></option>  
+                                <option value="0" selected><%- lang['No'] %></option>
+                                <option value="1"><%- lang['Yes'] %></option>
                                 </select></div>
                         </label>
                     </div>
                     <div class="form-group col-md-12">
                         <label><div><span><%- lang['Email Details'] %></span></div>
                             <div><select class="form-control" name="email">
-                                <option value="0" selected><%- lang['No'] %></option>  
-                                <option value="1"><%- lang['Yes'] %></option>  
+                                <option value="0" selected><%- lang['No'] %></option>
+                                <option value="1"><%- lang['Yes'] %></option>
                                 </select></div>
                         </label>
                     </div>
                     <div class="form-group col-md-12">
                         <label><div><span><%- lang['Delete Matches'] %></span></div>
                             <div><select class="form-control" name="delete">
-                                <option value="0" selected><%- lang['No'] %></option>  
-                                <option value="1"><%- lang['Yes'] %></option>  
+                                <option value="0" selected><%- lang['No'] %></option>
+                                <option value="1"><%- lang['Yes'] %></option>
                                 </select></div>
                         </label>
                     </div>
@@ -116,3 +116,4 @@
     </form>
   </div>
 </div>
+<script src="<%-window.libURL%>libs/js/dash2.cronfilter.js"></script>

@@ -27,6 +27,9 @@
         .list-group li .form-group {margin:0}
         a {cursor:pointer}
     </style>
+    <% customAutoLoad.superLibsCss.forEach(function(lib){ %>
+        <link rel="stylesheet" href="<%-window.libURL%>libs/css/<%-lib%>">
+    <% }) %>
 </head>
 
 <body class="index-page sidebar-collapse bg-hexagon">
@@ -62,7 +65,7 @@
                 <div class="row">
                     <div class="col-md-12">
                         <div id="main-card" class="card">
-                            <ul class="nav nav-tabs nav-tabs-neutral justify-content-center bg-primary" role="tablist">
+                            <ul class="nav nav-tabs nav-tabs-neutral justify-content-center bg-primary" id="tablist" role="tablist">
                                 <li class="nav-item">
                                     <a class="nav-link active" data-toggle="tab" href="#accounts" role="tab">Accounts</a>
                                 </li>
@@ -169,8 +172,15 @@
             </div>
         </div>
     </div>
+    <div id="temp" style="display:none"></div>
 </body>
+<script>
+    var superApiPrefix = "<%=originalURL%><%=config.webPaths.superApiPrefix%>"
+</script>
 <% include blocks/confirm.ejs %>
+<% customAutoLoad.superPageBlocks.forEach(function(block){ %>
+    <%- include(block) %>
+<% }) %>
 <script src="<%-window.libURL%>libs/js/pnotify.custom.min.js" type="text/javascript"></script>
 <script><% include ../libs/js/moment.js %></script>
 <script src="<%-window.libURL%>libs/js/livestamp.min.js" type="text/javascript"></script>
@@ -178,6 +188,7 @@
 <script src="<%-window.libURL%>libs/js/placeholder.js" type="text/javascript"></script>
 <script src="<%-window.libURL%>libs/js/now-ui-kit.js?v=1.1.0" type="text/javascript"></script>
 <script type="text/javascript">
+    var lang = <%- JSON.stringify(lang) || {} %>;
     PNotify.prototype.options.styling = "fontawesome";
     $(document).ready(function() {
         // the body of this function is in assets/js/now-ui-kit.js
@@ -530,4 +541,7 @@ $('body')
 })
 </script>
 <% include blocks/mainpermissions.ejs %>
+<% customAutoLoad.superLibsJs.forEach(function(lib){ %>
+    <script src="<%-window.libURL%>libs/js/<%-lib%>"></script>
+<% }) %>
 </html>

@@ -12,7 +12,7 @@ module.exports = function(s,config){
         if(s.isWin===true){
             cmd = "Taskkill /IM ffmpeg.exe /F"
         }else{
-            cmd = "ps aux | grep -ie ffmpeg | awk '{print $2}' | xargs kill -9"
+            cmd = "pkill -9 ffmpeg"
         }
         exec(cmd,{detached: true})
     };
@@ -33,7 +33,7 @@ module.exports = function(s,config){
     s.parseJSON = function(string){
         var parsed
         try{
-            string = JSON.parse(string)
+            parsed = JSON.parse(string)
         }catch(err){
 
         }
@@ -225,5 +225,20 @@ module.exports = function(s,config){
                 exec('find '+e.path+' -type f -c'+e.age_type+' +'+e.age+' -exec rm -f {} +',{detached: true});
             break;
         }
+    }
+    s.createTimeout = function(timeoutVar,timeoutLength,defaultLength,multiplier,callback){
+        var theTimeout
+        if(!multiplier)multiplier = 1000 * 60
+        if(!timeoutLength || timeoutLength === ''){
+            theTimeout = defaultLength
+        }else{
+            theTimeout = parseFloat(timeoutLength) * multiplier
+        }
+        clearTimeout(timeoutVar)
+        timeoutVar = setTimeout(function(){
+            clearTimeout(timeoutVar)
+            delete(timeoutVar)
+            if(callback)callback()
+        },theTimeout)
     }
 }

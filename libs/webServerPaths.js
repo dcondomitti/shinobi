@@ -8,6 +8,7 @@ var execSync = require('child_process').execSync;
 var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var httpProxy = require('http-proxy');
+var onvif = require('node-onvif');
 var proxy = httpProxy.createProxyServer({})
 var ejs = require('ejs');
 var CircularJSON = require('circular-json');
@@ -286,7 +287,8 @@ module.exports = function(s,config,lang,app,io){
                             // config: config,
                             $user: req.resp,
                             lang: r.lang,
-                            define: s.getDefinitonFile(r.details.lang)
+                            define: s.getDefinitonFile(r.details.lang),
+                            customAutoLoad: s.customAutoLoadTree
                         })
                     })
                 break;
@@ -297,7 +299,8 @@ module.exports = function(s,config,lang,app,io){
                             // config: config,
                             $user: req.resp,
                             lang: r.lang,
-                            define: s.getDefinitonFile(r.details.lang)
+                            define: s.getDefinitonFile(r.details.lang),
+                            customAutoLoad: s.customAutoLoadTree
                         })
                     })
                 break;
@@ -311,17 +314,36 @@ module.exports = function(s,config,lang,app,io){
                                     $subs: rr,
                                     $mons: rrr,
                                     lang: r.lang,
-                                    define: s.getDefinitonFile(r.details.lang)
+                                    define: s.getDefinitonFile(r.details.lang),
+                                    customAutoLoad: s.customAutoLoadTree
                                 })
                             })
                         })
                     }else{
                         //not admin user
-                        renderPage(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.mainDirectory});
+                        renderPage(config.renderPaths.home,{
+                            $user:req.resp,
+                            config:config,
+                            lang:r.lang,
+                            define:s.getDefinitonFile(r.details.lang),
+                            addStorage:s.dir.addStorage,
+                            fs:fs,
+                            __dirname:s.mainDirectory,
+                            customAutoLoad: s.customAutoLoadTree
+                        });
                     }
                 break;
                 default:
-                    renderPage(config.renderPaths.home,{$user:req.resp,config:config,lang:r.lang,define:s.getDefinitonFile(r.details.lang),addStorage:s.dir.addStorage,fs:fs,__dirname:s.mainDirectory});
+                    renderPage(config.renderPaths.home,{
+                        $user:req.resp,
+                        config:config,
+                        lang:r.lang,
+                        define:s.getDefinitonFile(r.details.lang),
+                        addStorage:s.dir.addStorage,
+                        fs:fs,
+                        __dirname:s.mainDirectory,
+                        customAutoLoad: s.customAutoLoadTree
+                    });
                 break;
             }
             s.userLog({ke:r.ke,mid:'$USER'},{type:r.lang['New Authentication Token'],msg:{for:req.body.function,mail:r.mail,id:r.uid,ip:req.ip}})
@@ -511,6 +533,7 @@ module.exports = function(s,config,lang,app,io){
                                 r=[]
                             }
                             data.Logs = r
+                            data.customAutoLoad = s.customAutoLoadTree
                             fs.readFile(s.location.config,'utf8',function(err,file){
                                 data.plainConfig = JSON.parse(file)
                                 renderPage(config.renderPaths.super,data)
@@ -1375,7 +1398,7 @@ module.exports = function(s,config,lang,app,io){
                     values.push(time)
                 })
                 s.sqlQuery('SELECT * FROM Videos WHERE '+where.join(' OR '),values,function(err,r){
-                    var resp = {ok:false}
+                    var resp = {ok: false}
                     if(r && r[0]){
                         resp.ok = true
                         var zipDownload = null
@@ -1396,7 +1419,7 @@ module.exports = function(s,config,lang,app,io){
                             fs.mkdirSync(fileBinDir);
                         }
                         r.forEach(function(video){
-                            timeFormatted = s.formattedTime(video.time)
+                            var timeFormatted = s.formattedTime(video.time)
                             video.filename = timeFormatted+'.'+video.ext
                             var dir = s.getVideoDirectory(video)+video.filename
                             var tempVideoFile = timeFormatted+' - '+video.mid+'.'+video.ext
@@ -1418,16 +1441,27 @@ module.exports = function(s,config,lang,app,io){
                             var zipDownload = fs.createReadStream(zippedFile)
                             zipDownload.pipe(res)
                             zipDownload.on('error', function (error) {
-                                s.userLog({ke:req.params.ke,mid:'$USER'},{title:'Zip Download Error',msg:error.toString()})
+                                var errorString = error.toString()
+                                s.userLog({
+                                    ke: req.params.ke,
+                                    mid: '$USER'
+                                },{
+                                    title: 'Zip Download Error',
+                                    msg: errorString
+                                })
                                 if(zipDownload && zipDownload.destroy){
                                     zipDownload.destroy()
                                 }
-                            });
+                                res.end(s.prettyPrint({
+                                    ok: false,
+                                    msg: errorString
+                                }))
+                            })
                             zipDownload.on('close', function () {
                                 res.end()
-                                zipDownload.destroy();
-                                fs.unlinkSync(zippedFile);
-                            });
+                                zipDownload.destroy()
+                                fs.unlinkSync(zippedFile)
+                            })
                         })
                     }else{
                         failed({ok:false,msg:'No Videos Found'})
@@ -1437,7 +1471,121 @@ module.exports = function(s,config,lang,app,io){
         }else{
             failed({ok:false,msg:'"videos" query variable is missing from request.'})
         }
-    });
+    })
+    /**
+    * API : Zip Cloud Videos and Get Link from fileBin
+     */
+    app.get(config.webPaths.apiPrefix+':auth/zipCloudVideos/:ke', function (req,res){
+        res.header("Access-Control-Allow-Origin",req.headers.origin);
+        var failed = function(resp){
+            res.setHeader('Content-Type', 'application/json');
+            res.end(s.prettyPrint(resp))
+        }
+        if(req.query.videos && req.query.videos !== ''){
+            s.auth(req.params,function(user){
+                var videosSelected = JSON.parse(req.query.videos)
+                var where = []
+                var values = []
+                videosSelected.forEach(function(video){
+                    where.push("(ke=? AND mid=? AND `time`=?)")
+                    if(!video.ke)video.ke = req.params.ke
+                    values.push(video.ke)
+                    values.push(video.mid)
+                    var time = s.nameToTime(video.filename)
+                    if(req.query.isUTC === 'true'){
+                        time = s.utcToLocal(time)
+                    }
+                    time = new Date(time)
+                    values.push(time)
+                })
+                s.sqlQuery('SELECT * FROM `Cloud Videos` WHERE '+where.join(' OR '),values,function(err,r){
+                    var resp = {ok: false}
+                    if(r && r[0]){
+                        resp.ok = true
+                        var zipDownload = null
+                        var tempFiles = []
+                        var fileId = s.gid()
+                        var fileBinDir = s.dir.fileBin+req.params.ke+'/'
+                        var tempScript = s.dir.streams+req.params.ke+'/'+fileId+'.sh'
+                        var zippedFilename = s.formattedTime()+'-'+fileId+'-Shinobi_Cloud_Backed_Recordings.zip'
+                        var zippedFile = fileBinDir+zippedFilename
+                        var script = 'cd '+fileBinDir+' && zip -9 -r '+zippedFile
+                        res.on('close', () => {
+                            if(zipDownload && zipDownload.destroy){
+                                zipDownload.destroy()
+                            }
+                            fs.unlink(zippedFile);
+                        })
+                        if(!fs.existsSync(fileBinDir)){
+                            fs.mkdirSync(fileBinDir);
+                        }
+                        var cloudDownloadCount = 0
+                        var getFile = function(video,completed){
+                            if(!video)completed();
+                            s.checkDetails(video)
+                            var filename = video.href.split('/')
+                            filename = filename[filename.length - 1]
+                            var timeFormatted = s.formattedTime(video.time)
+                            var tempVideoFile = video.details.type + '-' + video.mid + '-' + filename
+                            var tempFileWriteStream = fs.createWriteStream(fileBinDir+tempVideoFile)
+                            tempFileWriteStream.on('finish', function() {
+                                ++cloudDownloadCount
+                                getFile(r[cloudDownloadCount],completed)
+                            })
+                            var cloudVideoDownload = request(video.href)
+                            cloudVideoDownload.on('response',  function (res) {
+                                res.pipe(tempFileWriteStream)
+                            })
+                            tempFiles.push(fileBinDir+tempVideoFile)
+                            script += ' "'+tempVideoFile+'"'
+                        }
+                        getFile(r[cloudDownloadCount],function(){
+                            fs.writeFileSync(tempScript,script,'utf8')
+                            var zipCreate = spawn('sh',(tempScript).split(' '),{detached: true})
+                            zipCreate.stderr.on('data',function(data){
+                                s.userLog({ke:req.params.ke,mid:'$USER'},{title:'Zip Create Error',msg:data.toString()})
+                            })
+                            zipCreate.on('exit',function(data){
+                                fs.unlinkSync(tempScript)
+                                tempFiles.forEach(function(file){
+                                    fs.unlink(file,function(){})
+                                })
+                                res.setHeader('Content-Disposition', 'attachment; filename="' + zippedFilename + '"')
+                                var zipDownload = fs.createReadStream(zippedFile)
+                                zipDownload.pipe(res)
+                                zipDownload.on('error', function (error) {
+                                    var errorString = error.toString()
+                                    s.userLog({
+                                        ke: req.params.ke,
+                                        mid: '$USER'
+                                    },{
+                                        title: 'Zip Download Error',
+                                        msg: errorString
+                                    })
+                                    if(zipDownload && zipDownload.destroy){
+                                        zipDownload.destroy()
+                                    }
+                                    res.end(s.prettyPrint({
+                                        ok: false,
+                                        msg: errorString
+                                    }))
+                                })
+                                zipDownload.on('close', function () {
+                                    res.end()
+                                    zipDownload.destroy()
+                                    fs.unlinkSync(zippedFile)
+                                })
+                            })
+                        })
+                    }else{
+                        failed({ok:false,msg:'No Videos Found'})
+                    }
+                })
+            },res,req);
+        }else{
+            failed({ok:false,msg:'"videos" query variable is missing from request.'})
+        }
+    })
     /**
     * API : Get Cloud Video File (proxy)
      */
@@ -1524,27 +1672,34 @@ module.exports = function(s,config,lang,app,io){
     /**
     * API : Motion Trigger via GET request
      */
-    app.get(config.webPaths.apiPrefix+':auth/motion/:ke/:id', function (req,res){
-        s.auth(req.params,function(user){
-            if(req.query.data){
-                try{
-                    var d={id:req.params.id,ke:req.params.ke,details:JSON.parse(req.query.data)};
-                }catch(err){
-                    res.end('Data Broken',err);
-                    return;
-                }
-            }else{
-                res.end('No Data');
-                return;
-            }
-            if(!d.ke||!d.id||!s.group[d.ke]){
-                res.end(user.lang['No Group with this key exists']);
-                return;
-            }
-            s.triggerEvent(d)
-            res.end(user.lang['Trigger Successful'])
-        },res,req);
-    })
+     app.get(config.webPaths.apiPrefix+':auth/motion/:ke/:id', function (req,res){
+         s.auth(req.params,function(user){
+             var endData = {
+
+             }
+             if(req.query.data){
+                 try{
+                     var d = {
+                         id: req.params.id,
+                         ke: req.params.ke,
+                         details: JSON.parse(req.query.data)
+                     }
+                 }catch(err){
+                     res.end('Data Broken',err)
+                     return
+                 }
+             }else{
+                 res.end('No Data')
+                 return
+             }
+             if(!d.ke||!d.id||!s.group[d.ke]){
+                 res.end(user.lang['No Group with this key exists'])
+                 return
+             }
+             s.triggerEvent(d)
+             res.end(user.lang['Trigger Successful'])
+         },res,req)
+     })
     /**
     * API : WebHook Tester
      */

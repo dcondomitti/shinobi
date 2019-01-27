@@ -1,3 +1,4 @@
+var fs = require("fs")
 var Discord = require("discord.js")
 module.exports = function(s,config,lang){
     //discord bot

@@ -419,19 +419,7 @@ module.exports = function(s,config,lang,app){
                 s.closeJsonResponse(res,endData)
                 return
             }
-            var findPreset = function(callback){
-                s.sqlQuery("SELECT * FROM Presets WHERE ke=? AND type=? AND name=? LIMIT 1",[req.params.ke,'monitorStates',req.params.stateName],function(err,presets){
-                    var preset
-                    var notFound = false
-                    if(presets && presets[0]){
-                        preset = presets[0]
-                        s.checkDetails(preset)
-                    }else{
-                        notFound = true
-                    }
-                    callback(notFound,preset)
-                })
-            }
+            var presetQueryVals = [req.params.ke,'monitorStates',req.params.stateName]
             switch(req.params.action){
                 case'insert':case'edit':
                     var form = s.getPostData(req)
@@ -441,7 +429,7 @@ module.exports = function(s,config,lang,app){
                         s.closeJsonResponse(res,endData)
                         return
                     }
-                    findPreset(function(notFound,preset){
+                    s.findPreset(presetQueryVals,function(notFound,preset){
                         if(notFound === true){
                             endData.msg = lang["Inserted State Configuration"]
                             var details = {
@@ -478,7 +466,7 @@ module.exports = function(s,config,lang,app){
                     })
                 break;
                 case'delete':
-                    findPreset(function(notFound,preset){
+                    s.findPreset(presetQueryVals,function(notFound,preset){
                         if(notFound === true){
                             endData.msg = user.lang['State Configuration Not Found']
                             s.closeJsonResponse(res,endData)
@@ -494,43 +482,8 @@ module.exports = function(s,config,lang,app){
                     })
                 break;
                 default://change monitors according to state
-                    findPreset(function(notFound,preset){
-                        if(notFound === false){
-                            var sqlQuery = 'SELECT * FROM Monitors WHERE ke=? AND '
-                            var monitorQuery = []
-                            var sqlQueryValues = [req.params.ke]
-                            var monitorPresets = {}
-                            preset.details.monitors.forEach(function(monitor){
-                                monitorQuery.push('mid=?')
-                                sqlQueryValues.push(monitor.mid)
-                                monitorPresets[monitor.mid] = monitor
-                            })
-                            sqlQuery += '('+monitorQuery.join(' OR ')+')'
-                            s.sqlQuery(sqlQuery,sqlQueryValues,function(err,monitors){
-                                if(monitors && monitors[0]){
-                                    monitors.forEach(function(monitor){
-                                        s.checkDetails(monitor)
-                                        s.checkDetails(monitorPresets[monitor.mid])
-                                        var monitorPreset = monitorPresets[monitor.mid]
-                                        monitorPreset.details = Object.assign(monitor.details,monitorPreset.details)
-                                        monitor = s.cleanMonitorObjectForDatabase(Object.assign(monitor,monitorPreset))
-                                        monitor.details = JSON.stringify(monitor.details)
-                                        s.addOrEditMonitor(Object.assign(monitor,{}),function(err,endData){
-
-                                        },user)
-                                    })
-                                    endData.ok = true
-                                    s.tx({f:'change_group_state',ke:req.params.ke,name:req.params.stateName},'GRP_'+req.params.ke)
-                                    s.closeJsonResponse(res,endData)
-                                }else{
-                                    endData.msg = user.lang['State Configuration has no monitors associated']
-                                    s.closeJsonResponse(res,endData)
-                                }
-                            })
-                        }else{
-                            endData.msg = user.lang['State Configuration Not Found']
-                            s.closeJsonResponse(res,endData)
-                        }
+                    s.activateMonitorStates(req.params.ke,req.params.stateName,user,function(endData){
+                        s.closeJsonResponse(res,endData)
                     })
                 break;
             }

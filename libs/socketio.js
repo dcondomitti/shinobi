@@ -1365,7 +1365,7 @@ module.exports = function(s,config,lang,io){
             if(cn.cron){
                 delete(s.cron);
             }
-            if(cn.ocv){
+            if(cn.ocv && s.ocv){
                 s.tx({f:'detector_unplugged',plug:s.ocv.plug},'CPU')
                 delete(s.ocv);
                 delete(s.api[cn.id])

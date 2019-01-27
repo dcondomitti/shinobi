@@ -185,7 +185,7 @@
 <script>
 //add new
 $.aN={e:$('#add_edit')};$.aN.f=$.aN.e.find('form')
-$.aN.modeIsEdit = false
+$.aN.modeIsEdit = function(){return $('#edit').is(':checked')}
 $.aN.f.submit(function(e){
     e.preventDefault();
     var formValues = $.aN.f.serializeObject()
@@ -193,7 +193,7 @@ $.aN.f.submit(function(e){
         data: formValues
     }
     var webPath = 'registerAdmin'
-    if($.aN.modeIsEdit){
+    if($.aN.modeIsEdit()){
         webPath = 'editAdmin'
         postData.account = $.aN.selected
     }
@@ -210,14 +210,23 @@ $.aN.e.on('change','[name="mail"]',function(){
     var thisVal = $(this).val()
     $.each(users,function(n,user){
         if($.aN.selected && user.ke !== $.aN.selected.ke && thisVal.toLowerCase() === user.mail.toLowerCase()){
-            new PNotify({text:"<%=lang['Email address is in use.']%>",type:'error'})
+            new PNotify({text:lang['Email address is in use.'],type:'error'})
+        }
+    })
+})
+//client side group key check
+$.aN.e.on('change','[name="ke"]',function(){
+    var thisVal = $(this).val()
+    $.each(users,function(n,user){
+        if(!$.aN.modeIsEdit() && user.ke === thisVal){
+            new PNotify({text:lang['Group Key is in use.'] + ' ' + lang['Create Sub-Accounts at /admin'],type:'error'})
         }
     })
 })
 $.aN.e.on('change','[detail]',function(){
     e = {}
     e.ar = {}
-    if($.aN.modeIsEdit){
+    if($.aN.modeIsEdit()){
         try{
             e.ar = Object.assign(JSON.parse($.aN.selected.details),{})
         }catch(err){
@@ -232,12 +241,10 @@ $.aN.e.on('change','[detail]',function(){
 })
 $('#edit').change(function(e){
     if($('#edit').is(':checked')){
-        $.aN.modeIsEdit = true
-        $('#title').text("<%-lang['Edit']%>")
+        $('#title').text(lang['Edit'])
         $.aN.e.find('[name="ke"]').prop('disabled',true)
     }else{
-        $.aN.modeIsEdit = false
-        $('#title').text("<%-lang['Add New']%>")
+        $('#title').text(lang['Add New'])
         $.aN.e.find('input,select').prop('disabled',false)
     }
     $.aN.e.find('[detail]').first().change()
@@ -288,6 +295,7 @@ $.aC.e.on('click','.delete',function(e){
     });
 })
 $.aC.e.on('click','.permission',function(e){
+    $('#edit').prop('checked',true).change().parent().addClass('is-checked')
     $.aN.e.modal('show')
     e.e=$(this).parents('tr');
     e.u=e.e.attr('ke');
@@ -303,7 +311,6 @@ $.aC.e.on('click','.permission',function(e){
     $.each(JSON.parse(e.account.details),function(n,v){
         $.aN.e.find('[detail="'+n+'"]').val(v)
     })
-    $('#edit').prop('checked',true).change().parent().addClass('is-checked')
 //    $.pR.e.modal('show');
 
 })

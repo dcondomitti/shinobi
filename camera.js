@@ -26,7 +26,9 @@ loadLib('codeTester')(s,config,lang,io)
 //basic functions
 loadLib('basic')(s,config)
 //video processing engine
-loadLib('ffmpeg')(s,config,function(){
+loadLib('ffmpeg')(s,config,function(ffmpeg){
+    //ffmpeg coProcessor
+    loadLib('ffmpegCoProcessor')(s,config,lang,ffmpeg)
     //database connection : mysql, sqlite3..
     loadLib('sql')(s,config)
     //working directories : videos, streams, fileBin..
@@ -67,6 +69,8 @@ loadLib('ffmpeg')(s,config,function(){
     loadLib('notification')(s,config,lang)
     //custom module loader
     loadLib('customAutoLoad')(s,config,lang,app,io)
+    //scheduling engine
+    loadLib('scheduler')(s,config,lang,app,io)
     //on-start actions, daemon(s) starter
     loadLib('startup')(s,config,lang)
 })

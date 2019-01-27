@@ -1,49 +1,32 @@
-# OpenALPR and Motion Detector
+# OpenALPR
 
 Install required libraries.
 
-**Ubuntu and Debian only**
+**Ubuntu 17.10 and 18.04 only**
 
-```
-sudo apt update && sudo apt install libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev build-essential g++ openalpr openalpr-daemon openalpr-utils libopenalpr-dev -y
-```
+> By default plugins run as a client. `camera.js` is running as the host awaiting a plugin to connect to it. To learn about how to connect a plugin as a Host please review the "Run the plugin as a Host" section at the end of this README.
 
-**Install the Node.js Canvas engine**
+1. Go to the plugin's directory and run the installer for OpenALPR. **/home/Shinobi** is the default directory for where Shinobi is installed.
+    ```
+    cd /home/Shinobi/plugins/openalpr
+    sh INSTALL.sh
+    ```
 
-```
-sudo npm install canvas@1.6
-```
-Go to the Shinobi directory. **Below is an example.**
+2. Then add the plugin key to the **Main Configuration** file, the `conf.json` located in **/home/Shinobi**. You will find the `pluginKeys` object empty on a new install as seen below.
+    ```
+    "pluginKeys":{}
+    ```
+    > Add the key so it looks something like this.
 
-```
-cd /home/Shinobi
-```
+    ```
+    "pluginKeys":{
+        "OpenALPR": "SomeOpenALPRkeySoPeopleDontMessWithYourShinobi"
+    }
+    ```
 
-Copy the config file.
+3. Restart Shinobi to apply the Plugin Key. Shinobi does not need to be restarted when a plugin is initiated or stopped after applying changes to the Main Configuration file.
 
-```
-cp plugins/openalpr/conf.sample.json plugins/openalpr/conf.json
-```
-
-Edit it the new file. Host should be `localhost` and port should match the `listening port for camera.js`.
-
-```
-nano plugins/openalpr/conf.json
-```
-
-Start the plugin.
-
-```
-node plugins/openalpr/shinobi-openalpr.js
-```
-
-Or to daemonize with PM2.
-
-```
-pm2 start plugins/openalpr/shinobi-openalpr.js
-```
-
-Doing this will reveal options in the monitor configuration. Shinobi does not need to be restarted when a plugin is initiated or stopped.
+> You should change `SomeOpenALPRkeySoPeopleDontMessWithYourShinobi` to something else in both the main configuration and plugin configuration. Both files changed need to be matching keys of course.
 
 ## Run the plugin as a Host
 > The main app (Shinobi) will be the client and the plugin will be the host. The purpose of allowing this method is so that you can use one plugin for multiple Shinobi instances. Allowing you to easily manage connections without starting multiple processes.
@@ -51,7 +34,7 @@ Doing this will reveal options in the monitor configuration. Shinobi does not ne
 Edit your plugins configuration file. Set the `hostPort` **to be different** than the `listening port for camera.js`.
 
 ```
-nano plugins/openalpr/conf.json
+nano conf.json
 ```
 
 Here is a sample of a Host configuration for the plugin.
@@ -70,7 +53,7 @@ Here is a sample of a Host configuration for the plugin.
 }
 ```
 
-Now modify the **main configuration file** located in the main directory of Shinobi. *Where you currently should be.*
+Now modify the **Main Configuration** file located in the main directory of Shinobi. *Where you currently should be.*
 
 ```
 nano conf.json

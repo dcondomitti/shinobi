@@ -1,29 +1,67 @@
 #!/bin/bash
-installationDirectory="/home/Shinobi"
-if [ ! "$1" ]; then
+if [ ! -e "/etc/shinobisystems/path.txt" ]; then
+    installationDirectory="/home/Shinobi"
+else
+    installationDirectory=$(cat /etc/shinobisystems/cctv.txt)
+fi
+cd $installationDirectory
+currentBuild=$(git show --oneline -s)
+gitOrigin=$(git remote show origin)
+splitBuildString=($currentBuild)
+currentCommitNumber=${splitBuildString[0]}
+if [[ $gitOrigin == *'ShinobiCE'* ]]; then
+    repo="CE"
+else
+    repo="Pro"
+fi
+if [[ $@ == *'help'* ]] || [ ! "$1" ]; then
     echo "========================================================="
     echo "==!! Shinobi : The Open Source CCTV and NVR Solution !!=="
     echo "========================================================="
-    echo "You are missing function parameters."
-    echo "Example : shinobi [command] .."
-    echo "Example : shinobi flush restart logs"
+    if [ ! "$1" ]; then
+        echo "You are missing function parameters."
+        echo "Example : shinobi [command] .."
+        echo "Example : shinobi flush restart logs"
+    else
+        echo "Hello there! if you need support come on over"
+        echo "to the Shinobi Community Chat! :)"
+        echo "https://discordapp.com/invite/mdhmvuH/"
+    fi
     echo "========================================================="
     echo "Your available options for COMMAND are as follows"
     echo "========================================================="
-    echo "| start or s :"
+    echo "| start :"
     echo "|--> Start camera.js and cron.js under PM2 (Process Manager)"
     echo "-"
-    echo "| restart or r :"
+    echo "| restart :"
     echo "|--> Restart all processes running under the PM2 daemon."
     echo "-"
-    echo "| stop, exit, or e :"
+    echo "| stop, exit :"
     echo "|--> Stop all processes running under the PM2 daemon."
+    echo "-"
+    echo "| version :"
+    echo "|--> get version of your current build by git."
     echo "-"
     echo "| logs :"
     echo "|--> Get PM2 log stream with last 100 lines."
     echo "-"
-    echo "| clear, flush, or f :"
+    echo "| update :"
+    echo "|--> Update via Git."
+    echo "-"
+    echo "| getMaster :"
+    echo "|--> Switch to the Master Branch (For Pro Repo only)."
+    echo "-"
+    echo "| getDev :"
+    echo "|--> Switch to the Development Branch (For Pro Repo only)."
+    echo "-"
+    echo "| clear, flush :"
     echo "|--> Clear all PM2 logs."
+    echo "-"
+    echo "| bootupEnable :"
+    echo "|--> Start Shinobi on OS reboot."
+    echo "-"
+    echo "| bootupDisable :"
+    echo "|--> Disable starting Shinobi on OS reboot."
     echo "-"
     echo "| kill :"
     echo "|--> Stop the entire PM2 daemon."
@@ -34,7 +72,8 @@ fi
 if [[ $@ == *'restart'* ]]; then
     proccessAlive=$(pm2 list | grep camera)
     if [ "$proccessAlive" ]; then
-        pm2 restart all
+        pm2 restart $installationDirectory/camera.js
+        pm2 restart $installationDirectory/cron.js
     else
         echo "Shinobi process is not running."
     fi
@@ -58,9 +97,62 @@ fi
 if [[ $@ == *'stop'* ]] || [[ $@ == *'exit'* ]]; then
     proccessAlive=$(pm2 list | grep camera)
     if [ "$proccessAlive" ]; then
-        pm2 kill
+        pm2 stop $installationDirectory/camera.js
+        pm2 stop $installationDirectory/cron.js
     else
         echo "Shinobi process is not running."
+    fi
+fi
+if [[ $@ == *'version'* ]]; then
+    echo "Build ID : $currentCommitNumber"
+    if [[ $repo == "Pro" ]]; then
+        echo "Repository : Shinobi Pro"
+    else
+        echo "Repository : Shinobi CE"
+    fi
+    echo $currentBuild
+fi
+if [[ $@ == *'bootupEnable'* ]] || [[ $@ == *'bootupenable'* ]]; then
+    pm2 startup
+    pm2 save
+fi
+if [[ $@ == *'bootupDisable'* ]] || [[ $@ == *'bootupdisable'* ]]; then
+    pm2 unstartup
+    pm2 save
+fi
+if [[ $@ == *'getDev'* ]] || [[ $@ == *'getdev'* ]]; then
+    if [[ $repo == "Pro" ]]; then
+        git checkout dev
+        echo "Shinobi - Restart Shinobi to make the changes take affect."
+    else
+        echo "Shinobi - Cannot use \"getDev\" with Shinobi CE"
+    fi
+fi
+if [[ $@ == *'getMaster'* ]] || [[ $@ == *'getmaster'* ]]; then
+    if [[ $repo == "Pro" ]]; then
+        git checkout master
+        echo "Shinobi - Restart Shinobi to make the changes take affect."
+    else
+        echo "Shinobi - Cannot use \"getMaster\" with Shinobi CE"
+    fi
+fi
+if [[ $@ == *'update'* ]]; then
+    echo "============="
+    echo "Shinobi - Are you sure you want to update? This will restart Shinobi."
+    echo "(y)es or (N)o"
+    read updateshinobi
+    if [ "$updateshinobi" = "y" ] || [ "$updateshinobi" = "Y" ]; then
+        echo "Beginning Update Process..."
+        pm2 stop $installationDirectory/camera.js
+        pm2 stop $installationDirectory/cron.js
+        npm install --unsafe-perm
+        npm audit fix --force
+        git reset --hard
+        git pull
+        pm2 start $installationDirectory/camera.js
+        pm2 start $installationDirectory/cron.js
+    else
+        echo "Cancelled Update Process."
     fi
 fi
 if [[ $@ == *'kill'* ]]; then

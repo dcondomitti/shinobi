@@ -1,0 +1,13 @@
+#timelapse_video_line{overflow-y:scroll;overflow-x:hidden;max-height:400px;margin:0;text-align:left}
+#timelapse_video_display .videoBefore,#timelapse_video_display .videoAfter{display:none}
+.timelapse_video:not(:last-child){border-bottom:1px solid #444;}
+.timelapse_video .frame{width:50px;height:50px;background-size:cover;background-position:center;border-radius:5px}
+.timelapse_video>div>div:not(:last-child){padding-right:10px}
+.timelapse_video .flex-block:not(:last-child){padding-bottom:10px}
+.timelapse_video.list-group-item{padding:10px}
+.timelapse_hud{position: relative;background:#000}
+.timelapse_hud .timelapse_playRate{position: absolute;font-family: monospace;top:10px;right:0;left:0;margin:auto;font-size:23px}
+#timelapse .progress-bar{transition:0.5s!important}
+.timelapse_hud .controlBar{position: absolute;background:rgba(22,22,22,0.8);width:100%;left:0;bottom:0;}
+.timelapse_hud .hover-hide{opacity:0}
+.timelapse_hud:hover .hover-hide{opacity:1;z-index:5}

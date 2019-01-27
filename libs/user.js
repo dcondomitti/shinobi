@@ -15,7 +15,7 @@ module.exports = function(s,config){
                         if(s.group[e.ke].sizePurgeQueue.length > 0){
                             checkQueue()
                         }else{
-                            s.group[e.ke].sizePurging=false
+                            s.group[e.ke].sizePurging = false
                             s.sendDiskUsedAmountToClients(e)
                         }
                     }
@@ -260,11 +260,11 @@ module.exports = function(s,config){
                     d.form.details.use_admin=d.d.use_admin
                     d.form.details.use_ldap=d.d.use_ldap
                     //check
-                    if(d.d.edit_days=="0"){
-                        d.form.details.days=d.d.days;
+                    if(d.d.edit_days == "0"){
+                        d.form.details.days = d.d.days;
                     }
-                    if(d.d.edit_size=="0"){
-                        d.form.details.size=d.d.size;
+                    if(d.d.edit_size == "0"){
+                        d.form.details.size = d.d.size;
                     }
                     if(d.d.sub){
                         d.form.details.sub=d.d.sub;
@@ -307,5 +307,44 @@ module.exports = function(s,config){
                 }
             }
         })
+    }
+    s.findPreset = function(presetQueryVals,callback){
+        //presetQueryVals = [ke, type, name]
+        s.sqlQuery("SELECT * FROM Presets WHERE ke=? AND type=? AND name=? LIMIT 1",presetQueryVals,function(err,presets){
+            var preset
+            var notFound = false
+            if(presets && presets[0]){
+                preset = presets[0]
+                s.checkDetails(preset)
+            }else{
+                notFound = true
+            }
+            callback(notFound,preset)
+        })
+    }
+    if(config.cron.deleteOverMax === true){
+        s.checkForStalePurgeLocks = function(){
+            var doCheck = function(){
+                Object.keys(s.group).forEach(function(groupKey){
+                    var userGroup = s.group[groupKey]
+                    var monitorCount = 10
+                    if(userGroup.mon)monitorCount = Object.keys(userGroup.mon).length
+                    var purgeRequestCount = userGroup.sizePurgeQueue.length
+                    var isLocked = (userGroup.sizePurging === true)
+                    if(isLocked && purgeRequestCount > monitorCount + 10){
+                        s.group[groupKey].sizePurgeQueue = []
+                        s.group[groupKey].sizePurging = false
+                        s.systemLog(lang.sizePurgeLockedText + ' : ' + groupKey)
+                    }
+                })
+            }
+            clearTimeout(s.checkForStalePurgeLocksInterval)
+            s.checkForStalePurgeLocksInterval = setInterval(function(){
+                doCheck()
+            },1000 * 60 * 60)
+            doCheck()
+        }
+    }else{
+        s.checkForStalePurgeLocks = function(){}
     }
 }

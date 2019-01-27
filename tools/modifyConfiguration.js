@@ -12,7 +12,7 @@ processArgv.forEach(function(val) {
     var theSplit = val.split('=');
     var index = theSplit[0];
     var value = theSplit[1];
-    if(index === 'addToConfig'){
+    if(index.indexOf('addToConfig') > -1){
         try{
             value = JSON.parse(value)
             config = Object.assign(config,value)

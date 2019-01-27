@@ -30,12 +30,17 @@ if [ ! -e "./super.json" ]; then
     echo "* You can edit these settings in \"super.json\" located in the Shinobi directory."
     sudo cp super.sample.json super.json
 fi
+if ! [ -x "$(command -v ifconfig)" ]; then
+    echo "============="
+    echo "Shinobi - Installing Net-Tools"
+    sudo apt install net-tools -y
+fi
 if ! [ -x "$(command -v node)" ]; then
     echo "============="
     echo "Shinobi - Installing Node.js"
-    wget https://deb.nodesource.com/setup_9.x
-    chmod +x setup_9.x
-    ./setup_9.x
+    wget https://deb.nodesource.com/setup_8.x
+    chmod +x setup_8.x
+    ./setup_8.x
     sudo apt install nodejs -y
 else
     echo "Node.js Found..."
@@ -44,7 +49,7 @@ fi
 if ! [ -x "$(command -v npm)" ]; then
     sudo apt install npm -y
 fi
-sudo apt install make -y
+sudo apt install make zip -y
 if ! [ -x "$(command -v ffmpeg)" ]; then
     if [ "$getubuntuversion" = "16" ] || [ "$getubuntuversion" < "16" ]; then
         echo "============="
@@ -132,21 +137,14 @@ if [ "$startShinobi" = "y" ] || [ "$startShinobi" = "y" ]; then
     sudo pm2 save
     sudo pm2 list
 fi
-if [ ! "$sqliteormariadb" = "M" ] && [ ! "$sqliteormariadb" = "m" ]; then
-    echo "====================================="
-    echo "||=====   Install Completed   =====||"
-    echo "====================================="
-    echo "|| Login with the Superuser and create a new user!!"
-    echo "||==================================="
-    echo "|| Open http://$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'):8080/super in your web browser."
-    echo "||==================================="
-    echo "|| Default Superuser : admin@shinobi.video"
-    echo "|| Default Password : admin"
-    echo "====================================="
-    echo "====================================="
-else
-    echo "+=================================+"
-    echo "||=====   Install Completed   =====||"
-    echo "|| Access the main Shinobi panel at http://$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'):8080 in your web browser."
-    echo "+=================================+"
-fi
+echo "====================================="
+echo "||=====   Install Completed   =====||"
+echo "====================================="
+echo "|| Login with the Superuser and create a new user!!"
+echo "||==================================="
+echo "|| Open http://$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'):8080/super in your web browser."
+echo "||==================================="
+echo "|| Default Superuser : admin@shinobi.video"
+echo "|| Default Password : admin"
+echo "====================================="
+echo "====================================="
