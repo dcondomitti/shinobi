@@ -12,7 +12,7 @@ module.exports = function(s,config){
         if(s.isWin===true){
             cmd = "Taskkill /IM ffmpeg.exe /F"
         }else{
-            cmd = "ps aux | grep -ie ffmpeg | awk '{print $2}' | xargs kill -9"
+            cmd = "pkill -9 ffmpeg"
         }
         exec(cmd,{detached: true})
     };
