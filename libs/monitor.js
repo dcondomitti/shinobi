@@ -165,6 +165,9 @@ module.exports = function(s,config,lang){
         var streamDirItems = fs.readdirSync(pathDir)
         var items = []
         var copiedItems = []
+        var videoLength = s.group[monitor.ke].mon_conf[monitor.id].details.detector_send_video_length
+        if(!videoLength || videoLength === '')videoLength = '10'
+        if(videoLength.length === 1)videoLength = '0' + videoLength
         var createMerged = function(copiedItems){
             var allts = pathDir+items.join('_')
             fs.stat(allts,function(err,stats){
@@ -172,7 +175,7 @@ module.exports = function(s,config,lang){
                     //not exist
                     var cat = 'cat '+copiedItems.join(' ')+' > '+allts
                     exec(cat,function(){
-                        var merger = spawn(config.ffmpegDir,s.splitForFFPMEG(('-re -i '+allts+' -acodec copy -vcodec copy '+pathDir+mergedFile)))
+                        var merger = spawn(config.ffmpegDir,s.splitForFFPMEG(('-re -i '+allts+' -acodec copy -vcodec copy -t 00:00:' + videoLength + ' '+pathDir+mergedFile)))
                         merger.stderr.on('data',function(data){
                             s.userLog(monitor,{type:"Buffer Merge",msg:data.toString()})
                         })
@@ -200,7 +203,7 @@ module.exports = function(s,config,lang){
             }
         })
         items.sort()
-        items = items.slice(items.length - 5,items.length)
+        // items = items.slice(items.length - 5,items.length)
         items.forEach(function(filename){
             try{
                 var tempFilename = filename.split('.')
