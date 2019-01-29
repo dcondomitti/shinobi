@@ -926,6 +926,53 @@ module.exports = function(s,config,lang,app,io){
         s.auth(req.params,req.fn,res,req);
     });
     /**
+    * API : Merge Recorded Videos into one file
+     */
+     app.get(config.webPaths.apiPrefix+':auth/videosMerge/:ke', function (req,res){
+         res.header("Access-Control-Allow-Origin",req.headers.origin);
+         var failed = function(resp){
+             res.setHeader('Content-Type', 'application/json');
+             res.end(s.prettyPrint(resp))
+         }
+         if(req.query.videos && req.query.videos !== ''){
+             s.auth(req.params,function(user){
+                 var videosSelected = JSON.parse(req.query.videos)
+                 var where = []
+                 var values = []
+                 videosSelected.forEach(function(video){
+                     where.push("(ke=? AND mid=? AND `time`=?)")
+                     if(!video.ke)video.ke = req.params.ke
+                     values.push(video.ke)
+                     values.push(video.mid)
+                     var time = s.nameToTime(video.filename)
+                     if(req.query.isUTC === 'true'){
+                         time = s.utcToLocal(time)
+                     }
+                     time = new Date(time)
+                     values.push(time)
+                 })
+                 s.sqlQuery('SELECT * FROM Videos WHERE '+where.join(' OR '),values,function(err,r){
+                     var resp = {ok: false}
+                     if(r && r[0]){
+                         s.mergeRecordedVideos(r,req.params.ke,function(fullPath,filename){
+                             res.setHeader('Content-Disposition', 'attachment; filename="'+filename+'"')
+                             var file = fs.createReadStream(fullPath)
+                             file.on('close',function(){
+                                 s.file('delete',fullPath)
+                                 res.end()
+                             })
+                             file.pipe(res)
+                         })
+                     }else{
+                         failed({ok:false,msg:'No Videos Found'})
+                     }
+                 })
+             },res,req);
+         }else{
+             failed({ok:false,msg:'"videos" query variable is missing from request.'})
+         }
+    })
+    /**
     * API : Get Videos
      */
     app.get([
@@ -1628,38 +1675,7 @@ module.exports = function(s,config,lang,app,io){
                 if(r&&r[0]){
                     req.dir=s.getVideoDirectory(r[0])+req.params.file
                     if (fs.existsSync(req.dir)){
-                        req.ext=req.params.file.split('.')[1];
-                        var total = fs.statSync(req.dir).size;
-                        if (req.headers['range']) {
-                            try{
-                                var range = req.headers.range;
-                                var parts = range.replace(/bytes=/, "").split("-");
-                                var partialstart = parts[0];
-                                var partialend = parts[1];
-                                var start = parseInt(partialstart, 10);
-                                var end = partialend ? parseInt(partialend, 10) : total-1;
-                                var chunksize = (end-start)+1;
-                                var file = fs.createReadStream(req.dir, {start: start, end: end});
-                                req.headerWrite={ 'Content-Range': 'bytes ' + start + '-' + end + '/' + total, 'Accept-Ranges': 'bytes', 'Content-Length': chunksize, 'Content-Type': 'video/'+req.ext }
-                                req.writeCode=206
-                            }catch(err){
-                                req.headerWrite={ 'Content-Length': total, 'Content-Type': 'video/'+req.ext};
-                                var file = fs.createReadStream(req.dir)
-                                req.writeCode=200
-                            }
-                        } else {
-                            req.headerWrite={ 'Content-Length': total, 'Content-Type': 'video/'+req.ext};
-                            var file=fs.createReadStream(req.dir)
-                            req.writeCode=200
-                        }
-                        if(req.query.downloadName){
-                            req.headerWrite['content-disposition']='attachment; filename="'+req.query.downloadName+'"';
-                        }
-                        res.writeHead(req.writeCode,req.headerWrite);
-                        file.on('close',function(){
-                            res.end();
-                        })
-                        file.pipe(res);
+                        s.streamMp4FileOverHttp(req.dir,req,res)
                     }else{
                         res.end(user.lang['File Not Found in Filesystem'])
                     }

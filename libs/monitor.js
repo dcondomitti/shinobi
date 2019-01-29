@@ -223,6 +223,64 @@ module.exports = function(s,config,lang){
         })
         return items
     }
+    s.mergeRecordedVideos = function(videoRows,groupKey,callback){
+        var tempDir = s.dir.streams + groupKey + '/'
+        var pathDir = s.dir.fileBin + groupKey + '/'
+        var streamDirItems = fs.readdirSync(pathDir)
+        var items = []
+        var mergedFile = []
+        videoRows.forEach(function(video){
+            var filepath = s.getVideoDirectory(video) + s.formattedTime(video.time) + '.' + video.ext
+            if(
+                filepath.indexOf('.mp4') > -1
+                // || filename.indexOf('.webm') > -1
+            ){
+                mergedFile.push(s.formattedTime(video.time))
+                items.push(filepath)
+            }
+        })
+        mergedFile.sort()
+        mergedFile = mergedFile.join('_') + '.mp4'
+        var mergedFilepath = pathDir + mergedFile
+        var mergedRawFilepath = pathDir + 'raw_' + mergedFile
+        items.sort()
+        fs.stat(mergedFilepath,function(err,stats){
+            if(err){
+                //not exist
+                var tempScriptPath = tempDir + s.gid(5) + '.sh'
+                var cat = 'cat '+items.join(' ')+' > '+mergedRawFilepath
+                fs.writeFileSync(tempScriptPath,cat,'utf8')
+                exec('sh ' + tempScriptPath,function(){
+                    s.userLog({
+                        ke: groupKey,
+                        mid: '$USER'
+                    },{type:lang['Videos Merge'],msg:mergedFile})
+                    var merger = spawn(config.ffmpegDir,s.splitForFFPMEG(('-re -loglevel warning -i ' + mergedRawFilepath + ' -acodec copy -vcodec copy ' + mergedFilepath)))
+                    merger.stderr.on('data',function(data){
+                        s.userLog({
+                            ke: groupKey,
+                            mid: '$USER'
+                        },{type:lang['Videos Merge'],msg:data.toString()})
+                    })
+                    merger.on('close',function(){
+                        s.file('delete',mergedRawFilepath)
+                        s.file('delete',tempScriptPath)
+                        setTimeout(function(){
+                            fs.stat(mergedFilepath,function(err,stats){
+                                if(!err)s.file('delete',mergedFilepath)
+                            })
+                        },1000 * 60 * 60 * 24)
+                        delete(merger)
+                        callback(mergedFilepath,mergedFile)
+                    })
+                })
+            }else{
+                //file exist
+                callback(mergedFilepath,mergedFile)
+            }
+        })
+        return items
+    }
 
     s.cameraDestroy = function(x,e,p){
         if(s.group[e.ke]&&s.group[e.ke].mon[e.id]&&s.group[e.ke].mon[e.id].spawn !== undefined){
@@ -609,6 +667,14 @@ module.exports = function(s,config,lang){
         // exec('chmod -R 777 '+e.sdir,function(err){
         //
         // })
+        var binDir = s.dir.fileBin + e.ke + '/'
+        if (!fs.existsSync(binDir)){
+            fs.mkdirSync(binDir)
+        }
+        binDir = s.dir.fileBin + e.ke + '/' + e.id + '/'
+        if (!fs.existsSync(binDir)){
+            fs.mkdirSync(binDir)
+        }
         return setStreamDir
     }
     s.stripAuthFromHost = function(e){
