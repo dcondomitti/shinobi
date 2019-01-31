@@ -1352,7 +1352,10 @@ module.exports = function(s,config,lang){
         }else{
             s.cameraDestroy(s.group[e.ke].mon[e.id].spawn,e)
         }
-        s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Died});
+        s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Died})
+        s.onMonitorDiedExtensions.forEach(function(extender){
+            extender(Object.assign(s.group[e.ke].mon_conf[e.id],{}),e)
+        })
     }
     s.isWatchCountable = function(d){
         try{

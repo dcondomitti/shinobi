@@ -91,6 +91,11 @@ module.exports = function(s,config){
     s.onMonitorPingFailed = function(callback){
         s.onMonitorPingFailedExtensions.push(callback)
     }
+    //
+    s.onMonitorDiedExtensions = []
+    s.onMonitorDied = function(callback){
+        s.onMonitorDiedExtensions.push(callback)
+    }
 
     ///////// SYSTEM ////////
     s.onProcessReadyExtensions = []

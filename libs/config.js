@@ -34,7 +34,7 @@ module.exports = function(s){
     if(config.databaseLogs === undefined){config.databaseLogs=false}
     if(config.useUTC === undefined){config.useUTC=false}
     if(config.iconURL === undefined){config.iconURL = "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"}
-    if(config.pipeAddition === undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
+    if(config.pipeAddition === undefined){config.pipeAddition=10}else{config.pipeAddition=parseInt(config.pipeAddition)}
     if(config.hideCloudSaveUrls === undefined){config.hideCloudSaveUrls = true}
     if(config.insertOrphans === undefined){config.insertOrphans = true}
     if(config.orphanedVideoCheckMax === undefined){config.orphanedVideoCheckMax = 20}

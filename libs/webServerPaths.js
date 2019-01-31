@@ -958,7 +958,9 @@ module.exports = function(s,config,lang,app,io){
                              res.setHeader('Content-Disposition', 'attachment; filename="'+filename+'"')
                              var file = fs.createReadStream(fullPath)
                              file.on('close',function(){
-                                 s.file('delete',fullPath)
+                                 setTimeout(function(){
+                                     s.file('delete',fullPath)
+                                 },1000 * 60 * 3)
                                  res.end()
                              })
                              file.pipe(res)
