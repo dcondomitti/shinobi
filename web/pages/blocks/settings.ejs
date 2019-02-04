@@ -369,6 +369,72 @@
                 </div>
             </div>
             <% } %>
+            <% if(details.use_whcs!=='0'){ %>
+          <div class="form-group-group forestgreen">
+                <h4><%-lang['Wasabi Hot Cloud Storage']%></h4>
+                <div class="form-group">
+                    <label><div><span><%-lang.Bucket%></span></div>
+                        <div><input class="form-control" detail="whcs_bucket" placeholder="Example : slippery-seal"></div>
+                    </label>
+                </div>
+                <div class="row">
+                    <div class="form-group col-md-12">
+                        <label><div><span><%-lang.aws_accessKeyId%></span></div>
+                            <div><input class="form-control" detail="whcs_accessKeyId"></div>
+                        </label>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label><div><span><%-lang.aws_secretAccessKey%></span></div>
+                            <div><input class="form-control" type="password" detail="whcs_secretAccessKey"></div>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang.Region%></span></div>
+                        <div><select class="form-control" detail="whcs_region">
+                            <option value="us-west-1" selected>US West</option>
+                            <option value="us-east-1">US East</option>
+                        </select></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang.Autosave%></span></div>
+                            <div><select class="form-control" detail="whcs_save">
+                                <option value="0" selected><%-lang.No%></option>
+                                <option value="1"><%-lang.Yes%></option>
+                            </select></div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang['Save Links to Database']%></span></div>
+                            <div><select class="form-control" detail="whcs_log" selector="h_whcssld">
+                                <option value="0"><%-lang.No%></option>
+                                <option value="1" selected><%-lang.Yes%></option>
+                            </select></div>
+                    </label>
+                </div>
+                <div class="h_whcssld_input h_whcssld_1">
+                    <div class="form-group">
+                        <label><div><span><%-lang['Use Max Storage Amount']%></span></div>
+                                <div><select class="form-control" detail="use_whcs_size_limit" selector="h_whcszl">
+                                    <option value="0" selected><%-lang.No%></option>
+                                    <option value="1"><%-lang.Yes%></option>
+                                </select></div>
+                        </label>
+                    </div>
+                    <div class="form-group h_whcszl_input h_whcszl_1">
+                        <label><div><span><%-lang['Max Storage Amount']%></span></div>
+                            <div><input class="form-control" placeholder="10000" detail="whcs_size_limit"></div>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><div><span><%-lang['Save Directory']%></span></div>
+                        <div><input class="form-control" placeholder="" detail="whcs_dir"></div>
+                    </label>
+                </div>
+            </div>
+            <% } %>
             <% if(details.use_discordbot!=='0'){ %>
           <div class="form-group-group forestgreen">
                 <h4><%-lang['Discord Bot']%></h4>
