@@ -59,14 +59,14 @@ module.exports = function(s,config,lang,io){
         var tx;
         //set "client" detector plugin event function
         cn.on('ocv',function(d){
-            if(!cn.pluginEngine&&d.f==='init'){
-                if(config.pluginKeys[d.plug]===d.pluginKey){
+            if(!cn.pluginEngine && d.f === 'init'){
+                if(config.pluginKeys[d.plug] === d.pluginKey){
                     s.pluginInitiatorSuccess("client",d,cn)
                 }else{
                     s.pluginInitiatorFail("client",d,cn)
                 }
             }else{
-                if(config.pluginKeys[d.plug]===d.pluginKey){
+                if(config.pluginKeys[d.plug] === d.pluginKey){
                     s.pluginEventController(d)
                 }else{
                     cn.disconnect()
@@ -476,6 +476,9 @@ module.exports = function(s,config,lang,io){
                         }catch(err){
                             console.log(err)
                         }
+                    })
+                    s.onSocketAuthenticationExtensions.forEach(function(extender){
+                        extender(r,cn)
                     })
                 }
                 s.sqlQuery('SELECT ke,uid,auth,mail,details FROM Users WHERE ke=? AND auth=? AND uid=?',[d.ke,d.auth,d.uid],function(err,r) {
@@ -1362,7 +1365,7 @@ module.exports = function(s,config,lang,io){
             if(cn.cron){
                 delete(s.cron);
             }
-            if(cn.ocv){
+            if(cn.ocv && s.ocv){
                 s.tx({f:'detector_unplugged',plug:s.ocv.plug},'CPU')
                 delete(s.ocv);
                 delete(s.api[cn.id])

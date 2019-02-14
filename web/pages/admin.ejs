@@ -12,6 +12,9 @@
 <link rel="stylesheet" href="<%-window.libURL%>libs/css/fullcalendar.min.css">
 <link rel="stylesheet" href="<%-window.libURL%>libs/css/bootstrap-table.min.css">
 <link rel="stylesheet" href="<%-window.libURL%>libs/css/main.dash2.css">
+<% customAutoLoad.adminLibsCss.forEach(function(lib){ %>
+    <link rel="stylesheet" href="<%-window.libURL%>libs/css/<%-lib%>">
+<% }) %>
 <body class="shinobi-bg">
 <div class="container-fluid">
     <div class="container">
@@ -80,8 +83,14 @@
         </div>
     </div>
 </div>
+<script>
+    var adminApiPrefix = "<%=originalURL%><%=config.webPaths.adminApiPrefix%>"
+</script>
 <% include blocks/confirm.ejs %>
 <% include blocks/subpermissions.ejs %>
+<% customAutoLoad.adminPageBlocks.forEach(function(block){ %>
+    <%- include(block) %>
+<% }) %>
 </body>
 <script><% include ../libs/js/basic.js %></script>
 <script><% include ../libs/js/socket.io.js %></script>
@@ -275,3 +284,6 @@ $('body')
     localStorage.removeItem('ShinobiLogin_'+location.host);location.href=location.href;
 })
 </script>
+<% customAutoLoad.adminLibsJs.forEach(function(lib){ %>
+    <script src="<%-window.libURL%>libs/js/<%-lib%>"></script>
+<% }) %>

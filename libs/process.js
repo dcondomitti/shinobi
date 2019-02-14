@@ -7,6 +7,9 @@ module.exports = function(process,__dirname){
     });
     // [CTRL] + [C] = exit
     process.on('SIGINT', function() {
+        s.onProcessExitExtensions.forEach(function(extender){
+            extender()
+        })
         console.log('Shinobi is Exiting...')
         process.exit();
     });

@@ -4,6 +4,25 @@ var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var request = require('request');
 module.exports = function(s,config,lang){
+    var addEventDetailsToString = function(eventData,string,addOps){
+        //d = event data
+        if(!addOps)addOps = {}
+        var newString = string + ''
+        var d = Object.assign(eventData,addOps)
+        var detailString = s.stringJSON(d.details)
+        newString
+            .replace(/{{TIME}}/g,d.currentTimestamp)
+            .replace(/{{REGION_NAME}}/g,d.details.name)
+            .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
+            .replace(/{{MONITOR_ID}}/g,d.id)
+            .replace(/{{GROUP_KEY}}/g,d.ke)
+            .replace(/{{DETAILS}}/g,detailString)
+        if(d.details.confidence){
+            newString = newString
+            .replace(/{{CONFIDENCE}}/g,d.details.confidence)
+        }
+        return newString
+    }
     s.filterEvents = function(x,d){
         switch(x){
             case'archive':
@@ -45,6 +64,7 @@ module.exports = function(s,config,lang){
         }
         d.mon=s.group[d.ke].mon_conf[d.id];
         var currentConfig = s.group[d.ke].mon[d.id].details
+        var hasMatrices = (d.details.matrices && d.details.matrices.length > 0)
         //read filters
         if(
             currentConfig.use_detector_filters === '1' &&
@@ -160,7 +180,7 @@ module.exports = function(s,config,lang){
             })
             if(d.details.matrices && d.details.matrices.length === 0 || filter.halt === true){
                 return
-            }else if(d.details.matrices && d.details.matrices.length > 0){
+            }else if(hasMatrices){
                 var reviewedMatrix = []
                 d.details.matrices.forEach(function(matrix){
                     if(matrix)reviewedMatrix.push(matrix)
@@ -193,6 +213,16 @@ module.exports = function(s,config,lang){
                 return
             }
         }
+        // check if object should be in region
+        if(hasMatrices && currentConfig.detector_obj_region === '1'){
+            var regions = s.group[d.ke].mon[d.id].parsedObjects.cords
+            var isMatrixInRegions = s.isAtleastOneMatrixInRegion(regions,d.details.matrices)
+            if(isMatrixInRegions){
+                s.debugLog('Matrix in region!')
+            }else{
+                return
+            }
+        }
         // check modified indifference
         if(filter.indifference !== false && d.details.confidence < parseFloat(filter.indifference)){
             // fails indifference check for modified indifference
@@ -210,12 +240,12 @@ module.exports = function(s,config,lang){
             })
         }else{
             //save this detection result in SQL, only coords. not image.
-            if(filter.save && currentConfig.detector_save==='1'){
+            if(filter.save && currentConfig.detector_save === '1'){
                 s.sqlQuery('INSERT INTO Events (ke,mid,details) VALUES (?,?,?)',[d.ke,d.id,detailString])
             }
             if(currentConfig.detector_notrigger === '1'){
                 var detector_notrigger_timeout
-                if(!currentConfig.detector_notrigger_timeout||currentConfig.detector_notrigger_timeout===''){
+                if(!currentConfig.detector_notrigger_timeout||currentConfig.detector_notrigger_timeout === ''){
                     detector_notrigger_timeout = 10
                 }
                 detector_notrigger_timeout = parseFloat(currentConfig.detector_notrigger_timeout)*1000*60;
@@ -270,17 +300,7 @@ module.exports = function(s,config,lang){
             })
 
             if(filter.webhook && currentConfig.detector_webhook === '1'){
-                var detector_webhook_url = currentConfig.detector_webhook_url
-                    .replace(/{{TIME}}/g,d.currentTimestamp)
-                    .replace(/{{REGION_NAME}}/g,d.details.name)
-                    .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
-                    .replace(/{{MONITOR_ID}}/g,d.id)
-                    .replace(/{{GROUP_KEY}}/g,d.ke)
-                    .replace(/{{DETAILS}}/g,detailString)
-                    if(d.details.confidence){
-                        detector_webhook_url = detector_webhook_url
-                        .replace(/{{CONFIDENCE}}/g,d.details.confidence)
-                    }
+                var detector_webhook_url = addEventDetailsToString(d,currentConfig.detector_webhook_url)
                 request({url:detector_webhook_url,method:'GET',encoding:null},function(err,data){
                     if(err){
                         s.userLog(d,{type:lang["Event Webhook Error"],msg:{error:err,data:data}})
@@ -289,28 +309,8 @@ module.exports = function(s,config,lang){
             }
 
             if(filter.command && currentConfig.detector_command_enable === '1' && !s.group[d.ke].mon[d.id].detector_command){
-                var detector_command_timeout
-                if(!currentConfig.detector_command_timeout||currentConfig.detector_command_timeout===''){
-                    detector_command_timeout = 1000*60*10;
-                }else{
-                    detector_command_timeout = parseFloat(currentConfig.detector_command_timeout)*1000*60;
-                }
-                s.group[d.ke].mon[d.id].detector_command=setTimeout(function(){
-                    clearTimeout(s.group[d.ke].mon[d.id].detector_command);
-                    delete(s.group[d.ke].mon[d.id].detector_command);
-
-                },detector_command_timeout);
-                var detector_command = currentConfig.detector_command
-                    .replace(/{{TIME}}/g,d.currentTimestamp)
-                    .replace(/{{REGION_NAME}}/g,d.details.name)
-                    .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
-                    .replace(/{{MONITOR_ID}}/g,d.id)
-                    .replace(/{{GROUP_KEY}}/g,d.ke)
-                    .replace(/{{DETAILS}}/g,detailString)
-                    if(d.details.confidence){
-                        detector_command = detector_command
-                        .replace(/{{CONFIDENCE}}/g,d.details.confidence)
-                    }
+                s.createTimeout(s.group[d.ke].mon[d.id].detector_command,currentConfig.detector_command_timeout,10)
+                var detector_command = addEventDetailsToString(d,currentConfig.detector_command)
                 exec(detector_command,{detached: true})
             }
         }
@@ -319,6 +319,7 @@ module.exports = function(s,config,lang){
         s.tx(d.cx,'DETECTOR_'+d.ke+d.id);
     }
     s.createEventBasedRecording = function(d){
+        d.mon = s.group[d.ke].mon_conf[d.id]
         var currentConfig = s.group[d.ke].mon[d.id].details
         var detector_timeout
         if(!currentConfig.detector_timeout||currentConfig.detector_timeout===''){
@@ -326,7 +327,7 @@ module.exports = function(s,config,lang){
         }else{
             detector_timeout = parseFloat(currentConfig.detector_timeout)
         }
-        if(currentConfig.watchdog_reset !== '1' || !s.group[d.ke].mon[d.id].eventBasedRecording.timeout){
+        if(currentConfig.watchdog_reset === '1' || !s.group[d.ke].mon[d.id].eventBasedRecording.timeout){
             clearTimeout(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
             s.group[d.ke].mon[d.id].eventBasedRecording.timeout = setTimeout(function(){
                 s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd = true
@@ -336,40 +337,28 @@ module.exports = function(s,config,lang){
             },detector_timeout * 1000 * 60)
         }
         if(!s.group[d.ke].mon[d.id].eventBasedRecording.process){
-            if(!d.auth){
-                d.auth = s.gid(60)
-            }
-            if(!s.api[d.auth]){
-                s.api[d.auth] = {
-                    system: 1,
-                    ip: '0.0.0.0',
-                    details: {},
-                    lang: lang
-                }
-            }
             s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd = false;
             var runRecord = function(){
                 var filename = s.formattedTime()+'.mp4'
-                s.userLog(d,{type:"Traditional Recording",msg:"Started"})
+                s.userLog(d,{type:lang["Traditional Recording"],msg:lang["Started"]})
                 //-t 00:'+s.timeObject(new Date(detector_timeout * 1000 * 60)).format('mm:ss')+'
-                s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i http://'+config.ip+':'+config.port+'/'+d.auth+'/hls/'+d.ke+'/'+d.id+'/detectorStream.m3u8 -c:v copy -strftime 1 "'+s.getVideoDirectory(d.mon) + filename + '"')))
+                s.group[d.ke].mon[d.id].eventBasedRecording.process = spawn(config.ffmpegDir,s.splitForFFPMEG(('-loglevel warning -analyzeduration 1000000 -probesize 1000000 -re -i "'+s.dir.streams+'/'+d.ke+'/'+d.id+'/detectorStream.m3u8" -c:v copy -strftime 1 "'+s.getVideoDirectory(d.mon) + filename + '"')))
                 var ffmpegError='';
                 var error
                 s.group[d.ke].mon[d.id].eventBasedRecording.process.stderr.on('data',function(data){
-                    s.userLog(d,{type:"Traditional Recording",msg:data.toString()})
+                    s.userLog(d,{type:lang["Traditional Recording"],msg:data.toString()})
                 })
                 s.group[d.ke].mon[d.id].eventBasedRecording.process.on('close',function(){
                     if(!s.group[d.ke].mon[d.id].eventBasedRecording.allowEnd){
-                        s.userLog(d,{type:"Traditional Recording",msg:"Detector Recording Process Exited Prematurely. Restarting."})
+                        s.userLog(d,{type:lang["Traditional Recording"],msg:lang["Detector Recording Process Exited Prematurely. Restarting."]})
                         runRecord()
                         return
                     }
                     s.insertCompletedVideo(d.mon,{
                         file : filename
                     })
-                    s.userLog(d,{type:"Traditional Recording",msg:"Detector Recording Complete"})
-                    delete(s.api[d.auth])
-                    s.userLog(d,{type:"Traditional Recording",msg:'Clear Recorder Process'})
+                    s.userLog(d,{type:lang["Traditional Recording"],msg:lang["Detector Recording Complete"]})
+                    s.userLog(d,{type:lang["Traditional Recording"],msg:lang["Clear Recorder Process"]})
                     delete(s.group[d.ke].mon[d.id].eventBasedRecording.process)
                     clearTimeout(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
                     delete(s.group[d.ke].mon[d.id].eventBasedRecording.timeout)
@@ -385,5 +374,12 @@ module.exports = function(s,config,lang){
             s.group[e.ke].mon[e.id].eventBasedRecording.allowEnd = true;
             s.group[e.ke].mon[e.id].eventBasedRecording.process.kill('SIGTERM');
         }
+        // var stackedProcesses = s.group[e.ke].mon[e.id].eventBasedRecording.stackable
+        // Object.keys(stackedProcesses).forEach(function(key){
+        //     var item = stackedProcesses[key]
+        //     clearTimeout(item.timeout)
+        //     item.allowEnd = true;
+        //     item.process.kill('SIGTERM');
+        // })
     }
 }

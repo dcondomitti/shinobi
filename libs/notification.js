@@ -1,3 +1,4 @@
+var fs = require("fs")
 var Discord = require("discord.js")
 module.exports = function(s,config,lang){
     //discord bot
@@ -21,16 +22,27 @@ module.exports = function(s,config,lang){
                       text: "Shinobi Systems"
                     }
                 },data)
-                bot.channels.get(s.group[groupKey].init.discordbot_channel).send({
-                    embed: sendBody,
-                    files: files
-                }).catch(err => {
-                    if(err){
-                        s.userLog({ke:groupKey,mid:'$USER'},{type:lang.DiscordErrorText,msg:err})
-                        s.group[groupKey].discordBot = null
-                        s.loadGroupApps({ke:groupKey})
-                    }
-                })
+                var discordChannel = bot.channels.get(s.group[groupKey].init.discordbot_channel)
+                if(discordChannel && discordChannel.send){
+                    discordChannel.send({
+                        embed: sendBody,
+                        files: files
+                    }).catch(err => {
+                        if(err){
+                            s.userLog({ke:groupKey,mid:'$USER'},{type:lang.DiscordErrorText,msg:err})
+                            s.group[groupKey].discordBot = null
+                            s.loadGroupApps({ke:groupKey})
+                        }
+                    })
+                }else{
+                    s.userLog({
+                        ke: groupKey,
+                        mid: '$USER'
+                    },{
+                        type: lang.DiscordErrorText,
+                        msg: 'Check the Channel ID'
+                    })
+                }
             }
             var onEventTriggerBeforeFilterForDiscord = function(d,filter){
                 filter.discord = true
@@ -131,7 +143,13 @@ module.exports = function(s,config,lang){
                   ){
                     s.group[user.ke].discordBot = new Discord.Client()
                     s.group[user.ke].discordBot.on('ready', () => {
-                        console.log(`${user.mail} : Discord Bot Logged in as ${s.group[user.ke].discordBot.user.tag}!`)
+                        s.userLog({
+                            ke: user.ke,
+                            mid: '$USER'
+                        },{
+                            type: lang.DiscordLoggedIn,
+                            msg: s.group[user.ke].discordBot.user.tag
+                        })
                     })
                     s.group[user.ke].discordBot.login(ar.discordbot_token)
                 }

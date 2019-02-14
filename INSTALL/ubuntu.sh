@@ -25,55 +25,45 @@ fi
 #create super.json
 if [ ! -e "./super.json" ]; then
     echo "============="
-    echo "Shinobi - Do you want to enable superuser access?"
-    echo "This may be useful if passwords are forgotten or"
-    echo "if you would like to limit accessibility of an"
-    echo "account for business scenarios."
-    echo "(y)es or (N)o"
-    read createSuperJson
-    if [ "$createSuperJson" = "y" ] || [ "$createSuperJson" = "Y" ]; then
-        echo "Default Superuser : admin@shinobi.video"
-        echo "Default Password : admin"
-        echo "* You can edit these settings in \"super.json\" located in the Shinobi directory."
-        sudo cp super.sample.json super.json
-    fi
+    echo "Default Superuser : admin@shinobi.video"
+    echo "Default Password : admin"
+    echo "* You can edit these settings in \"super.json\" located in the Shinobi directory."
+    sudo cp super.sample.json super.json
 fi
-echo "============="
-echo "Shinobi - Do you want to Install Node.js?"
-echo "(y)es or (N)o"
-read nodejsinstall
-if [ "$nodejsinstall" = "y" ] || [ "$nodejsinstall" = "Y" ]; then
+if ! [ -x "$(command -v ifconfig)" ]; then
+    echo "============="
+    echo "Shinobi - Installing Net-Tools"
+    sudo apt install net-tools -y
+fi
+if ! [ -x "$(command -v node)" ]; then
+    echo "============="
+    echo "Shinobi - Installing Node.js"
     wget https://deb.nodesource.com/setup_8.x
     chmod +x setup_8.x
     ./setup_8.x
     sudo apt install nodejs -y
+else
+    echo "Node.js Found..."
+    echo "Version : $(node -v)"
 fi
-sudo apt install make -y
-echo "============="
-echo "Shinobi - Do you want to Install FFMPEG?"
-echo "(y)es or (N)o"
-read ffmpeginstall
-if [ "$ffmpeginstall" = "y" ] || [ "$ffmpeginstall" = "Y" ]; then
-    echo "Shinobi - Do you want to Install FFMPEG with apt or download a static version provided with npm?"
-    echo "(a)pt or (N)pm"
-    echo "Press [ENTER] for default (npm)"
-    read ffmpegstaticinstall
-    if [ "$ffmpegstaticinstall" = "a" ] || [ "$ffmpegstaticinstall" = "A" ]; then
-        if [ "$getubuntuversion" = "16" ] || [ "$getubuntuversion" < "16" ]; then
-            echo "============="
-            echo "Shinobi - Get FFMPEG 3.x from ppa:jonathonf/ffmpeg-3"
-            sudo add-apt-repository ppa:jonathonf/ffmpeg-3 -y
-            sudo apt update -y && sudo apt install ffmpeg libav-tools x264 x265 -y
-            echo "============="
-        else
-            echo "============="
-            echo "Shinobi - Installing FFMPEG"
-            sudo apt install ffmpeg -y
-            echo "============="
-        fi
+if ! [ -x "$(command -v npm)" ]; then
+    sudo apt install npm -y
+fi
+sudo apt install make zip -y
+if ! [ -x "$(command -v ffmpeg)" ]; then
+    if [ "$getubuntuversion" = "16" ] || [ "$getubuntuversion" < "16" ]; then
+        echo "============="
+        echo "Shinobi - Get FFMPEG 3.x from ppa:jonathonf/ffmpeg-3"
+        sudo add-apt-repository ppa:jonathonf/ffmpeg-3 -y
+        sudo apt update -y && sudo apt install ffmpeg libav-tools x264 x265 -y
     else
-        sudo npm install ffbinaries
+        echo "============="
+        echo "Shinobi - Installing FFMPEG"
+        sudo apt install ffmpeg -y
     fi
+else
+    echo "FFmpeg Found..."
+    echo "Version : $(ffmpeg -version)"
 fi
 echo "============="
 echo "Shinobi - Do you want to use MariaDB or SQLite3?"
@@ -137,15 +127,6 @@ sudo chmod -R 755 .
 touch INSTALL/installed.txt
 dos2unix /home/Shinobi/INSTALL/shinobi
 ln -s /home/Shinobi/INSTALL/shinobi /usr/bin/shinobi
-if [ "$mysqlDefaultData" = "y" ] || [ "$mysqlDefaultData" = "Y" ]; then
-    echo "=====================================" > INSTALL/installed.txt
-    echo "=======   Login Credentials   =======" >> INSTALL/installed.txt
-    echo "|| Username : $userEmail" >> INSTALL/installed.txt
-    echo "|| Password : $userPasswordPlain" >> INSTALL/installed.txt
-    echo "|| API Key : $apiKey" >> INSTALL/installed.txt
-    echo "=====================================" >> INSTALL/installed.txt
-    echo "=====================================" >> INSTALL/installed.txt
-fi
 echo "Shinobi - Start Shinobi and set to start on boot?"
 echo "(y)es or (N)o"
 read startShinobi
@@ -156,31 +137,14 @@ if [ "$startShinobi" = "y" ] || [ "$startShinobi" = "y" ]; then
     sudo pm2 save
     sudo pm2 list
 fi
-if [ "$mysqlDefaultData" = "y" ] || [ "$mysqlDefaultData" = "Y" ]; then
-    echo "details written to INSTALL/installed.txt"
-    echo "====================================="
-    echo "=======   Login Credentials   ======="
-    echo "|| Username : $userEmail"
-    echo "|| Password : $userPasswordPlain"
-    echo "|| API Key : $apiKey"
-    echo "====================================="
-    echo "====================================="
-fi
-if [ ! "$sqliteormariadb" = "M" ] && [ ! "$sqliteormariadb" = "m" ]; then
-    echo "====================================="
-    echo "||=====   Install Completed   =====||"
-    echo "====================================="
-    echo "|| Login with the Superuser and create a new user!!"
-    echo "||==================================="
-    echo "|| Open http://$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'):8080/super in your web browser."
-    echo "||==================================="
-    echo "|| Default Superuser : admin@shinobi.video"
-    echo "|| Default Password : admin"
-    echo "====================================="
-    echo "====================================="
-else
-    echo "+=================================+"
-    echo "||=====   Install Completed   =====||"
-    echo "|| Access the main Shinobi panel at http://$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'):8080 in your web browser."
-    echo "+=================================+"
-fi
+echo "====================================="
+echo "||=====   Install Completed   =====||"
+echo "====================================="
+echo "|| Login with the Superuser and create a new user!!"
+echo "||==================================="
+echo "|| Open http://$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'):8080/super in your web browser."
+echo "||==================================="
+echo "|| Default Superuser : admin@shinobi.video"
+echo "|| Default Password : admin"
+echo "====================================="
+echo "====================================="

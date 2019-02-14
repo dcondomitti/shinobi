@@ -1156,7 +1156,9 @@ switch($user.details.lang){
                 tmp+='</li>';
             break;
             case'option':
-                tmp+='<option auth="'+user.auth_token+'" value="'+d.id+'">'+d.name+'</option>'
+                var selected = ''
+                if(d.selected === true){selected = ' selected'}
+                tmp+='<option auth="'+user.auth_token+'"'+selected+' value="'+d.id+'">'+d.name+'</option>'
             break;
             case'stream-element':
                 try{k.d=JSON.parse(d.details);}catch(er){k.d=d.details}
@@ -4710,7 +4712,7 @@ $.timelapse.f.submit(function(e){
 $.timelapse.drawTimeline=function(getData){
     var e={};
     if(getData===undefined){getData=true}
-    var mid=$.timelapse.monitors.val();
+    var mid = $.timelapse.monitors.val()
     e.dateRange=$.timelapse.dr.data('daterangepicker');
     e.dateRange={startDate:e.dateRange.startDate,endDate:e.dateRange.endDate}
     e.videoURL=$.ccio.init('location',$user)+$user.auth_token+'/videos/'+$user.ke+'/'+mid;
@@ -5839,13 +5841,14 @@ $('body')
                         getThumbnail()
                     break;
                     case'videos_table':
+                        var showThumbnail = $.ccio.op().showThumbnail === '1'
                         $.vidview.e.removeClass('dark')
                         e.t.attr('class','fa fa-film')
                         var tmp = '<table class="table table-striped" style="max-height:500px">';
                         tmp+='<thead>';
                         tmp+='<tr>';
                         tmp+='<th><div class="checkbox"><input id="videos_select_all" type="checkbox"><label for="videos_select_all"></label></div></th>';
-                        tmp+='<th data-field="Thumbnail" data-sortable="true">'+lang.Thumbnail+'</th>';
+                        if(showThumbnail)tmp+='<th data-field="Thumbnail" data-sortable="true">'+lang.Thumbnail+'</th>';
                         tmp+='<th data-field="Closed" data-sortable="true">'+lang.Closed+'</th>';
                         tmp+='<th data-field="Ended" data-sortable="true">'+lang.Ended+'</th>';
                         tmp+='<th data-field="Started" data-sortable="true">'+lang.Started+'</th>';
@@ -5869,7 +5872,7 @@ $('body')
 //                                v.filename=$.ccio.init('tf',v.time)+'.'+v.ext;
                                 tmp+='<tr data-ke="'+v.ke+'" data-status="'+v.status+'" data-mid="'+v.mid+'" data-file="'+v.filename+'" data-auth="'+v.mon.user.auth_token+'">';
                                 tmp+='<td><div class="checkbox"><input id="'+v.ke+'_'+v.filename+'" name="'+v.filename+'" value="'+v.mid+'" type="checkbox"><label for="'+v.ke+'_'+v.filename+'"></label></div></td>';
-                                tmp+='<td class="text-center"><img class="thumbnail"></td>';
+                                if(showThumbnail)tmp+='<td class="text-center"><img class="thumbnail"></td>';
                                 tmp+='<td><span class="livestamp" title="'+$.ccio.timeObject(v.end).format('YYYY-MM-DD HH:mm:ss')+'"></span></td>';
                                 tmp+='<td title="'+v.end+'">'+$.ccio.timeObject(v.end).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
                                 tmp+='<td title="'+v.time+'">'+$.ccio.timeObject(v.time).format('h:mm:ss A, MMMM Do YYYY')+'</td>';
@@ -5887,20 +5890,22 @@ $('body')
                         tmp+='</tbody>';
                         tmp+='</table>';
                         e.b.html(tmp)
-                        var i = 0
-                        var getThumbnail = function(){
-                            var v = d.videos[i]
-                            if(v){
-                                tool.getVideoImage($.ccio.init('videoUrlBuild',v),0,function(err,base64){
-                                    if(base64){
-                                        $('[data-ke="'+v.ke+'"][data-mid="'+v.mid+'"][data-file="'+v.filename+'"] .thumbnail')[0].src = base64
-                                    }
-                                    ++i
-                                    getThumbnail()
-                                })
+                        if(showThumbnail){
+                            var i = 0
+                            var getThumbnail = function(){
+                                var v = d.videos[i]
+                                if(v){
+                                    tool.getVideoImage($.ccio.init('videoUrlBuild',v),0,function(err,base64){
+                                        if(base64){
+                                            $('[data-ke="'+v.ke+'"][data-mid="'+v.mid+'"][data-file="'+v.filename+'"] .thumbnail')[0].src = base64
+                                        }
+                                        ++i
+                                        getThumbnail()
+                                    })
+                                }
                             }
+                            getThumbnail()
                         }
-                        getThumbnail()
                         $.ccio.init('ls');
                         $.vidview.e.find('table').bootstrapTable();
                     break;

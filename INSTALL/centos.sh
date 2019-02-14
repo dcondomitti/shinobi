@@ -27,7 +27,7 @@ if [ ! -e "./super.json" ]; then
 fi
 echo "Shinobi - Run yum update"
 sudo yum update -y
-sudo yum install make -y
+sudo yum install make zip -y
 echo "============="
 echo "Shinobi - Do you want to Install FFMPEG?"
 echo "(y)es or (N)o"
@@ -143,21 +143,14 @@ if [ "$mysqlDefaultData" = "y" ] || [ "$mysqlDefaultData" = "Y" ]; then
     echo "====================================="
     echo "====================================="
 fi
-if [ ! "$sqliteormariadb" = "M" ] && [ ! "$sqliteormariadb" = "m" ]; then
-    echo "====================================="
-    echo "||=====   Install Completed   =====||"
-    echo "====================================="
-    echo "|| Login with the Superuser and create a new user!!"
-    echo "||==================================="
-    echo "|| Open http://$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'):8080/super in your web browser."
-    echo "||==================================="
-    echo "|| Default Superuser : admin@shinobi.video"
-    echo "|| Default Password : admin"
-    echo "====================================="
-    echo "====================================="
-else
-    echo "+=================================+"
-    echo "||=====   Install Completed   =====||"
-    echo "|| Access the main Shinobi panel at http://$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'):8080 in your web browser."
-    echo "+=================================+"
-fi
+echo "====================================="
+echo "||=====   Install Completed   =====||"
+echo "====================================="
+echo "|| Login with the Superuser and create a new user!!"
+echo "||==================================="
+echo "|| Open http://$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'):8080/super in your web browser."
+echo "||==================================="
+echo "|| Default Superuser : admin@shinobi.video"
+echo "|| Default Password : admin"
+echo "====================================="
+echo "====================================="

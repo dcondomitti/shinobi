@@ -21,10 +21,10 @@ module.exports = function(s,config,lang,app){
                 return
             }
             var form = s.getPostData(req)
-            var uid = s.getPostData(req,'uid',false)
-            var mail = s.getPostData(req,'mail',false)
+            var uid = form.uid || s.getPostData(req,'uid',false)
+            var mail = form.mail || s.getPostData(req,'mail',false)
             if(form){
-                var keys = Object.keys(form)
+                var keys = ['details']
                 var condition = []
                 var value = []
                 keys.forEach(function(v){
@@ -68,8 +68,9 @@ module.exports = function(s,config,lang,app){
                 s.closeJsonResponse(res,endData)
                 return
             }
-            var uid = s.getPostData(req,'uid',false)
-            var mail = s.getPostData(req,'mail',false)
+            var form = s.getPostData(req)
+            var uid = form.uid || s.getPostData(req,'uid',false)
+            var mail = form.mail || s.getPostData(req,'mail',false)
             s.sqlQuery('DELETE FROM Users WHERE uid=? AND ke=? AND mail=?',[uid,req.params.ke,mail])
             s.sqlQuery("SELECT * FROM API WHERE ke=? AND uid=?",[req.params.ke,uid],function(err,rows){
                 if(rows && rows[0]){
@@ -132,6 +133,12 @@ module.exports = function(s,config,lang,app){
                                 uid: newId,
                                 mail: form.mail
                             },'ADM_'+req.params.ke)
+                            endData.user = {
+                                details: s.parseJSON(details),
+                                ke: req.params.ke,
+                                uid: newId,
+                                mail: form.mail
+                            }
                         }
                         res.end(s.prettyPrint(endData))
                     })
@@ -266,6 +273,7 @@ module.exports = function(s,config,lang,app){
                         },'GRP_' + req.params.ke)
                         endData.ok = true
                     }
+                    endData.api = insert
                     s.closeJsonResponse(res,endData)
                 })
             }else{
@@ -364,6 +372,36 @@ module.exports = function(s,config,lang,app){
         },res,req)
     })
     /**
+    * API : Administrator : Get Monitor State Presets List
+    */
+    app.all([
+        config.webPaths.apiPrefix+':auth/monitorStates/:ke',
+        config.webPaths.adminApiPrefix+':auth/monitorStates/:ke'
+    ],function (req,res){
+        s.auth(req.params,function(user){
+            var endData = {
+                ok : false
+            }
+            if(user.details.sub){
+                endData.msg = user.lang['Not Permitted']
+                s.closeJsonResponse(res,endData)
+                return
+            }
+            s.sqlQuery("SELECT * FROM Presets WHERE ke=? AND type=?",[req.params.ke,'monitorStates'],function(err,presets){
+                if(presets && presets[0]){
+                    endData.ok = true
+                    presets.forEach(function(preset){
+                        preset.details = JSON.parse(preset.details)
+                    })
+                    endData.presets = presets
+                }else{
+                    endData.msg = user.lang['State Configuration Not Found']
+                }
+                s.closeJsonResponse(res,endData)
+            })
+        })
+    })
+    /**
     * API : Administrator : Change Group Preset. Currently affects Monitors only.
     */
     app.all([
@@ -381,19 +419,7 @@ module.exports = function(s,config,lang,app){
                 s.closeJsonResponse(res,endData)
                 return
             }
-            var findPreset = function(callback){
-                s.sqlQuery("SELECT * FROM Presets WHERE ke=? AND type=? AND name=? LIMIT 1",[req.params.ke,'monitorStates',req.params.stateName],function(err,presets){
-                    var preset
-                    var notFound = false
-                    if(presets && presets[0]){
-                        preset = presets[0]
-                        s.checkDetails(preset)
-                    }else{
-                        notFound = true
-                    }
-                    callback(notFound,preset)
-                })
-            }
+            var presetQueryVals = [req.params.ke,'monitorStates',req.params.stateName]
             switch(req.params.action){
                 case'insert':case'edit':
                     var form = s.getPostData(req)
@@ -403,7 +429,7 @@ module.exports = function(s,config,lang,app){
                         s.closeJsonResponse(res,endData)
                         return
                     }
-                    findPreset(function(notFound,preset){
+                    s.findPreset(presetQueryVals,function(notFound,preset){
                         if(notFound === true){
                             endData.msg = lang["Inserted State Configuration"]
                             var details = {
@@ -440,7 +466,7 @@ module.exports = function(s,config,lang,app){
                     })
                 break;
                 case'delete':
-                    findPreset(function(notFound,preset){
+                    s.findPreset(presetQueryVals,function(notFound,preset){
                         if(notFound === true){
                             endData.msg = user.lang['State Configuration Not Found']
                             s.closeJsonResponse(res,endData)
@@ -456,43 +482,8 @@ module.exports = function(s,config,lang,app){
                     })
                 break;
                 default://change monitors according to state
-                    findPreset(function(notFound,preset){
-                        if(notFound === false){
-                            var sqlQuery = 'SELECT * FROM Monitors WHERE ke=? AND '
-                            var monitorQuery = []
-                            var sqlQueryValues = [req.params.ke]
-                            var monitorPresets = {}
-                            preset.details.monitors.forEach(function(monitor){
-                                monitorQuery.push('mid=?')
-                                sqlQueryValues.push(monitor.mid)
-                                monitorPresets[monitor.mid] = monitor
-                            })
-                            sqlQuery += '('+monitorQuery.join(' OR ')+')'
-                            s.sqlQuery(sqlQuery,sqlQueryValues,function(err,monitors){
-                                if(monitors && monitors[0]){
-                                    monitors.forEach(function(monitor){
-                                        s.checkDetails(monitor)
-                                        s.checkDetails(monitorPresets[monitor.mid])
-                                        var monitorPreset = monitorPresets[monitor.mid]
-                                        monitorPreset.details = Object.assign(monitor.details,monitorPreset.details)
-                                        monitor = s.cleanMonitorObjectForDatabase(Object.assign(monitor,monitorPreset))
-                                        monitor.details = JSON.stringify(monitor.details)
-                                        s.addOrEditMonitor(Object.assign(monitor,{}),function(err,endData){
-
-                                        },user)
-                                    })
-                                    endData.ok = true
-                                    s.tx({f:'change_group_state',ke:req.params.ke,name:req.params.stateName},'GRP_'+req.params.ke)
-                                    s.closeJsonResponse(res,endData)
-                                }else{
-                                    endData.msg = user.lang['State Configuration has no monitors associated']
-                                    s.closeJsonResponse(res,endData)
-                                }
-                            })
-                        }else{
-                            endData.msg = user.lang['State Configuration Not Found']
-                            s.closeJsonResponse(res,endData)
-                        }
+                    s.activateMonitorStates(req.params.ke,req.params.stateName,user,function(endData){
+                        s.closeJsonResponse(res,endData)
                     })
                 break;
             }

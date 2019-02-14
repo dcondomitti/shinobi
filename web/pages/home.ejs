@@ -14,7 +14,22 @@
 <link rel="stylesheet" href="<%-window.libURL%>libs/css/gridstack.min.css">
 <link rel="stylesheet" href="<%-window.libURL%>libs/css/gridstack-extra.min.css">
 <link rel="stylesheet" href="<%-window.libURL%>libs/css/bootstrap-table.min.css">
+<!--
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/dash2.basic.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/dash2.forms.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/dash2.modal.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/dash2.monitors.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/dash2.powervideo.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/dash2.ptzcontrols.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/dash2.regioneditor.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/dash2.rightotleft.css">
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/dash2.timelapse.css">
 <link rel="stylesheet" href="<%-window.libURL%>libs/css/main.dash2.css">
+-->
+<link rel="stylesheet" href="<%-window.libURL%>libs/css/main.dash2.old.css">
+<% customAutoLoad.LibsCss.forEach(function(lib){ %>
+    <link rel="stylesheet" href="<%-window.libURL%>libs/css/<%-lib%>">
+<% }) %>
 <style id="theme">
 <% if(details.theme&&details.theme!==''){ %><%- include(__dirname+'/web/libs/themes/'+details.theme+'/style.css'); %><% } %>
 </style>
@@ -121,6 +136,8 @@
                 <% if(!details.sub){ %>
                 <li class="mdl-menu__item" data-toggle="modal" data-target="#onvif_probe"><div><i class="fa fa-rss"></i><div><%- lang.ONVIF %></div></div></li>
                 <li class="mdl-menu__item" data-toggle="modal" data-target="#probe"><div><i class="fa fa-search"></i><div><%- lang.FFprobe %></div></div></li>
+                <li class="mdl-menu__item" data-toggle="modal" data-target="#monitorStates"><div><i class="fa fa-align-right"></i><div><%- lang['Monitor States'] %></div></div></li>
+                <li class="mdl-menu__item" data-toggle="modal" data-target="#schedules"><div><i class="fa fa-clock-o"></i><div><%- lang['Schedules'] %></div></div></li>
                 <li class="mdl-menu__item" data-toggle="modal" data-target="#filters"><div><i class="fa fa-filter"></i><div><%- lang.Filters %></div></div></li>
                 <% } %>
                 <li class="mdl-menu__item permission_view_logs" data-toggle="modal" data-target="#logs_modal"><div><i class="fa fa-exclamation-triangle"></i><div><%- lang.Logs %></div></div></li>
@@ -167,7 +184,12 @@
 <% include blocks/probe.ejs %>
 <% include blocks/region.ejs %>
 <% include blocks/detectorfilters.ejs %>
+<% include blocks/monitorStates.ejs %>
+<% include blocks/schedules.ejs %>
 <% include blocks/confirm.ejs %>
+<% customAutoLoad.PageBlocks.forEach(function(block){ %>
+    <%- include(block) %>
+<% }) %>
 <% if(config.DropboxAppKey){ %>
 <!--Dropbox Library, Change data-app-key to your app key. -->
 <script type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="<%= config.DropboxAppKey %>"></script>
@@ -198,5 +220,15 @@
 <script src="<%-window.libURL%>libs/js/gridstack.min.js"></script>
 <script src="<%-window.libURL%>libs/js/gridstack.jQueryUI.min.js"></script>
 <script src="<%-window.libURL%>libs/js/basic.js"></script>
-<script><% include ../libs/js/main.dash2.js %></script>
+<script><% include ../libs/js/dash2.config.js %></script>
+<script src="<%-window.libURL%>libs/js/dash2.basic.js"></script>
+<script src="<%-window.libURL%>libs/js/dash2.confirm.js"></script>
+<script src="<%-window.libURL%>libs/js/dash2.socketio.js"></script>
+<script src="<%-window.libURL%>libs/js/dash2.gridstack.js"></script>
+<script src="<%-window.libURL%>libs/js/dash2.elements.js"></script>
+<script src="<%-window.libURL%>libs/js/dash2.elementbuilder.js"></script>
+<script src="<%-window.libURL%>libs/js/dash2.init.js"></script>
+<% customAutoLoad.LibsJs.forEach(function(lib){ %>
+    <script src="<%-window.libURL%>libs/js/<%-lib%>"></script>
+<% }) %>
 <% include blocks/help.ejs %>

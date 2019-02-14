@@ -1,0 +1,5 @@
+#region_editor .modal-body{text-align:center;overflow:auto;max-height:800px}
+#region_editor .canvas_holder{position:relative;display:inline-block;overflow:auto;min-height:450px}
+#region_editor .cord_element{position:absolute;background:rgba(221, 221, 221, 0.8);z-index:11;padding:5px;}
+#region_editor .cord_element.selected{z-index:12;}
+#region_editor .cord_element .controls{margin-bottom:5px;}

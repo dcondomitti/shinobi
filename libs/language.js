@@ -18,42 +18,50 @@ module.exports = function(s,config){
         var definitions = require(s.location.definitions+'/en_CA.json');
     }
     //load languages dynamically
+    s.copySystemDefaultLanguage = function(){
+        //en_CA
+        return Object.assign(lang,{})
+    }
     s.loadedLanguages={}
-    s.loadedLanguages[config.language]=lang;
+    s.loadedLanguages[config.language] = s.copySystemDefaultLanguage()
     s.getLanguageFile = function(rule){
         if(rule && rule !== ''){
             var file = s.loadedLanguages[file]
             if(!file){
                 try{
                     s.loadedLanguages[rule] = require(s.location.languages+'/'+rule+'.json')
-                    s.loadedLanguages[rule] = Object.assign(lang,s.loadedLanguages[rule])
+                    s.loadedLanguages[rule] = Object.assign(s.copySystemDefaultLanguage(),s.loadedLanguages[rule])
                     file = s.loadedLanguages[rule]
                 }catch(err){
-                    file = lang
+                    file = s.copySystemDefaultLanguage()
                 }
             }
         }else{
-            file = lang
+            file = s.copySystemDefaultLanguage()
         }
         return file
     }
     //load defintions dynamically
+    s.copySystemDefaultDefinitions = function(){
+        //en_CA
+        return Object.assign(definitions,{})
+    }
     s.loadedDefinitons={}
-    s.loadedDefinitons[config.language]=definitions;
+    s.loadedDefinitons[config.language] = s.copySystemDefaultDefinitions()
     s.getDefinitonFile = function(rule){
         if(rule && rule !== ''){
             var file = s.loadedDefinitons[file]
             if(!file){
                 try{
                     s.loadedDefinitons[rule] = require(s.location.definitions+'/'+rule+'.json')
-                    s.loadedDefinitons[rule] = Object.assign(definitions,s.loadedDefinitons[rule])
+                    s.loadedDefinitons[rule] = Object.assign(s.copySystemDefaultDefinitions(),s.loadedDefinitons[rule])
                     file = s.loadedDefinitons[rule]
                 }catch(err){
-                    file = definitions
+                    file = s.copySystemDefaultDefinitions()
                 }
             }
         }else{
-            file = definitions
+            file = s.copySystemDefaultDefinitions()
         }
         return file
     }

@@ -1,4 +1,14 @@
 # Install prerequisites
+DIR=`dirname $0`
+INSTALLERS_DIR="$DIR"
+echo "-----------------------------------"
+if ! [ -x "$(command -v opencv_version)" ]; then
+    echo "Installing OpenCV"
+    dos2unix $INSTALLERS_DIR/opencv-cuda.sh
+    sh $INSTALLERS_DIR/opencv-cuda.sh
+else
+    echo "OpenCV found... : $(opencv_version)"
+fi
 # this includes all the ones missing from OpenALPR's guide.
 sudo apt install libtesseract-dev git cmake build-essential libleptonica-dev -y
 sudo apt install liblog4cplus-dev libcurl3-dev -y

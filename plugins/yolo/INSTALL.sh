@@ -19,8 +19,15 @@ if [ ! -d "/usr/local/cuda" ]; then
     exit 1
 else
     echo "CUDA Toolkit found..."
-    export PATH=/usr/local/cuda/bin:$PATH
-    export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+    echo "============="
+    echo "Shinobi - Do you want to install the plugin with CUDA support?"
+    echo "Do this if you installed NVIDIA Drivers, CUDA Toolkit, and CuDNN"
+    echo "(y)es or (N)o"
+    read usecuda
+    if [ "$usecuda" = "y" ] || [ "$usecuda" = "Y" ]; then
+        export PATH=/usr/local/cuda/bin:$PATH
+        export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+    fi
 fi
 echo "-----------------------------------"
 if ! [ -x "$(command -v opencv_version)" ]; then
@@ -73,7 +80,6 @@ else
     echo "conf.json already exists..."
 fi
 echo "-----------------------------------"
-echo "Getting Imagemagick"
 if [ -f /etc/redhat-release ]; then
   yum update
   yum install imagemagick -y
@@ -90,6 +96,7 @@ echo "-----------------------------------"
 echo "Getting C++ module : node-yolo-shinobi"
 echo "https://www.npmjs.com/package/node-yolo-shinobi is a fork of https://github.com/rcaceiro/node-yolo"
 npm install --unsafe-perm
+npm install node-yolo-shinobi --unsafe-perm
 npm audit fix --force
 echo "-----------------------------------"
 echo "Start the plugin with pm2 like so :"
