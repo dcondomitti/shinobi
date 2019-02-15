@@ -39,7 +39,10 @@ s.detectObject = function(buffer,d,tx,frameLocation){
                 }else{
                     try{
                         try{
-                            scan=JSON.parse(scan.replace('--(!)Loaded CUDA classifier','').trim())
+                            if(scan.indexOf('Initialize OpenCL runtime...') > -1){
+                                scan = scan.split('Initialize OpenCL runtime...')[1].trim()
+                            }
+                            scan = JSON.parse(scan.replace('--(!)Loaded CUDA classifier','').trim())
                         }catch(err){
                             if(!scan||!scan.results){
                                 return s.systemLog(scan,err);
