@@ -779,15 +779,12 @@ module.exports = function(s,config,onFinish){
                 x.detector_vf.push('hwdownload,format=nv12')
             }
             if(x.detector_vf.length > 0)x.pipe += ' -vf "'+x.detector_vf.join(',')+'"'
-            // REMOVE AFTER TESTING >
-            e.details.detector_h264 = '1'
-            // REMOVE AFTER TESTING />
             var h264Output = ' -q:v 1 -an -c:v libx264 -f hls -tune zerolatency -g 1 -hls_time 2 -hls_list_size 3 -start_number 0 -live_start_index 3 -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'detectorStreamX.m3u8"'
             if(e.details.detector_pam === '1'){
                 if(e.cudaEnabled){
                     x.pipe += ' -vf "hwdownload,format=nv12"'
                 }
-                x.pipe += ' -an -c:v pam -pix_fmt gray -f image2pipe -r '+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:3'
+                x.pipe += ' -an -c:v pam -pix_fmt gray -f image2pipe pipe:3'
                 if(e.details.detector_use_detect_object === '1'){
                     //for object detection
                     x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
