@@ -788,6 +788,8 @@ module.exports = function(s,config,onFinish){
                 if(e.details.detector_use_detect_object === '1'){
                     //for object detection
                     x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
+                    if(e.details.detector_scale_x_object&&e.details.detector_scale_x_object!==''&&e.details.detector_scale_y_object&&e.details.detector_scale_y_object!==''){x.dobjratio=' -s '+e.details.detector_scale_x_object+'x'+e.details.detector_scale_y_object}else{x.dobjratio=x.dratio}
+                    x.pipe += ' -r ' + x.detector_fps + x.dobjratio + x.cust_detect
                     if(e.details.detector_h264 === '1'){
                         x.pipe += h264Output
                     }else{
@@ -848,7 +850,6 @@ module.exports = function(s,config,onFinish){
             if(!e.details.detector_buffer_hls_list_size||e.details.detector_buffer_hls_list_size===''){e.details.detector_buffer_hls_list_size='4'}
             if(!e.details.detector_buffer_start_number||e.details.detector_buffer_start_number===''){e.details.detector_buffer_start_number='0'}
             if(!e.details.detector_buffer_live_start_index||e.details.detector_buffer_live_start_index===''){e.details.detector_buffer_live_start_index='-3'}
-
             if(e.details.detector_buffer_vcodec.indexOf('_vaapi')>-1){
                 if(x.hwaccel.indexOf('-vaapi_device')>-1){
                     x.detector_buffer_filters.push('format=nv12')
@@ -869,7 +870,7 @@ module.exports = function(s,config,onFinish){
             if(x.detector_buffer_filters.length>0){
                 x.pipe+=' -vf '+x.detector_buffer_filters.join(',')
             }
-            x.pipe+=x.detector_buffer_fps+x.detector_buffer_acodec+' -c:v '+e.details.detector_buffer_vcodec+' -f hls -tune '+e.details.detector_buffer_tune+' -g '+e.details.detector_buffer_g+' -hls_time '+e.details.detector_buffer_hls_time+' -hls_list_size '+e.details.detector_buffer_hls_list_size+' -start_number '+e.details.detector_buffer_start_number+' -live_start_index '+e.details.detector_buffer_live_start_index+' -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'detectorStream.m3u8"'
+            x.pipe += x.detector_buffer_fps+x.detector_buffer_acodec+' -c:v '+e.details.detector_buffer_vcodec+' -f hls -tune '+e.details.detector_buffer_tune+' -g '+e.details.detector_buffer_g+' -hls_time '+e.details.detector_buffer_hls_time+' -hls_list_size '+e.details.detector_buffer_hls_list_size+' -start_number '+e.details.detector_buffer_start_number+' -live_start_index '+e.details.detector_buffer_live_start_index+' -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'detectorStream.m3u8"'
         }
     }
     ffmpeg.buildCoProcessorFeed = function(e,x){
