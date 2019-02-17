@@ -51,5 +51,12 @@ module.exports = function(s){
         if(config.childNodes.key === undefined)config.childNodes.key = [
             '3123asdasdf1dtj1hjk23sdfaasd12asdasddfdbtnkkfgvesra3asdsd3123afdsfqw345'
         ];
+    if(config.cron.key === 'change_this_to_something_very_random__just_anything_other_than_this'){
+        console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        console.error('!! Change your cron key in your conf.json.                     !!')
+        console.error('!! If you\'re running Shinobi remotely you should do this now.  !!')
+        console.error('!! You can do this in the Super User panel or from terminal.   !!')
+        console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+    }
     return config
 }
