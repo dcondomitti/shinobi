@@ -237,55 +237,60 @@ module.exports = function(s,config,lang){
         })
     }
     s.deleteListOfVideos = function(videos){
-        var query = 'DELETE FROM Videos WHERE '
-        var videoQuery = []
-        var queryValues = []
-        videos.forEach(function(video){
-            s.checkDetails(video)
-            //e = video object
-            video.dir = s.getVideoDirectory(video)
-            if(!video.filename && video.time){
-                video.filename = s.formattedTime(video.time)
-            }
-            var filename,
-                time
-            if(video.filename.indexOf('.')>-1){
-                filename = video.filename
-            }else{
-                filename = video.filename+'.'+video.ext
-            }
-            if(video.filename && !video.time){
-                time = s.nameToTime(filename)
-            }else{
-                time = video.time
-            }
-            time = new Date(time)
-            fs.chmod(video.dir+filename,0o777,function(err){
-                s.tx({
-                    f: 'video_delete',
-                    filename: filename,
-                    mid: video.id,
-                    ke: video.ke,
-                    time: s.nameToTime(filename),
-                    end: s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')
-                },'GRP_'+video.ke);
-                s.setDiskUsedForGroup(video,-(video.size / 1000000))
-                fs.unlink(video.dir+filename,function(err){
-                    fs.stat(video.dir+filename,function(err){
-                        if(!err){
-                            s.file('delete',video.dir+filename)
-                        }
+        var deleteSetOfVideos = function(videos){
+            var query = 'DELETE FROM Videos WHERE '
+            var videoQuery = []
+            var queryValues = []
+            videos.forEach(function(video){
+                s.checkDetails(video)
+                //e = video object
+                video.dir = s.getVideoDirectory(video)
+                if(!video.filename && video.time){
+                    video.filename = s.formattedTime(video.time)
+                }
+                var filename,
+                    time
+                if(video.filename.indexOf('.')>-1){
+                    filename = video.filename
+                }else{
+                    filename = video.filename+'.'+video.ext
+                }
+                if(video.filename && !video.time){
+                    time = s.nameToTime(filename)
+                }else{
+                    time = video.time
+                }
+                time = new Date(time)
+                fs.chmod(video.dir+filename,0o777,function(err){
+                    s.tx({
+                        f: 'video_delete',
+                        filename: filename,
+                        mid: video.id,
+                        ke: video.ke,
+                        time: s.nameToTime(filename),
+                        end: s.formattedTime(new Date,'YYYY-MM-DD HH:mm:ss')
+                    },'GRP_'+video.ke);
+                    s.setDiskUsedForGroup(video,-(video.size / 1000000))
+                    fs.unlink(video.dir+filename,function(err){
+                        fs.stat(video.dir+filename,function(err){
+                            if(!err){
+                                s.file('delete',video.dir+filename)
+                            }
+                        })
                     })
                 })
+                videoQuery.push('(`mid`=? AND `ke`=? AND `time`=?)')
+                queryValues = queryValues.concat([video.id,video.ke,time])
             })
-            videoQuery.push('(`mid`=? AND `ke`=? AND `time`=?)')
-            queryValues = queryValues.concat([video.id,video.ke,time])
-        })
-        query += videoQuery.join(' OR ')
-        s.sqlQuery(query,queryValues,function(err){
-            if(err){
-                s.systemLog(lang['List of Videos Delete Error'],err)
-            }
+            query += videoQuery.join(' OR ')
+            s.sqlQuery(query,queryValues,function(err){
+                if(err){
+                    s.systemLog(lang['List of Videos Delete Error'],err)
+                }
+            })
+        }
+        videos.chunk(100).forEach(function(videosChunk){
+            deleteSetOfVideos(videosChunk)
         })
     }
     s.deleteVideoFromCloudExtensions = {}
