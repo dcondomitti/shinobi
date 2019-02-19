@@ -322,37 +322,41 @@ module.exports = function(s,config,lang){
                 if(ar.bb_b2_dir !== ''){
                   ar.bb_b2_dir = s.checkCorrectPathEnding(ar.bb_b2_dir)
                 }
-                var b2 = new B2({
-                    accountId: ar.bb_b2_accountId,
-                    applicationKey: ar.bb_b2_applicationKey
-                })
-                s.group[e.ke].bb_b2 = b2
                 var backblazeErr = function(err){
                     // console.log(err)
-                    s.userLog({mid:'$USER',ke:e.ke},{type:lang['Backblaze Error'],msg:err.data})
+                    s.userLog({mid:'$USER',ke:e.ke},{type:lang['Backblaze Error'],msg:err.data || err})
                 }
-                b2.authorize().then(function(resp){
-                    s.group[e.ke].bb_b2_downloadUrl = resp.data.downloadUrl
-                    b2.listBuckets().then(function(resp){
-                        var buckets = resp.data.buckets
-                        var bucketN = -2
-                        buckets.forEach(function(item,n){
-                            if(item.bucketName === ar.bb_b2_bucket){
-                                bucketN = n
+                var createB2Connection = function(){
+                    var b2 = new B2({
+                        accountId: ar.bb_b2_accountId,
+                        applicationKey: ar.bb_b2_applicationKey
+                    })
+                    b2.authorize().then(function(resp){
+                        s.group[e.ke].bb_b2_downloadUrl = resp.data.downloadUrl
+                        b2.listBuckets().then(function(resp){
+                            var buckets = resp.data.buckets
+                            var bucketN = -2
+                            buckets.forEach(function(item,n){
+                                if(item.bucketName === ar.bb_b2_bucket){
+                                    bucketN = n
+                                }
+                            })
+                            if(bucketN > -1){
+                                s.group[e.ke].bb_b2_bucketId = buckets[bucketN].bucketId
+                            }else{
+                                b2.createBucket(
+                                    ar.bb_b2_bucket,
+                                    'allPublic'
+                                ).then(function(resp){
+                                    s.group[e.ke].bb_b2_bucketId = resp.data.bucketId
+                                }).catch(backblazeErr)
                             }
-                        })
-                        if(bucketN > -1){
-                            s.group[e.ke].bb_b2_bucketId = buckets[bucketN].bucketId
-                        }else{
-                            b2.createBucket(
-                                ar.bb_b2_bucket,
-                                'allPublic'
-                            ).then(function(resp){
-                                s.group[e.ke].bb_b2_bucketId = resp.data.bucketId
-                            }).catch(backblazeErr)
-                        }
+                        }).catch(backblazeErr)
                     }).catch(backblazeErr)
-                }).catch(backblazeErr)
+                    s.group[e.ke].bb_b2 = b2
+                }
+                createB2Connection()
+                s.group[e.ke].bb_b2_refreshTimer = setTimeout(createB2Connection,1000 * 60 * 60)
             }
         }catch(err){
             s.debugLog(err)
@@ -360,6 +364,7 @@ module.exports = function(s,config,lang){
     }
     var unloadBackblazeB2ForUser = function(user){
         s.group[user.ke].bb_b2 = null
+        clearTimeout(s.group[user.ke].bb_b2_refreshTimer)
     }
     var deleteVideoFromBackblazeB2 = function(e,video,callback){
         // e = user
