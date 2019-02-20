@@ -68,6 +68,10 @@ module.exports = function(s,config,lang,app,io){
     app.use(s.checkCorrectPathEnding(config.webPaths.super)+'libs',express.static(s.mainDirectory + '/web/libs'))
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({extended: true}));
+    app.use(function (req,res,next){
+        res.header("Access-Control-Allow-Origin",req.headers.origin);
+        next()
+    })
     app.set('views', s.mainDirectory + '/web');
     app.set('view engine','ejs');
     //add template handler
@@ -126,7 +130,6 @@ module.exports = function(s,config,lang,app,io){
     app.get(config.webPaths.apiPrefix+':auth/userInfo/:ke',function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             req.ret.ok=true
             req.ret.user=user
@@ -152,9 +155,6 @@ module.exports = function(s,config,lang,app,io){
         s.checkCorrectPathEnding(config.webPaths.super)+':screen',
     ],function (req,res){
         req.ip = s.getClientIp(req)
-        if(req.query.json === 'true'){
-            res.header("Access-Control-Allow-Origin",req.headers.origin);
-        }
         var screenChooser = function(screen){
             var search = function(screen){
                 if(req.url.indexOf(screen) > -1){
@@ -581,7 +581,6 @@ module.exports = function(s,config,lang,app,io){
     * API : Brute Protection Lock Reset by API
     */
     app.get([config.webPaths.apiPrefix+':auth/resetBruteProtection/:ke'], function (req,res){
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             if(s.failedLoginAttempts[user.mail]){
                 clearTimeout(s.failedLoginAttempts[user.mail].timeout)
@@ -599,7 +598,6 @@ module.exports = function(s,config,lang,app,io){
         config.webPaths.apiPrefix+':auth/cycle/:ke',
         config.webPaths.apiPrefix+':auth/cycle/:ke/:group'
     ], function(req,res) {
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             if(user.permissions.get_monitors==="0"){
                 res.end(user.lang['Not Permitted'])
@@ -728,7 +726,6 @@ module.exports = function(s,config,lang,app,io){
         }else{
             res.setHeader('Content-Type', 'application/json');
         }
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.fn=function(user){
             if(user.permissions.get_monitors==="0"){
                 res.end(s.prettyPrint([]))
@@ -844,7 +841,6 @@ module.exports = function(s,config,lang,app,io){
     app.get([config.webPaths.apiPrefix+':auth/monitor/:ke',config.webPaths.apiPrefix+':auth/monitor/:ke/:id'], function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.fn=function(user){
         if(user.permissions.get_monitors==="0"){
             res.end(s.prettyPrint([]))
@@ -929,7 +925,6 @@ module.exports = function(s,config,lang,app,io){
     * API : Merge Recorded Videos into one file
      */
      app.get(config.webPaths.apiPrefix+':auth/videosMerge/:ke', function (req,res){
-         res.header("Access-Control-Allow-Origin",req.headers.origin);
          var failed = function(resp){
              res.setHeader('Content-Type', 'application/json');
              res.end(s.prettyPrint(resp))
@@ -984,7 +979,6 @@ module.exports = function(s,config,lang,app,io){
         config.webPaths.apiPrefix+':auth/cloudVideos/:ke/:id'
     ], function (req,res){
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             var hasRestrictions = user.details.sub && user.details.allmonitors !== '1'
             if(
@@ -1105,7 +1099,6 @@ module.exports = function(s,config,lang,app,io){
     app.get([config.webPaths.apiPrefix+':auth/events/:ke',config.webPaths.apiPrefix+':auth/events/:ke/:id',config.webPaths.apiPrefix+':auth/events/:ke/:id/:limit',config.webPaths.apiPrefix+':auth/events/:ke/:id/:limit/:start',config.webPaths.apiPrefix+':auth/events/:ke/:id/:limit/:start/:end'], function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             if(user.permissions.watch_videos==="0"||user.details.sub&&user.details.allmonitors!=='1'&&user.details.video_view.indexOf(req.params.id)===-1){
                 res.end(s.prettyPrint([]))
@@ -1163,7 +1156,6 @@ module.exports = function(s,config,lang,app,io){
     app.get([config.webPaths.apiPrefix+':auth/logs/:ke',config.webPaths.apiPrefix+':auth/logs/:ke/:id'], function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             if(user.permissions.get_logs==="0" || user.details.sub && user.details.view_logs !== '1'){
                 res.end(s.prettyPrint([]))
@@ -1228,7 +1220,6 @@ module.exports = function(s,config,lang,app,io){
     app.get(config.webPaths.apiPrefix+':auth/smonitor/:ke', function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.fn=function(user){
             if(user.permissions.get_monitors==="0"){
                 res.end(s.prettyPrint([]))
@@ -1265,7 +1256,6 @@ module.exports = function(s,config,lang,app,io){
     app.get([config.webPaths.apiPrefix+':auth/monitor/:ke/:id/:f',config.webPaths.apiPrefix+':auth/monitor/:ke/:id/:f/:ff',config.webPaths.apiPrefix+':auth/monitor/:ke/:id/:f/:ff/:fff'], function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             if(user.permissions.control_monitors==="0"||user.details.sub&&user.details.allmonitors!=='1'&&user.details.monitor_edit.indexOf(req.params.id)===-1){
                 res.end(user.lang['Not Permitted'])
@@ -1360,7 +1350,6 @@ module.exports = function(s,config,lang,app,io){
      */
     app.get([config.webPaths.apiPrefix+':auth/fileBin/:ke',config.webPaths.apiPrefix+':auth/fileBin/:ke/:id'],function (req,res){
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.fn=function(user){
             req.sql='SELECT * FROM Files WHERE ke=?';req.ar=[req.params.ke];
             if(user.details.sub&&user.details.monitors&&user.details.allmonitors!=='1'){
@@ -1393,7 +1382,6 @@ module.exports = function(s,config,lang,app,io){
     * API : Get fileBin file
      */
     app.get(config.webPaths.apiPrefix+':auth/fileBin/:ke/:id/:year/:month/:day/:file', function (req,res){
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.fn=function(user){
             req.failed=function(){
                 res.end(user.lang['File Not Found'])
@@ -1424,7 +1412,6 @@ module.exports = function(s,config,lang,app,io){
     * API : Zip Videos and Get Link from fileBin
      */
     app.get(config.webPaths.apiPrefix+':auth/zipVideos/:ke', function (req,res){
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         var failed = function(resp){
             res.setHeader('Content-Type', 'application/json');
             res.end(s.prettyPrint(resp))
@@ -1525,7 +1512,6 @@ module.exports = function(s,config,lang,app,io){
     * API : Zip Cloud Videos and Get Link from fileBin
      */
     app.get(config.webPaths.apiPrefix+':auth/zipCloudVideos/:ke', function (req,res){
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         var failed = function(resp){
             res.setHeader('Content-Type', 'application/json');
             res.end(s.prettyPrint(resp))
@@ -1733,7 +1719,6 @@ module.exports = function(s,config,lang,app,io){
      */
     app.get(config.webPaths.apiPrefix+':auth/control/:ke/:id/:direction', function (req,res){
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             s.cameraControl(req.params,function(resp){
                 res.end(s.prettyPrint(resp))
@@ -1751,7 +1736,6 @@ module.exports = function(s,config,lang,app,io){
     ], function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             if(user.permissions.watch_videos==="0"||user.details.sub&&user.details.allmonitors!=='1'&&user.details.video_delete.indexOf(req.params.id)===-1){
                 res.end(user.lang['Not Permitted'])
@@ -1846,7 +1830,6 @@ module.exports = function(s,config,lang,app,io){
     app.get(config.webPaths.apiPrefix+':auth/probe/:ke',function (req,res){
         req.ret={ok:false};
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             switch(req.query.action){
     //            case'stop':
@@ -1893,7 +1876,6 @@ module.exports = function(s,config,lang,app,io){
     app.all([config.webPaths.apiPrefix+':auth/onvif/:ke/:id/:action',config.webPaths.apiPrefix+':auth/onvif/:ke/:id/:service/:action'],function (req,res){
         var response = {ok:false};
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             var errorMessage = function(msg,error){
                 response.ok = false

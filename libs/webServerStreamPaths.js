@@ -16,7 +16,6 @@ module.exports = function(s,config,lang,app){
     * Page : Get Embed Stream
      */
     app.get([config.webPaths.apiPrefix+':auth/embed/:ke/:id',config.webPaths.apiPrefix+':auth/embed/:ke/:id/:addon'], function (req,res){
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.params.protocol=req.protocol;
         s.auth(req.params,function(user){
             if(user.permissions.watch_stream==="0"||user.details.sub&&user.details.allmonitors!=='1'&&user.details.monitors.indexOf(req.params.id)===-1){
@@ -100,7 +99,6 @@ module.exports = function(s,config,lang,app){
      * @param {string} full - if `true` page will load the MJPEG iframe page
      */
     app.get([config.webPaths.apiPrefix+':auth/mjpeg/:ke/:id',config.webPaths.apiPrefix+':auth/mjpeg/:ke/:id/:channel'], function(req,res) {
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         if(req.query.full=='true'){
             s.renderPage(req,res,config.renderPaths.mjpeg,{url:config.webPaths.apiPrefix + req.params.auth+'/mjpeg/'+req.params.ke+'/'+req.params.id,originalURL:s.getOriginalUrl(req)});
             res.end()
@@ -163,7 +161,6 @@ module.exports = function(s,config,lang,app){
     * API : Get HLS Stream
     */
     app.get([config.webPaths.apiPrefix+':auth/hls/:ke/:id/:file',config.webPaths.apiPrefix+':auth/hls/:ke/:id/:channel/:file'], function (req,res){
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         req.fn=function(user){
             s.checkChildProxy(req.params,function(){
                 req.dir=s.dir.streams+req.params.ke+'/'+req.params.id+'/'
@@ -186,7 +183,6 @@ module.exports = function(s,config,lang,app){
     * API : Get JPEG Snapshot
     */
     app.get(config.webPaths.apiPrefix+':auth/jpeg/:ke/:id/s.jpg', function(req,res){
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             s.checkChildProxy(req.params,function(){
                 if(user.details.sub&&user.details.allmonitors!=='1'&&user.details.monitors&&user.details.monitors.indexOf(req.params.id)===-1){
@@ -212,7 +208,6 @@ module.exports = function(s,config,lang,app){
     * API : Get FLV Stream
     */
     app.get([config.webPaths.apiPrefix+':auth/flv/:ke/:id/s.flv',config.webPaths.apiPrefix+':auth/flv/:ke/:id/:channel/s.flv'], function(req,res) {
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             s.checkChildProxy(req.params,function(){
                 var Emitter,chunkChannel
@@ -263,7 +258,6 @@ module.exports = function(s,config,lang,app){
     * API : Get H.265/h265 HEVC stream
     */
     app.get([config.webPaths.apiPrefix+':auth/h265/:ke/:id/s.hevc',config.webPaths.apiPrefix+':auth/h265/:ke/:id/:channel/s.hevc'], function(req,res) {
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             s.checkChildProxy(req.params,function(){
                 var Emitter,chunkChannel
@@ -313,7 +307,6 @@ module.exports = function(s,config,lang,app){
         config.webPaths.apiPrefix+':auth/h264/:ke/:id/:feed',
         config.webPaths.apiPrefix+':auth/h264/:ke/:id'
     ], function (req, res) {
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             s.checkChildProxy(req.params,function(){
                 if(!req.query.feed){req.query.feed='1'}
