@@ -4,6 +4,24 @@ var spawn = require('child_process').spawn;
 var webdav = require("webdav-fs");
 var ssh2SftpClient = require('node-ssh')
 module.exports = function(s,config,lang){
+    var addCloudUploader = function(opt){
+        s.loadGroupAppExtender(opt.loadGroupAppExtender)
+        s.unloadGroupAppExtender(opt.unloadGroupAppExtender)
+        s.insertCompletedVideoExtender(opt.insertCompletedVideoExtender)
+        s.deleteVideoFromCloudExtensions[opt.name] = opt.deleteVideoFromCloudExtensions
+        s.cloudDiskUseStartupExtensions[opt.name] = opt.cloudDiskUseStartupExtensions
+        s.beforeAccountSave(opt.beforeAccountSave)
+        s.onAccountSave(opt.onAccountSave)
+        s.cloudDisksLoader(opt.name)
+    }
+    var addSimpleUploader = function(opt){
+        s.loadGroupAppExtender(opt.loadGroupAppExtender)
+        s.unloadGroupAppExtender(opt.unloadGroupAppExtender)
+        s.insertCompletedVideoExtender(opt.insertCompletedVideoExtender)
+        s.beforeAccountSave(opt.beforeAccountSave)
+        s.onAccountSave(opt.onAccountSave)
+        s.onMonitorSave(opt.onMonitorSave)
+    }
     // WebDAV
     var beforeAccountSaveForWebDav = function(d){
         //d = save event
@@ -21,33 +39,33 @@ module.exports = function(s,config,lang){
     }
     var loadWebDavForUser = function(e){
         // e = user
-        var ar = JSON.parse(e.details);
-        if(ar.webdav_use_global === '1' && config.cloudUploaders && config.cloudUploaders.WebDAV){
+        var userDetails = JSON.parse(e.details);
+        if(userDetails.webdav_use_global === '1' && config.cloudUploaders && config.cloudUploaders.WebDAV){
             // {
             //     webdav_user: "",
             //     webdav_pass: "",
             //     webdav_url: "",
             //     webdav_dir: "",
             // }
-            ar = Object.assign(ar,config.cloudUploaders.WebDAV)
+            userDetails = Object.assign(userDetails,config.cloudUploaders.WebDAV)
         }
         //owncloud/webdav
         if(!s.group[e.ke].webdav &&
-           ar.webdav_user&&
-           ar.webdav_user!==''&&
-           ar.webdav_pass&&
-           ar.webdav_pass!==''&&
-           ar.webdav_url&&
-           ar.webdav_url!==''
+           userDetails.webdav_user&&
+           userDetails.webdav_user!==''&&
+           userDetails.webdav_pass&&
+           userDetails.webdav_pass!==''&&
+           userDetails.webdav_url&&
+           userDetails.webdav_url!==''
           ){
-            if(!ar.webdav_dir||ar.webdav_dir===''){
-                ar.webdav_dir='/'
+            if(!userDetails.webdav_dir||userDetails.webdav_dir===''){
+                userDetails.webdav_dir='/'
             }
-            ar.webdav_dir = s.checkCorrectPathEnding(ar.webdav_dir)
+            userDetails.webdav_dir = s.checkCorrectPathEnding(userDetails.webdav_dir)
             s.group[e.ke].webdav = webdav(
-                ar.webdav_url,
-                ar.webdav_user,
-                ar.webdav_pass
+                userDetails.webdav_url,
+                userDetails.webdav_user,
+                userDetails.webdav_pass
             )
         }
     }
@@ -175,8 +193,8 @@ module.exports = function(s,config,lang){
     }
     var loadAmazonS3ForUser = function(e){
         // e = user
-        var ar = JSON.parse(e.details)
-        if(ar.aws_use_global === '1' && config.cloudUploaders && config.cloudUploaders.AmazonS3){
+        var userDetails = JSON.parse(e.details)
+        if(userDetails.aws_use_global === '1' && config.cloudUploaders && config.cloudUploaders.AmazonS3){
             // {
             //     aws_accessKeyId: "",
             //     aws_secretAccessKey: "",
@@ -184,30 +202,30 @@ module.exports = function(s,config,lang){
             //     aws_s3_bucket: "",
             //     aws_s3_dir: "",
             // }
-            ar = Object.assign(ar,config.cloudUploaders.AmazonS3)
+            userDetails = Object.assign(userDetails,config.cloudUploaders.AmazonS3)
         }
         //Amazon S3
         if(!s.group[e.ke].aws &&
            !s.group[e.ke].aws_s3 &&
-           ar.aws_s3 !== '0' &&
-           ar.aws_accessKeyId !== ''&&
-           ar.aws_secretAccessKey &&
-           ar.aws_secretAccessKey !== ''&&
-           ar.aws_region &&
-           ar.aws_region !== ''&&
-           ar.aws_s3_bucket !== ''
+           userDetails.aws_s3 !== '0' &&
+           userDetails.aws_accessKeyId !== ''&&
+           userDetails.aws_secretAccessKey &&
+           userDetails.aws_secretAccessKey !== ''&&
+           userDetails.aws_region &&
+           userDetails.aws_region !== ''&&
+           userDetails.aws_s3_bucket !== ''
           ){
-            if(!ar.aws_s3_dir || ar.aws_s3_dir === '/'){
-                ar.aws_s3_dir = ''
+            if(!userDetails.aws_s3_dir || userDetails.aws_s3_dir === '/'){
+                userDetails.aws_s3_dir = ''
             }
-            if(ar.aws_s3_dir !== ''){
-                ar.aws_s3_dir = s.checkCorrectPathEnding(ar.aws_s3_dir)
+            if(userDetails.aws_s3_dir !== ''){
+                userDetails.aws_s3_dir = s.checkCorrectPathEnding(userDetails.aws_s3_dir)
             }
             s.group[e.ke].aws = new require("aws-sdk")
             s.group[e.ke].aws.config = new s.group[e.ke].aws.Config({
-                accessKeyId: ar.aws_accessKeyId,
-                secretAccessKey: ar.aws_secretAccessKey,
-                region: ar.aws_region
+                accessKeyId: userDetails.aws_accessKeyId,
+                secretAccessKey: userDetails.aws_secretAccessKey,
+                region: userDetails.aws_region
             })
             s.group[e.ke].aws_s3 = new s.group[e.ke].aws.S3();
         }
@@ -297,31 +315,31 @@ module.exports = function(s,config,lang){
         }
     }
     var loadBackblazeB2ForUser = function(e){
-        var ar = JSON.parse(e.details);
+        var userDetails = JSON.parse(e.details);
         try{
-            if(ar.b2_use_global === '1' && config.cloudUploaders && config.cloudUploaders.BackblazeB2){
+            if(userDetails.b2_use_global === '1' && config.cloudUploaders && config.cloudUploaders.BackblazeB2){
                 // {
                 //     bb_b2_accountId: "",
                 //     bb_b2_applicationKey: "",
                 //     bb_b2_bucket: "",
                 //     bb_b2_dir: "",
                 // }
-                ar = Object.assign(ar,config.cloudUploaders.BackblazeB2)
+                userDetails = Object.assign(userDetails,config.cloudUploaders.BackblazeB2)
             }
             if(!s.group[e.ke].bb_b2 &&
-               ar.bb_b2_accountId &&
-               ar.bb_b2_accountId !=='' &&
-               ar.bb_b2_applicationKey &&
-               ar.bb_b2_applicationKey !=='' &&
-               ar.bb_b2_bucket &&
-               ar.bb_b2_bucket !== ''
+               userDetails.bb_b2_accountId &&
+               userDetails.bb_b2_accountId !=='' &&
+               userDetails.bb_b2_applicationKey &&
+               userDetails.bb_b2_applicationKey !=='' &&
+               userDetails.bb_b2_bucket &&
+               userDetails.bb_b2_bucket !== ''
               ){
                 var B2 = require('backblaze-b2')
-                if(!ar.bb_b2_dir || ar.bb_b2_dir === '/'){
-                  ar.bb_b2_dir = ''
+                if(!userDetails.bb_b2_dir || userDetails.bb_b2_dir === '/'){
+                  userDetails.bb_b2_dir = ''
                 }
-                if(ar.bb_b2_dir !== ''){
-                  ar.bb_b2_dir = s.checkCorrectPathEnding(ar.bb_b2_dir)
+                if(userDetails.bb_b2_dir !== ''){
+                  userDetails.bb_b2_dir = s.checkCorrectPathEnding(userDetails.bb_b2_dir)
                 }
                 var backblazeErr = function(err){
                     // console.log(err)
@@ -329,8 +347,8 @@ module.exports = function(s,config,lang){
                 }
                 var createB2Connection = function(){
                     var b2 = new B2({
-                        accountId: ar.bb_b2_accountId,
-                        applicationKey: ar.bb_b2_applicationKey
+                        accountId: userDetails.bb_b2_accountId,
+                        applicationKey: userDetails.bb_b2_applicationKey
                     })
                     b2.authorize().then(function(resp){
                         s.group[e.ke].bb_b2_downloadUrl = resp.data.downloadUrl
@@ -338,7 +356,7 @@ module.exports = function(s,config,lang){
                             var buckets = resp.data.buckets
                             var bucketN = -2
                             buckets.forEach(function(item,n){
-                                if(item.bucketName === ar.bb_b2_bucket){
+                                if(item.bucketName === userDetails.bb_b2_bucket){
                                     bucketN = n
                                 }
                             })
@@ -346,7 +364,7 @@ module.exports = function(s,config,lang){
                                 s.group[e.ke].bb_b2_bucketId = buckets[bucketN].bucketId
                             }else{
                                 b2.createBucket(
-                                    ar.bb_b2_bucket,
+                                    userDetails.bb_b2_bucket,
                                     'allPublic'
                                 ).then(function(resp){
                                     s.group[e.ke].bb_b2_bucketId = resp.data.bucketId
@@ -454,8 +472,8 @@ module.exports = function(s,config,lang){
     }
     var loadWasabiHotCloudStorageForUser = function(e){
         // e = user
-        var ar = JSON.parse(e.details)
-        if(ar.whcs_use_global === '1' && config.cloudUploaders && config.cloudUploaders.WasabiHotCloudStorage){
+        var userDetails = JSON.parse(e.details)
+        if(userDetails.whcs_use_global === '1' && config.cloudUploaders && config.cloudUploaders.WasabiHotCloudStorage){
             // {
             //     whcs_accessKeyId: "",
             //     whcs_secretAccessKey: "",
@@ -463,32 +481,32 @@ module.exports = function(s,config,lang){
             //     whcs_bucket: "",
             //     whcs_dir: "",
             // }
-            ar = Object.assign(ar,config.cloudUploaders.WasabiHotCloudStorage)
+            userDetails = Object.assign(userDetails,config.cloudUploaders.WasabiHotCloudStorage)
         }
         //Wasabi Hot Cloud Storage
         if(!s.group[e.ke].whcs &&
-           ar.whcs !== '0' &&
-           ar.whcs_accessKeyId !== ''&&
-           ar.whcs_secretAccessKey &&
-           ar.whcs_secretAccessKey !== ''&&
-           ar.whcs_region &&
-           ar.whcs_region !== ''&&
-           ar.whcs_bucket !== ''
+           userDetails.whcs !== '0' &&
+           userDetails.whcs_accessKeyId !== ''&&
+           userDetails.whcs_secretAccessKey &&
+           userDetails.whcs_secretAccessKey !== ''&&
+           userDetails.whcs_region &&
+           userDetails.whcs_region !== ''&&
+           userDetails.whcs_bucket !== ''
           ){
-            if(!ar.whcs_dir || ar.whcs_dir === '/'){
-                ar.whcs_dir = ''
+            if(!userDetails.whcs_dir || userDetails.whcs_dir === '/'){
+                userDetails.whcs_dir = ''
             }
-            if(ar.whcs_dir !== ''){
-                ar.whcs_dir = s.checkCorrectPathEnding(ar.whcs_dir)
+            if(userDetails.whcs_dir !== ''){
+                userDetails.whcs_dir = s.checkCorrectPathEnding(userDetails.whcs_dir)
             }
             var AWS = new require("aws-sdk")
             s.group[e.ke].whcs = AWS
             var wasabiEndpoint = new AWS.Endpoint('s3.wasabisys.com')
             s.group[e.ke].whcs.config = new s.group[e.ke].whcs.Config({
                 endpoint: wasabiEndpoint,
-                accessKeyId: ar.whcs_accessKeyId,
-                secretAccessKey: ar.whcs_secretAccessKey,
-                region: ar.whcs_region
+                accessKeyId: userDetails.whcs_accessKeyId,
+                secretAccessKey: userDetails.whcs_secretAccessKey,
+                region: userDetails.whcs_region
             })
             s.group[e.ke].whcs = new s.group[e.ke].whcs.S3();
         }
@@ -572,32 +590,32 @@ module.exports = function(s,config,lang){
     }
     var loadSftpForUser = function(e){
         // e = user
-        var ar = JSON.parse(e.details);
+        var userDetails = JSON.parse(e.details);
         //SFTP
         if(!s.group[e.ke].sftp &&
             !s.group[e.ke].sftp &&
-            ar.sftp !== '0' &&
-            ar.sftp_host &&
-            ar.sftp_host !== ''&&
-            ar.sftp_port &&
-            ar.sftp_port !== ''
+            userDetails.sftp !== '0' &&
+            userDetails.sftp_host &&
+            userDetails.sftp_host !== ''&&
+            userDetails.sftp_port &&
+            userDetails.sftp_port !== ''
           ){
-            if(!ar.sftp_dir || ar.sftp_dir === '/'){
-                ar.sftp_dir = ''
+            if(!userDetails.sftp_dir || userDetails.sftp_dir === '/'){
+                userDetails.sftp_dir = ''
             }
-            if(ar.sftp_dir !== ''){
-                ar.sftp_dir = s.checkCorrectPathEnding(ar.sftp_dir)
+            if(userDetails.sftp_dir !== ''){
+                userDetails.sftp_dir = s.checkCorrectPathEnding(userDetails.sftp_dir)
             }
             var sftp = new ssh2SftpClient()
             var connectionDetails = {
-                host: ar.sftp_host,
-                port: ar.sftp_port
+                host: userDetails.sftp_host,
+                port: userDetails.sftp_port
             }
-            if(!ar.sftp_port)connectionDetails.port = 22
-            if(ar.sftp_username)connectionDetails.username = ar.sftp_username
-            if(ar.sftp_password)connectionDetails.password = ar.sftp_password
-            if(ar.sftp_privateKey)connectionDetails.privateKey = ar.sftp_privateKey
-            sftp.connect(connectionDetails).catch(function(err){console.log(err)})
+            if(!userDetails.sftp_port)connectionDetails.port = 22
+            if(userDetails.sftp_username && userDetails.sftp_username !== '')connectionDetails.username = userDetails.sftp_username
+            if(userDetails.sftp_password && userDetails.sftp_password !== '')connectionDetails.password = userDetails.sftp_password
+            if(userDetails.sftp_privateKey && userDetails.sftp_privateKey !== '')connectionDetails.privateKey = userDetails.sftp_privateKey
+            sftp.connect(connectionDetails).catch(sftpErr)
             s.group[e.ke].sftp = sftp
         }
     }
@@ -614,14 +632,14 @@ module.exports = function(s,config,lang){
         if(s.group[e.ke].sftp && s.group[e.ke].init.use_sftp !== '0' && s.group[e.ke].init.sftp_save === '1'){
             var localPath = k.dir + k.filename
             var saveLocation = s.group[e.ke].init.sftp_dir + e.ke + '/' + e.mid + '/' + k.filename
-            s.group[e.ke].sftp.putFile(localPath, saveLocation).catch(function(err){console.log(err)})
+            s.group[e.ke].sftp.putFile(localPath, saveLocation).catch(sftpErr)
         }
     }
     var createSftpDirectory = function(monitorConfig){
         var monitorSaveDirectory = s.group[monitorConfig.ke].init.sftp_dir + monitorConfig.ke + '/' + monitorConfig.mid
         s.group[monitorConfig.ke].sftp.mkdir(monitorSaveDirectory, true).catch(function(err){
             if(err.code !== 'ERR_ASSERTION'){
-                console.log(err)
+                sftpErr(err)
             }
         })
     }
@@ -639,46 +657,57 @@ module.exports = function(s,config,lang){
     }
     //add the extenders
     //webdav
-    s.loadGroupAppExtender(loadWebDavForUser)
-    s.unloadGroupAppExtender(unloadWebDavForUser)
-    s.insertCompletedVideoExtender(uploadVideoToWebDav)
-    s.deleteVideoFromCloudExtensions['webdav'] = deleteVideoFromWebDav
-    s.cloudDiskUseStartupExtensions['webdav'] = cloudDiskUseStartupForWebDav
-    s.beforeAccountSave(beforeAccountSaveForWebDav)
-    s.onAccountSave(cloudDiskUseStartupForWebDav)
-    s.cloudDisksLoader('webdav')
+    addCloudUploader({
+        name: 'webdav',
+        loadGroupAppExtender: loadWebDavForUser,
+        unloadGroupAppExtender: unloadWebDavForUser,
+        insertCompletedVideoExtender: uploadVideoToWebDav,
+        deleteVideoFromCloudExtensions: deleteVideoFromWebDav,
+        cloudDiskUseStartupExtensions: cloudDiskUseStartupForWebDav,
+        beforeAccountSave: beforeAccountSaveForWebDav,
+        onAccountSave: cloudDiskUseStartupForWebDav,
+    })
     //amazon s3
-    s.loadGroupAppExtender(loadAmazonS3ForUser)
-    s.unloadGroupAppExtender(unloadAmazonS3ForUser)
-    s.insertCompletedVideoExtender(uploadVideoToAmazonS3)
-    s.deleteVideoFromCloudExtensions['s3'] = deleteVideoFromAmazonS3
-    s.cloudDiskUseStartupExtensions['s3'] = cloudDiskUseStartupForAmazonS3
-    s.beforeAccountSave(beforeAccountSaveForAmazonS3)
-    s.onAccountSave(cloudDiskUseStartupForAmazonS3)
-    s.cloudDisksLoader('s3')
+    addCloudUploader({
+        name: 's3',
+        loadGroupAppExtender: loadAmazonS3ForUser,
+        unloadGroupAppExtender: unloadAmazonS3ForUser,
+        insertCompletedVideoExtender: uploadVideoToAmazonS3,
+        deleteVideoFromCloudExtensions: deleteVideoFromAmazonS3,
+        cloudDiskUseStartupExtensions: cloudDiskUseStartupForAmazonS3,
+        beforeAccountSave: beforeAccountSaveForAmazonS3,
+        onAccountSave: cloudDiskUseStartupForAmazonS3,
+    })
     //backblaze b2
-    s.loadGroupAppExtender(loadBackblazeB2ForUser)
-    s.unloadGroupAppExtender(unloadBackblazeB2ForUser)
-    s.insertCompletedVideoExtender(uploadVideoToBackblazeB2)
-    s.deleteVideoFromCloudExtensions['b2'] = deleteVideoFromBackblazeB2
-    s.cloudDiskUseStartupExtensions['b2'] = cloudDiskUseStartupForBackblazeB2
-    s.beforeAccountSave(beforeAccountSaveForBackblazeB2)
-    s.onAccountSave(cloudDiskUseStartupForBackblazeB2)
-    s.cloudDisksLoader('b2')
+    addCloudUploader({
+        name: 'b2',
+        loadGroupAppExtender: loadBackblazeB2ForUser,
+        unloadGroupAppExtender: unloadBackblazeB2ForUser,
+        insertCompletedVideoExtender: uploadVideoToBackblazeB2,
+        deleteVideoFromCloudExtensions: deleteVideoFromBackblazeB2,
+        cloudDiskUseStartupExtensions: cloudDiskUseStartupForBackblazeB2,
+        beforeAccountSave: beforeAccountSaveForBackblazeB2,
+        onAccountSave: cloudDiskUseStartupForBackblazeB2,
+    })
     //wasabi
-    s.loadGroupAppExtender(loadWasabiHotCloudStorageForUser)
-    s.unloadGroupAppExtender(unloadWasabiHotCloudStorageForUser)
-    s.insertCompletedVideoExtender(uploadVideoToWasabiHotCloudStorage)
-    s.deleteVideoFromCloudExtensions['whcs'] = deleteVideoFromWasabiHotCloudStorage
-    s.cloudDiskUseStartupExtensions['whcs'] = cloudDiskUseStartupForWasabiHotCloudStorage
-    s.beforeAccountSave(beforeAccountSaveForWasabiHotCloudStorage)
-    s.onAccountSave(cloudDiskUseStartupForWasabiHotCloudStorage)
-    s.cloudDisksLoader('whcs')
+    addCloudUploader({
+        name: 'whcs',
+        loadGroupAppExtender: loadWasabiHotCloudStorageForUser,
+        unloadGroupAppExtender: unloadWasabiHotCloudStorageForUser,
+        insertCompletedVideoExtender: uploadVideoToWasabiHotCloudStorage,
+        deleteVideoFromCloudExtensions: deleteVideoFromWasabiHotCloudStorage,
+        cloudDiskUseStartupExtensions: cloudDiskUseStartupForWasabiHotCloudStorage,
+        beforeAccountSave: beforeAccountSaveForWasabiHotCloudStorage,
+        onAccountSave: cloudDiskUseStartupForWasabiHotCloudStorage,
+    })
     //SFTP (Simple Uploader)
-    s.loadGroupAppExtender(loadSftpForUser)
-    s.unloadGroupAppExtender(unloadSftpForUser)
-    s.insertCompletedVideoExtender(uploadVideoToSftp)
-    s.beforeAccountSave(beforeAccountSaveForSftp)
-    s.onAccountSave(onAccountSaveForSftp)
-    s.onMonitorSave(onMonitorSaveForSftp)
+    addSimpleUploader({
+        name: 'sftp',
+        loadGroupAppExtender: loadSftpForUser,
+        unloadGroupAppExtender: unloadSftpForUser,
+        insertCompletedVideoExtender: uploadVideoToSftp,
+        beforeAccountSave: beforeAccountSaveForSftp,
+        onAccountSave: onAccountSaveForSftp,
+        onMonitorSave: onMonitorSaveForSftp,
+    })
 }
