@@ -72,6 +72,11 @@ module.exports = function(s,config){
         s.onMonitorStopExtensions.push(callback)
     }
     //
+    s.onMonitorSaveExtensions = []
+    s.onMonitorSave = function(callback){
+        s.onMonitorSaveExtensions.push(callback)
+    }
+    //
     s.onMonitorUnexpectedExitExtensions = []
     s.onMonitorUnexpectedExit = function(callback){
         s.onMonitorUnexpectedExitExtensions.push(callback)

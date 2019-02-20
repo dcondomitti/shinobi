@@ -2,6 +2,7 @@ var fs = require('fs');
 var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var webdav = require("webdav-fs");
+var ssh2SftpClient = require('node-ssh')
 module.exports = function(s,config,lang){
     // WebDAV
     var beforeAccountSaveForWebDav = function(d){
@@ -561,120 +562,81 @@ module.exports = function(s,config,lang){
         }
     }
     //SFTP
-    // var beforeAccountSaveForSftp = function(d){
-    //     //d = save event
-    //     d.form.details.use_sftp = d.d.use_sftp
-    // }
-    // var cloudDiskUseStartupForSftp = function(group,userDetails){
-    //     group.cloudDiskUse['sftp'].name = 'SFTP'
-    //     group.cloudDiskUse['sftp'].sizeLimitCheck = (userDetails.use_aws_s3_size_limit === '1')
-    //     if(!userDetails.aws_s3_size_limit || userDetails.aws_s3_size_limit === ''){
-    //         group.cloudDiskUse['sftp'].sizeLimit = 10000
-    //     }else{
-    //         group.cloudDiskUse['sftp'].sizeLimit = parseFloat(userDetails.aws_s3_size_limit)
-    //     }
-    // }
-    // var loadSftpForUser = function(e){
-    //     // e = user
-    //     var ar = JSON.parse(e.details);
-    //     //SFTP
-    //     if(!s.group[e.ke].sftp &&
-    //        !s.group[e.ke].sftp &&
-    //        ar.sftp !== '0' &&
-    //        ar.sftp_accessKeyId !== ''&&
-    //        ar.sftp_secretAccessKey &&
-    //        ar.sftp_secretAccessKey !== ''&&
-    //        ar.sftp_region &&
-    //        ar.sftp_region !== ''&&
-    //        ar.sftp_bucket !== ''
-    //       ){
-    //         if(!ar.sftp_dir || ar.sftp_dir === '/'){
-    //             ar.sftp_dir = ''
-    //         }
-    //         if(ar.sftp_dir !== ''){
-    //             ar.sftp_dir = s.checkCorrectPathEnding(ar.sftp_dir)
-    //         }
-    //         s.group[e.ke].sftp = new s.group[e.ke].sftp.S3();
-    //         s.group[e.ke].sftp = new require('ssh2-sftp-client')();
-    //         var connectionDetails = {
-    //             host: ar.sftp_host,
-    //             port: ar.sftp_port
-    //         }
-    //         if(!ar.sftp_port)ar.sftp_port = 22
-    //         if(ar.sftp_username)connectionDetails.username = ar.sftp_username
-    //         if(ar.sftp_password)connectionDetails.password = ar.sftp_password
-    //         if(ar.sftp_privateKey)connectionDetails.privateKey = ar.sftp_privateKey
-    //         sftp.connect(connectionDetails).then(() => {
-    //             return sftp.list('/pathname');
-    //         }).then((data) => {
-    //             console.log(data, 'the data info');
-    //         }).catch((err) => {
-    //             console.log(err, 'catch error');
-    //         });
-    //     }
-    // }
-    // var unloadSftpForUser = function(user){
-    //     s.group[user.ke].sftp = null
-    // }
-    // var deleteVideoFromSftp = function(e,video,callback){
-    //     // e = user
-    //     try{
-    //         var videoDetails = JSON.parse(video.details)
-    //     }catch(err){
-    //         var videoDetails = video.details
-    //     }
-    //     s.group[e.ke].sftp.deleteObject({
-    //         Bucket: s.group[e.ke].init.sftp_bucket,
-    //         Key: videoDetails.location,
-    //     }, function(err, data) {
-    //         if (err) console.log(err);
-    //         callback()
-    //     });
-    // }
-    // var uploadVideoToSftp = function(e,k){
-    //     //e = video object
-    //     //k = temporary values
-    //     if(!k)k={};
-    //     //cloud saver - SFTP
-    //     if(s.group[e.ke].sftp && s.group[e.ke].init.use_sftp !== '0' && s.group[e.ke].init.sftp_save === '1'){
-    //         var fileStream = fs.createReadStream(k.dir+k.filename);
-    //         fileStream.on('error', function (err) {
-    //             console.error(err)
-    //         })
-    //         var saveLocation = s.group[e.ke].init.sftp_dir+e.ke+'/'+e.mid+'/'+k.filename
-    //         s.group[e.ke].sftp.upload({
-    //             Bucket: s.group[e.ke].init.sftp_bucket,
-    //             Key: saveLocation,
-    //             Body:fileStream,
-    //             ACL:'public-read'
-    //         },function(err,data){
-    //             if(err){
-    //                 s.userLog(e,{type:lang['SFTP Upload Error'],msg:err})
-    //             }
-    //             if(s.group[e.ke].init.sftp_log === '1' && data && data.Location){
-    //                 var save = [
-    //                     e.mid,
-    //                     e.ke,
-    //                     k.startTime,
-    //                     1,
-    //                     s.s({
-    //                         type : 'sftp',
-    //                         location : saveLocation
-    //                     }),
-    //                     k.filesize,
-    //                     k.endTime,
-    //                     data.Location
-    //                 ]
-    //                 s.sqlQuery('INSERT INTO `Cloud Videos` (mid,ke,time,status,details,size,end,href) VALUES (?,?,?,?,?,?,?,?)',save)
-    //                 s.setCloudDiskUsedForGroup(e,{
-    //                     amount : k.filesizeMB,
-    //                     storageType : 'sftp'
-    //                 })
-    //                 s.purgeCloudDiskForGroup(e,'sftp')
-    //             }
-    //         })
-    //     }
-    // }
+    var sftpErr = function(err){
+        // console.log(err)
+        s.userLog({mid:'$USER',ke:e.ke},{type:lang['SFTP Error'],msg:err.data || err})
+    }
+    var beforeAccountSaveForSftp = function(d){
+        //d = save event
+        d.form.details.use_sftp = d.d.use_sftp
+    }
+    var loadSftpForUser = function(e){
+        // e = user
+        var ar = JSON.parse(e.details);
+        //SFTP
+        if(!s.group[e.ke].sftp &&
+            !s.group[e.ke].sftp &&
+            ar.sftp !== '0' &&
+            ar.sftp_host &&
+            ar.sftp_host !== ''&&
+            ar.sftp_port &&
+            ar.sftp_port !== ''
+          ){
+            if(!ar.sftp_dir || ar.sftp_dir === '/'){
+                ar.sftp_dir = ''
+            }
+            if(ar.sftp_dir !== ''){
+                ar.sftp_dir = s.checkCorrectPathEnding(ar.sftp_dir)
+            }
+            var sftp = new ssh2SftpClient()
+            var connectionDetails = {
+                host: ar.sftp_host,
+                port: ar.sftp_port
+            }
+            if(!ar.sftp_port)connectionDetails.port = 22
+            if(ar.sftp_username)connectionDetails.username = ar.sftp_username
+            if(ar.sftp_password)connectionDetails.password = ar.sftp_password
+            if(ar.sftp_privateKey)connectionDetails.privateKey = ar.sftp_privateKey
+            sftp.connect(connectionDetails).catch(function(err){console.log(err)})
+            s.group[e.ke].sftp = sftp
+        }
+    }
+    var unloadSftpForUser = function(user){
+        if(s.group[user.ke].sftp && s.group[user.ke].sftp.end)s.group[user.ke].sftp.end().then(function(){
+            s.group[user.ke].sftp = null
+        })
+    }
+    var uploadVideoToSftp = function(e,k){
+        //e = video object
+        //k = temporary values
+        if(!k)k={};
+        //cloud saver - SFTP
+        if(s.group[e.ke].sftp && s.group[e.ke].init.use_sftp !== '0' && s.group[e.ke].init.sftp_save === '1'){
+            var localPath = k.dir + k.filename
+            var saveLocation = s.group[e.ke].init.sftp_dir + e.ke + '/' + e.mid + '/' + k.filename
+            s.group[e.ke].sftp.putFile(localPath, saveLocation).catch(function(err){console.log(err)})
+        }
+    }
+    var createSftpDirectory = function(monitorConfig){
+        var monitorSaveDirectory = s.group[monitorConfig.ke].init.sftp_dir + monitorConfig.ke + '/' + monitorConfig.mid
+        s.group[monitorConfig.ke].sftp.mkdir(monitorSaveDirectory, true).catch(function(err){
+            if(err.code !== 'ERR_ASSERTION'){
+                console.log(err)
+            }
+        })
+    }
+    var onMonitorSaveForSftp = function(monitorConfig){
+        if(s.group[monitorConfig.ke].sftp && s.group[monitorConfig.ke].init.use_sftp !== '0' && s.group[monitorConfig.ke].init.sftp_save === '1'){
+            createSftpDirectory(monitorConfig)
+        }
+    }
+    var onAccountSaveForSftp = function(group,userDetails,user){
+        if(s.group[user.ke] && s.group[user.ke].sftp && s.group[user.ke].init.use_sftp !== '0' && s.group[user.ke].init.sftp_save === '1'){
+            Object.keys(s.group[user.ke].mon_conf).forEach(function(monitorId){
+                createSftpDirectory(s.group[user.ke].mon_conf[monitorId])
+            })
+        }
+    }
     //add the extenders
     //webdav
     s.loadGroupAppExtender(loadWebDavForUser)
@@ -712,13 +674,11 @@ module.exports = function(s,config,lang){
     s.beforeAccountSave(beforeAccountSaveForWasabiHotCloudStorage)
     s.onAccountSave(cloudDiskUseStartupForWasabiHotCloudStorage)
     s.cloudDisksLoader('whcs')
-    //SFTP
-    // s.loadGroupAppExtender(loadSftpForUser)
-    // s.unloadGroupAppExtender(unloadSftpForUser)
-    // s.insertCompletedVideoExtender(uploadVideoToSftp)
-    // s.deleteVideoFromCloudExtensions['sftp'] = deleteVideoFromSftp
-    // s.cloudDiskUseStartupExtensions['sftp'] = cloudDiskUseStartupForSftp
-    // s.beforeAccountSave(beforeAccountSaveForSftp)
-    // s.onAccountSave(cloudDiskUseStartupForSftp)
-    // s.cloudDisksLoader('sftp')
+    //SFTP (Simple Uploader)
+    s.loadGroupAppExtender(loadSftpForUser)
+    s.unloadGroupAppExtender(unloadSftpForUser)
+    s.insertCompletedVideoExtender(uploadVideoToSftp)
+    s.beforeAccountSave(beforeAccountSaveForSftp)
+    s.onAccountSave(onAccountSaveForSftp)
+    s.onMonitorSave(onMonitorSaveForSftp)
 }

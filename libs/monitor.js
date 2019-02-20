@@ -1462,6 +1462,9 @@ module.exports = function(s,config,lang){
             }
             s.tx(txData,'GRP_'+form.ke)
             callback(!endData.ok,endData)
+            s.onMonitorSaveExtensions.forEach(function(extender){
+                extender(Object.assign(s.group[e.ke].mon_conf[e.id],{}),e,endData)
+            })
         })
     }
     s.camera = function(x,e,cn){

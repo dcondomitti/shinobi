@@ -295,7 +295,7 @@ module.exports = function(s,config){
                             var userDetails = JSON.parse(d.form.details)
                             s.group[d.ke].sizeLimit = parseFloat(newSize)
                             s.onAccountSaveExtensions.forEach(function(extender){
-                                extender(s.group[d.ke],userDetails)
+                                extender(s.group[d.ke],userDetails,user)
                             })
                             s.unloadGroupAppExtensions.forEach(function(extender){
                                 extender(user)
