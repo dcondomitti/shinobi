@@ -645,7 +645,7 @@ module.exports = function(s,config,onFinish){
             x.dimensions = e.details.stream_scale_x+'x'+e.details.stream_scale_y;
         }
         //record - segmenting
-        x.segment=' -f segment -segment_atclocktime 1 -reset_timestamps 1 -strftime 1 -segment_list pipe:2 -segment_time '+(60*e.cutoff)+' "'+e.dir+'%Y-%m-%dT%H-%M-%S.'+e.ext+'"';
+        x.segment=' -f segment -segment_format_options movflags=faststart+frag_keyframe+empty_moov -segment_atclocktime 1 -reset_timestamps 1 -strftime 1 -segment_list pipe:2 -segment_time '+(60*e.cutoff)+' "'+e.dir+'%Y-%m-%dT%H-%M-%S.'+e.ext+'"';
         //record - set defaults for extension, video quality
         switch(e.ext){
             case'mp4':
