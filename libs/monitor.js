@@ -1463,7 +1463,7 @@ module.exports = function(s,config,lang){
             s.tx(txData,'GRP_'+form.ke)
             callback(!endData.ok,endData)
             s.onMonitorSaveExtensions.forEach(function(extender){
-                extender(Object.assign(s.group[e.ke].mon_conf[e.id],{}),e,endData)
+                extender(Object.assign(s.group[form.ke].mon_conf[form.mid],{}),form,endData)
             })
         })
     }
