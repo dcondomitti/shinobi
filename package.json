@@ -27,6 +27,7 @@
     "discord.js": "^11.3.2",
     "ejs": "^2.5.5",
     "express": "^4.16.4",
+    "ftp-srv": "^4.0.0",
     "http-proxy": "^1.17.0",
     "jsonfile": "^3.0.1",
     "knex": "^0.16.3",
