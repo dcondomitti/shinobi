@@ -59,8 +59,6 @@ module.exports = function(s,config,lang,app,io){
                         }
                     })
                 }
-                console.log(eventType,filePath)
-
                 if(config.dropInEventDeleteFileAfterTrigger){
                     setTimeout(function(){
                         fs.unlink(filePath,function(err){
