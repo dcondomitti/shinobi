@@ -34,6 +34,9 @@ module.exports = function(s,config,lang,io){
     }
     var loadedAccounts = []
     var loadMonitors = function(callback){
+        s.beforeMonitorsLoadedOnStartupExtensions.forEach(function(extender){
+            extender()
+        })
         s.systemLog(lang.startUpText4)
         //preliminary monitor start
         s.sqlQuery('SELECT * FROM Monitors', function(err,monitors) {

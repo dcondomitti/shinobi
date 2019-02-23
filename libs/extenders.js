@@ -123,4 +123,9 @@ module.exports = function(s,config){
         s.onFFmpegLoadedExtensions.push(callback)
     }
     //
+    s.beforeMonitorsLoadedOnStartupExtensions = []
+    s.beforeMonitorsLoadedOnStartup = function(callback){
+        s.beforeMonitorsLoadedOnStartupExtensions.push(callback)
+    }
+    //
 }
