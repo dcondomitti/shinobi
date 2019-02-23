@@ -67,6 +67,10 @@ loadLib('ffmpeg')(s,config,function(ffmpeg){
     loadLib('cloudUploaders')(s,config,lang)
     //notifiers : discord..
     loadLib('notification')(s,config,lang)
+    //notifiers : discord..
+    loadLib('rtmpserver')(s,config,lang)
+    //dropInEvents server (file manipulation to create event trigger)
+    loadLib('dropInEvents')(s,config,lang,app,io)
     //custom module loader
     loadLib('customAutoLoad')(s,config,lang,app,io)
     //scheduling engine

@@ -1072,7 +1072,7 @@ module.exports = function(s,config,lang){
                     s.launchMonitorProcesses(e)
                 break;
                 case /T[0-9][0-9]-[0-9][0-9]-[0-9][0-9]./.test(d):
-                    var filename = d.split('.')[0]+'.'+e.ext
+                    var filename = d.split('.')[0].split(' [')[0].trim()+'.'+e.ext
                     s.insertCompletedVideo(e,{
                         file : filename
                     },function(err){

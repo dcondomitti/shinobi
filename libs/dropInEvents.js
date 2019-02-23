@@ -7,8 +7,6 @@ module.exports = function(s,config,lang,app,io){
                 config.dropInEventsDir = s.dir.streams + 'dropInEvents/'
             }
             s.dir.dropInEvents = s.checkCorrectPathEnding(config.dropInEventsDir)
-            console.log(s.dir.dropInEvents)
-
             //dropInEvents dir
             if(!fs.existsSync(s.dir.dropInEvents)){
                 fs.mkdirSync(s.dir.dropInEvents)
@@ -65,7 +63,9 @@ module.exports = function(s,config,lang,app,io){
 
                 if(config.dropInEventDeleteFileAfterTrigger){
                     setTimeout(function(){
-                        fs.unlink(filePath)
+                        fs.unlink(filePath,function(err){
+
+                        })
                     },1000 * 60 * 5)
                 }
             }
