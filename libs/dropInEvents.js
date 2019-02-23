@@ -1,4 +1,4 @@
-var fs = require('fs');
+var fs = require('fs')
 module.exports = function(s,config,lang,app,io){
     if(config.dropInEventServer === true){
         if(config.dropInEventDeleteFileAfterTrigger === undefined)config.dropInEventDeleteFileAfterTrigger = true
@@ -74,6 +74,29 @@ module.exports = function(s,config,lang,app,io){
                 },3000)
             })
             s.group[monitorConfig.ke].mon[monitorConfig.mid].dropInEventWatcher = directoryWatch
+        }
+        if(config.ftpServer === true){
+            if(!config.ftpPort)config.ftpPort = 21
+            if(!config.ftpUrl)config.ftpUrl = `ftp://0.0.0.0:${config.ftpPort}`
+            const FtpSrv = require('ftp-srv');
+            const ftpServer = new FtpSrv({url: config.ftpUrl});
+
+            ftpServer.on('login', (data, resolve, reject) => {
+                var username = data.username
+                var password = data.password
+                s.sqlQuery('SELECT * FROM Users WHERE mail=? AND (pass=? OR pass=?)',[username,password,s.createHash(password)],function(err,r){
+                    if(r && r[0]){
+                        var user = r[0]
+                        resolve({root: s.dir.dropInEvents + user.ke})
+                    }else{
+                        reject()
+                    }
+                })
+            });
+
+            ftpServer.listen().then(() => {
+                s.systemLog(`FTP Server running on port ${config.ftpPort}...`)
+            })
         }
         //add extensions
         s.beforeMonitorsLoadedOnStartup(beforeMonitorsLoadedOnStartup)
