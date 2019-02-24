@@ -68,18 +68,24 @@ module.exports = function(s,config,lang,app,io){
                 }
             }
             var directoryWatch = fs.watch(monitorEventDropDir,function(eventType,filename){
-                clearTimeout(fileQueue[filename])
-                fileQueue[filename] = setTimeout(function(){
-                    eventTrigger(eventType,filename)
-                },3000)
+                if(fs.existsSync(monitorEventDropDir + filename)){
+                    clearTimeout(fileQueue[filename])
+                    fileQueue[filename] = setTimeout(function(){
+                        eventTrigger(eventType,filename)
+                    },3000)
+                }
             })
             s.group[monitorConfig.ke].mon[monitorConfig.mid].dropInEventWatcher = directoryWatch
         }
         if(config.ftpServer === true){
-            if(!config.ftpPort)config.ftpPort = 21
-            if(!config.ftpUrl)config.ftpUrl = `ftp://0.0.0.0:${config.ftpPort}`
+            if(!config.ftpServerPort)config.ftpServerPort = 21
+            if(!config.ftpServerUrl)config.ftpServerUrl = `ftp://0.0.0.0:${config.ftpServerPort}`
+            config.ftpServerUrl = config.ftpServerUrl.replace('{{PORT}}',config.ftpServerPort)
             const FtpSrv = require('ftp-srv');
-            const ftpServer = new FtpSrv({url: config.ftpUrl});
+            const ftpServer = new FtpSrv({
+                url: config.ftpServerUrl,
+                // log:{trace:function(){},error:function(){},child:function(){},info:function(){},warn:function(){}
+            })
 
             ftpServer.on('login', (data, resolve, reject) => {
                 var username = data.username
@@ -89,13 +95,15 @@ module.exports = function(s,config,lang,app,io){
                         var user = r[0]
                         resolve({root: s.dir.dropInEvents + user.ke})
                     }else{
-                        reject()
+                        // reject(new Error('Failed Authorization'))
                     }
                 })
-            });
+            })
 
             ftpServer.listen().then(() => {
-                s.systemLog(`FTP Server running on port ${config.ftpPort}...`)
+                s.systemLog(`FTP Server running on port ${config.ftpServerPort}...`)
+            }).catch(function(err){
+                console.log(err)
             })
         }
         //add extensions
