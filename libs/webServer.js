@@ -50,6 +50,8 @@ module.exports = function(s,config,lang,io){
         if(config.renderPaths.grid === undefined){config.renderPaths.grid='pages/grid'}
         //slick.js (cycle) page
         if(config.renderPaths.cycle === undefined){config.renderPaths.cycle='pages/cycle'}
+    // Use uws/cws
+    if(config.useUWebsocketJs === undefined){config.useUWebsocketJs=true}
     //SSL options
     if(config.ssl&&config.ssl.key&&config.ssl.cert){
         config.ssl.key=fs.readFileSync(s.checkRelativePath(config.ssl.key),'utf8')
@@ -111,5 +113,11 @@ module.exports = function(s,config,lang,io){
         path:s.checkCorrectPathEnding(config.webPaths.super)+'socket.io',
         transports: ['websocket']
     })
+    if(config.useUWebsocketJs === true){
+        io.engine.ws = new (require('cws').Server)({
+            noServer: true,
+            perMessageDeflate: false
+        })
+    }
     return app
 }

@@ -8,7 +8,7 @@
 // If you like what I am doing here and want me to continue please consider donating :)
 // PayPal : paypal@m03.ca
 //
-var io = new (require('socket.io'))()
+var io = new (require('socket.io'))
 //library loader
 var loadLib = function(lib){
     return require(__dirname+'/libs/'+lib+'.js')
@@ -22,7 +22,7 @@ var config = loadLib('config')(s)
 //language loader
 var lang = loadLib('language')(s,config)
 //code test module
-loadLib('codeTester')(s,config,lang,io)
+loadLib('codeTester')(s,config,lang)
 //basic functions
 loadLib('basic')(s,config)
 //video processing engine
