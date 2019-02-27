@@ -4,7 +4,6 @@ module.exports = function(s,config,lang,app,io){
         if(config.dropInEventDeleteFileAfterTrigger === undefined)config.dropInEventDeleteFileAfterTrigger = true
         var authenticateUser = function(username,password,callback){
             var splitUsername = username.split('@')
-
             if(splitUsername[1] !== 'Shinobi' && splitUsername[1] !== 'shinobi'){
                 s.sqlQuery('SELECT ke,uid FROM Users WHERE mail=? AND (pass=? OR pass=?)',[
                     username,

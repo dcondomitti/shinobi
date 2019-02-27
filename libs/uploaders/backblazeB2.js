@@ -76,7 +76,7 @@ module.exports = function(s,config,lang){
                     s.group[e.ke].bb_b2 = b2
                 }
                 createB2Connection()
-                s.group[e.ke].bb_b2_refreshTimer = setTimeout(createB2Connection,1000 * 60 * 60)
+                s.group[e.ke].bb_b2_refreshTimer = setInterval(createB2Connection,1000 * 60 * 60)
             }
         }catch(err){
             s.debugLog(err)
