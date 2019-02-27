@@ -84,7 +84,7 @@ module.exports = function(s,config,lang){
     }
     var unloadBackblazeB2ForUser = function(user){
         s.group[user.ke].bb_b2 = null
-        clearTimeout(s.group[user.ke].bb_b2_refreshTimer)
+        clearInterval(s.group[user.ke].bb_b2_refreshTimer)
     }
     var deleteVideoFromBackblazeB2 = function(e,video,callback){
         // e = user
