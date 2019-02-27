@@ -8,7 +8,7 @@
 // If you like what I am doing here and want me to continue please consider donating :)
 // PayPal : paypal@m03.ca
 //
-var io = new (require('socket.io'))
+var io = new (require('socket.io'))()
 //library loader
 var loadLib = function(lib){
     return require(__dirname+'/libs/'+lib+'.js')
@@ -64,7 +64,7 @@ loadLib('ffmpeg')(s,config,function(ffmpeg){
     //cluster module
     loadLib('childNode')(s,config,lang,app,io)
     //cloud uploaders : amazon s3, webdav, backblaze b2..
-    loadLib('cloudUploaders')(s,config,lang)
+    loadLib('uploaders')(s,config,lang)
     //notifiers : discord..
     loadLib('notification')(s,config,lang)
     //notifiers : discord..

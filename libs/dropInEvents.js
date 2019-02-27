@@ -2,6 +2,34 @@ var fs = require('fs')
 module.exports = function(s,config,lang,app,io){
     if(config.dropInEventServer === true){
         if(config.dropInEventDeleteFileAfterTrigger === undefined)config.dropInEventDeleteFileAfterTrigger = true
+        var authenticateUser = function(username,password,callback){
+            var splitUsername = username.split('@')
+
+            if(splitUsername[1] !== 'Shinobi' && splitUsername[1] !== 'shinobi'){
+                s.sqlQuery('SELECT ke,uid FROM Users WHERE mail=? AND (pass=? OR pass=?)',[
+                    username,
+                    password,
+                    s.createHash(password)
+                ],function(err,r){
+                    var user
+                    if(r && r[0]){
+                        user = r[0]
+                    }
+                    callback(err,user)
+                })
+            }else{
+                s.sqlQuery('SELECT ke,uid FROM API WHERE code=? AND ke=?',[
+                    splitUsername[0], //code
+                    password //ke
+                ],function(err,r){
+                    var apiKey
+                    if(r && r[0]){
+                        apiKey = r[0]
+                    }
+                    callback(err,apiKey)
+                })
+            }
+        }
         var beforeMonitorsLoadedOnStartup = function(){
             if(!config.dropInEventsDir){
                 config.dropInEventsDir = s.dir.streams + 'dropInEvents/'
@@ -55,7 +83,7 @@ module.exports = function(s,config,lang,app,io){
                             confidence: 100,
                             name: filename,
                             plug: "dropInEvent",
-                            reason: "dropInEvent"
+                            reason: "ftpServer"
                         }
                     })
                 }
@@ -81,7 +109,7 @@ module.exports = function(s,config,lang,app,io){
             if(!config.ftpServerPort)config.ftpServerPort = 21
             if(!config.ftpServerUrl)config.ftpServerUrl = `ftp://0.0.0.0:${config.ftpServerPort}`
             config.ftpServerUrl = config.ftpServerUrl.replace('{{PORT}}',config.ftpServerPort)
-            const FtpSrv = require('ftp-srv');
+            const FtpSrv = require('ftp-srv')
             const ftpServer = new FtpSrv({
                 url: config.ftpServerUrl,
                 // log:{trace:function(){},error:function(){},child:function(){},info:function(){},warn:function(){}
@@ -90,9 +118,8 @@ module.exports = function(s,config,lang,app,io){
             ftpServer.on('login', (data, resolve, reject) => {
                 var username = data.username
                 var password = data.password
-                s.sqlQuery('SELECT * FROM Users WHERE mail=? AND (pass=? OR pass=?)',[username,password,s.createHash(password)],function(err,r){
-                    if(r && r[0]){
-                        var user = r[0]
+                authenticateUser(username,password,function(err,user){
+                    if(user){
                         resolve({root: s.dir.dropInEvents + user.ke})
                     }else{
                         // reject(new Error('Failed Authorization'))
@@ -103,7 +130,57 @@ module.exports = function(s,config,lang,app,io){
             ftpServer.listen().then(() => {
                 s.systemLog(`FTP Server running on port ${config.ftpServerPort}...`)
             }).catch(function(err){
-                console.log(err)
+                s.systemLog(err)
+            })
+        }
+        if(config.smtpServer === true){
+            var SMTPServer = require("smtp-server").SMTPServer;
+            if(!config.smtpServerPort && (config.smtpServerSsl && config.smtpServerSsl.enabled !== false || config.ssl)){config.smtpServerPort = 465}else if(!config.smtpServerPort){config.smtpServerPort = 25}
+            var smtpOptions = {
+                onAuth(auth, session, callback) {
+                    var username = auth.username
+                    var password = auth.password
+                    authenticateUser(username,password,function(err,user){
+                        if(user){
+                            callback(null, {user: user.ke})
+                        }else{
+                            callback(new Error(lang.failedLoginText2))
+                        }
+                    })
+                },
+                onRcptTo(address, session, callback) {
+                    var split = address.address.split('@')
+                    var monitorId = split[0]
+                    var ke = session.user
+                    if(s.group[ke].mon_conf[monitorId]){
+                        s.triggerEvent({
+                            id: monitorId,
+                            ke: ke,
+                            details: {
+                                confidence: 100,
+                                name: address.address,
+                                plug: "dropInEvent",
+                                reason: "smtpServer"
+                            }
+                        })
+                    }else{
+                        return callback(new Error(lang['No Monitor Exists with this ID.']))
+                    }
+                    callback()
+                }
+            }
+            if(config.smtpServerSsl && config.smtpServerSsl.enabled !== false || config.ssl && config.ssl.cert && config.ssl.key){
+                var key = config.ssl.key || fs.readFileSync(config.smtpServerSsl.key)
+                var cert = config.ssl.cert || fs.readFileSync(config.smtpServerSsl.cert)
+                smtpOptions = Object.assign(smtpOptions,{
+                    secure: true,
+                    key: config.ssl.key,
+                    cert: config.ssl.cert
+                })
+            }
+            var server = new SMTPServer(smtpOptions)
+            server.listen(config.smtpServerPort,function(){
+                s.systemLog(`SMTP Server running on port ${config.smtpServerPort}...`)
             })
         }
         //add extensions
