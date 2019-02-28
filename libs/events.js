@@ -337,6 +337,9 @@ module.exports = function(s,config,lang){
     s.createEventBasedRecording = function(d){
         d.mon = s.group[d.ke].mon_conf[d.id]
         var currentConfig = s.group[d.ke].mon[d.id].details
+        if(currentConfig.detector !== '1'){
+            return
+        }
         var detector_timeout
         if(!currentConfig.detector_timeout||currentConfig.detector_timeout===''){
             detector_timeout = 10
