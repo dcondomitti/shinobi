@@ -104,6 +104,7 @@ module.exports = function(s,config,lang,app,io){
             })
             s.group[monitorConfig.ke].mon[monitorConfig.mid].dropInEventWatcher = directoryWatch
         }
+        // FTP Server
         if(config.ftpServer === true){
             if(!config.ftpServerPort)config.ftpServerPort = 21
             if(!config.ftpServerUrl)config.ftpServerUrl = `ftp://0.0.0.0:${config.ftpServerPort}`
@@ -132,58 +133,60 @@ module.exports = function(s,config,lang,app,io){
                 s.systemLog(err)
             })
         }
-        if(config.smtpServer === true){
-            var SMTPServer = require("smtp-server").SMTPServer;
-            if(!config.smtpServerPort && (config.smtpServerSsl && config.smtpServerSsl.enabled !== false || config.ssl)){config.smtpServerPort = 465}else if(!config.smtpServerPort){config.smtpServerPort = 25}
-            var smtpOptions = {
-                onAuth(auth, session, callback) {
-                    var username = auth.username
-                    var password = auth.password
-                    authenticateUser(username,password,function(err,user){
-                        if(user){
-                            callback(null, {user: user.ke})
-                        }else{
-                            callback(new Error(lang.failedLoginText2))
-                        }
-                    })
-                },
-                onRcptTo(address, session, callback) {
-                    var split = address.address.split('@')
-                    var monitorId = split[0]
-                    var ke = session.user
-                    if(s.group[ke].mon_conf[monitorId]){
-                        s.triggerEvent({
-                            id: monitorId,
-                            ke: ke,
-                            details: {
-                                confidence: 100,
-                                name: address.address,
-                                plug: "dropInEvent",
-                                reason: "smtpServer"
-                            }
-                        })
-                    }else{
-                        return callback(new Error(lang['No Monitor Exists with this ID.']))
-                    }
-                    callback()
-                }
-            }
-            if(config.smtpServerSsl && config.smtpServerSsl.enabled !== false || config.ssl && config.ssl.cert && config.ssl.key){
-                var key = config.ssl.key || fs.readFileSync(config.smtpServerSsl.key)
-                var cert = config.ssl.cert || fs.readFileSync(config.smtpServerSsl.cert)
-                smtpOptions = Object.assign(smtpOptions,{
-                    secure: true,
-                    key: config.ssl.key,
-                    cert: config.ssl.cert
-                })
-            }
-            var server = new SMTPServer(smtpOptions)
-            server.listen(config.smtpServerPort,function(){
-                s.systemLog(`SMTP Server running on port ${config.smtpServerPort}...`)
-            })
-        }
         //add extensions
         s.beforeMonitorsLoadedOnStartup(beforeMonitorsLoadedOnStartup)
         s.onMonitorInit(onMonitorInit)
+    }
+    // SMTP Server
+    // allow starting SMTP server without dropInEventServer
+    if(config.smtpServer === true){
+        var SMTPServer = require("smtp-server").SMTPServer;
+        if(!config.smtpServerPort && (config.smtpServerSsl && config.smtpServerSsl.enabled !== false || config.ssl)){config.smtpServerPort = 465}else if(!config.smtpServerPort){config.smtpServerPort = 25}
+        var smtpOptions = {
+            onAuth(auth, session, callback) {
+                var username = auth.username
+                var password = auth.password
+                authenticateUser(username,password,function(err,user){
+                    if(user){
+                        callback(null, {user: user.ke})
+                    }else{
+                        callback(new Error(lang.failedLoginText2))
+                    }
+                })
+            },
+            onRcptTo(address, session, callback) {
+                var split = address.address.split('@')
+                var monitorId = split[0]
+                var ke = session.user
+                if(s.group[ke].mon_conf[monitorId]){
+                    s.triggerEvent({
+                        id: monitorId,
+                        ke: ke,
+                        details: {
+                            confidence: 100,
+                            name: address.address,
+                            plug: "dropInEvent",
+                            reason: "smtpServer"
+                        }
+                    })
+                }else{
+                    return callback(new Error(lang['No Monitor Exists with this ID.']))
+                }
+                callback()
+            }
+        }
+        if(config.smtpServerSsl && config.smtpServerSsl.enabled !== false || config.ssl && config.ssl.cert && config.ssl.key){
+            var key = config.ssl.key || fs.readFileSync(config.smtpServerSsl.key)
+            var cert = config.ssl.cert || fs.readFileSync(config.smtpServerSsl.cert)
+            smtpOptions = Object.assign(smtpOptions,{
+                secure: true,
+                key: config.ssl.key,
+                cert: config.ssl.cert
+            })
+        }
+        var server = new SMTPServer(smtpOptions)
+        server.listen(config.smtpServerPort,function(){
+            s.systemLog(`SMTP Server running on port ${config.smtpServerPort}...`)
+        })
     }
 }
