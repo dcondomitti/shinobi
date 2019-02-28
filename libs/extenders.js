@@ -40,6 +40,11 @@ module.exports = function(s,config){
         s.onTwoFactorAuthCodeNotificationExtensions.push(callback)
     }
     //
+    s.onStalePurgeLockExtensions = []
+    s.onStalePurgeLock = function(callback){
+        s.onStalePurgeLockExtensions.push(callback)
+    }
+    //
     s.cloudDiskUseStartupExtensions = {}
 
     ////// EVENTS //////

@@ -1035,9 +1035,10 @@ module.exports = function(s,config,lang){
         s.group[e.ke].mon[e.id].spawn.stderr.on('data',function(d){
             d=d.toString();
             switch(true){
-                // case checkLog(d,'No space left on device'):
-                //
-                // break;
+                case checkLog(d,'No space left on device'):
+                    s.checkUserPurgeLock(e.ke)
+                    s.purgeDiskForGroup(e)
+                break;
                 case checkLog(d,'error while decoding'):
                     s.userLog(e,{type:lang['Error While Decoding'],msg:lang.ErrorWhileDecodingText});
                 break;
