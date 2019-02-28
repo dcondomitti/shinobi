@@ -15,6 +15,7 @@ var Poseidon = function () {
         console.log('Poseidon Start: ' + options.id);
         var _monitor = {
             url: options.url,
+            path: options.path,
             auth: options.auth_token,
             uid: options.uid,
             ke: options.ke,
