@@ -1644,4 +1644,34 @@ module.exports = function(s,config,lang){
             }
         })
     }
+    s.getCamerasForMultiTrigger = function(monitor){
+        var list={}
+        var cameras=[]
+        var group
+        try{
+            group=JSON.parse(monitor.details.group_detector_multi)
+            if(!group){group=[]}
+        }catch(err){
+            group=[]
+        }
+        group.forEach(function(b){
+            Object.keys(s.group[monitor.ke].mon_conf).forEach(function(v){
+                try{
+                    var groups = JSON.parse(s.group[monitor.ke].mon_conf[v].details.groups)
+                    if(!groups){
+                        groups=[]
+                    }
+                }catch(err){
+                    groups=[]
+                }
+                if(!list[v]&&groups.indexOf(b)>-1){
+                    list[v]={}
+                    if(s.group[monitor.ke].mon_conf[v].mode !== 'stop'){
+                        cameras.push(Object.assign({},s.group[monitor.ke].mon_conf[v]))
+                    }
+                }
+            })
+        })
+        return cameras
+    }
 }

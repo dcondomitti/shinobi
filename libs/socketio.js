@@ -515,12 +515,23 @@ module.exports = function(s,config,lang,io){
                         s.ocvTx(d.data)
                     break;
                     case'monitorOrder':
-                        if(d.monitorOrder&&d.monitorOrder instanceof Object){
+                        if(d.monitorOrder && d.monitorOrder instanceof Object){
                             s.sqlQuery('SELECT details FROM Users WHERE uid=? AND ke=?',[cn.uid,cn.ke],function(err,r){
-                                if(r&&r[0]){
-                                    r=JSON.parse(r[0].details);
-                                    r.monitorOrder=d.monitorOrder;
-                                    s.sqlQuery('UPDATE Users SET details=? WHERE uid=? AND ke=?',[JSON.stringify(r),cn.uid,cn.ke])
+                                if(r && r[0]){
+                                    details = JSON.parse(r[0].details)
+                                    details.monitorOrder = d.monitorOrder
+                                    s.sqlQuery('UPDATE Users SET details=? WHERE uid=? AND ke=?',[s.s(details),cn.uid,cn.ke])
+                                }
+                            })
+                        }
+                    break;
+                    case'monitorListOrder':
+                        if(d.monitorListOrder && d.monitorListOrder instanceof Object){
+                            s.sqlQuery('SELECT details FROM Users WHERE uid=? AND ke=?',[cn.uid,cn.ke],function(err,r){
+                                if(r && r[0]){
+                                    details = JSON.parse(r[0].details)
+                                    details.monitorListOrder = d.monitorListOrder
+                                    s.sqlQuery('UPDATE Users SET details=? WHERE uid=? AND ke=?',[s.s(details),cn.uid,cn.ke])
                                 }
                             })
                         }

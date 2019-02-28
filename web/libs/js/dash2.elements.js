@@ -42,8 +42,21 @@ $(document).ready(function(e){
             $.ccio.cx({f:'monitor',ff:'watch_on',id:v.mid,ke:v.ke},user)
         })
     })
-
-
+    $.ccio.sortListMonitors = function(user){
+        var listKey = user.auth_token
+        if(user.auth_token === $user.auth_token){
+            listKey = 0
+        }
+        if(!user.details.monitorListOrder)user.details.monitorListOrder = {0:[]}
+        var getIdPlace = function(x){return user.details.monitorListOrder[listKey].indexOf(x)}
+        $(function() {
+           $('.link-monitors-list[auth="'+user.auth_token+'"] .monitor_block').sort(function(a, b) {
+               var contentA = getIdPlace($(a).attr('mid'))
+               var contentB = getIdPlace($(b).attr('mid'))
+               return contentA - contentB
+            }).each(function() { $('.link-monitors-list[auth="'+user.auth_token+'"]').append($(this)); });
+        })
+    }
     //open all monitors
     $('[class_toggle="list-blocks"][data-target="#left_menu"]').dblclick(function(){
         $('#monitors_list .monitor_block').each(function(n,v){
@@ -152,8 +165,7 @@ $(document).ready(function(e){
                 console.log('videoLink',videoLink)
                 console.log(href)
                 if(!href){
-                    var query=$.ccio.useUTC ? '?isUTC=true' : '';
-                    href = $.ccio.init('location',$.users[e.auth])+e.auth+'/videos/'+e.ke+'/'+e.mid+'/'+e.file+'/delete'+query;
+                    href = $.ccio.init('location',$.users[e.auth])+e.auth+'/videos/'+e.ke+'/'+e.mid+'/'+e.file+'/delete<% if(config.useUTC === true){%>?isUTC=true<%}%>'
                 }
                 console.log(href)
                 $.confirm.e.modal('show');

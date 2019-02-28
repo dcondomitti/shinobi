@@ -135,7 +135,9 @@ module.exports = function(s,config,onFinish){
                     string += ' -map '+v.map
                 })
             }else{
-                string += ' -map 0'
+                var primaryMap = '0:0'
+                if(e.details.primary_input && e.details.primary_input !== '')primaryMap = e.details.primary_input
+                string += ' -map ' + primaryMap
             }
         }
         return string;
@@ -765,26 +767,29 @@ module.exports = function(s,config,onFinish){
         //x = temporary values
         x.cust_detect = ' '
         //detector - plugins, motion
-        if(e.details.detector === '1' && e.details.detector_send_frames === '1' && e.coProcessor === false){
-            if(e.details.input_map_choices&&e.details.input_map_choices.detector){
+        var sendFramesGlobally = (e.details.detector_send_frames === '1')
+        var sendFramesToObjectDetector = (e.details.detector_send_frames_object !== '0' && e.details.detector_use_detect_object === '1')
+        if(e.details.detector === '1' && (sendFramesGlobally || sendFramesToObjectDetector) && e.coProcessor === false){
+            if(sendFramesGlobally && e.details.input_map_choices && e.details.input_map_choices.detector){
                 //add input feed map
                 x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
             }
-            if(!e.details.detector_fps||e.details.detector_fps===''){x.detector_fps = 2}else{x.detector_fps = parseInt(e.details.detector_fps)}
-            if(e.details.detector_scale_x&&e.details.detector_scale_x!==''&&e.details.detector_scale_y&&e.details.detector_scale_y!==''){x.dratio=' -s '+e.details.detector_scale_x+'x'+e.details.detector_scale_y}else{x.dratio=' -s 320x240'}
+            if(!e.details.detector_fps || e.details.detector_fps === ''){x.detector_fps = 2}else{x.detector_fps = parseInt(e.details.detector_fps)}
+            if(e.details.detector_scale_x && e.details.detector_scale_x !== '' && e.details.detector_scale_y && e.details.detector_scale_y !== ''){x.dratio=' -s '+e.details.detector_scale_x+'x'+e.details.detector_scale_y}else{x.dratio=' -s 320x240'}
             if(e.details.cust_detect&&e.details.cust_detect!==''){x.cust_detect+=e.details.cust_detect;}
-            x.pipe += ' -r ' + x.detector_fps + x.dratio + x.cust_detect
+            if(sendFramesGlobally)x.pipe += ' -r ' + x.detector_fps + x.dratio + x.cust_detect
             x.detector_vf = []
             if(e.cudaEnabled){
                 x.detector_vf.push('hwdownload,format=nv12')
             }
-            if(x.detector_vf.length > 0)x.pipe += ' -vf "'+x.detector_vf.join(',')+'"'
+            if(sendFramesGlobally && x.detector_vf.length > 0)x.pipe += ' -vf "'+x.detector_vf.join(',')+'"'
+
             var h264Output = ' -q:v 1 -an -c:v libx264 -f hls -tune zerolatency -g 1 -hls_time 2 -hls_list_size 3 -start_number 0 -live_start_index 3 -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'detectorStreamX.m3u8"'
             if(e.details.detector_pam === '1'){
-                if(e.cudaEnabled){
+                if(sendFramesGlobally && e.cudaEnabled){
                     x.pipe += ' -vf "hwdownload,format=nv12"'
                 }
-                x.pipe += ' -an -c:v pam -pix_fmt gray -f image2pipe pipe:3'
+                if(sendFramesGlobally)x.pipe += ' -an -c:v pam -pix_fmt gray -f image2pipe pipe:3'
                 if(e.details.detector_use_detect_object === '1'){
                     //for object detection
                     x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
@@ -796,7 +801,7 @@ module.exports = function(s,config,onFinish){
                         x.pipe += ' -an -f singlejpeg pipe:4'
                     }
                 }
-            }else{
+            }else if(sendFramesGlobally){
                 if(e.details.detector_h264 === '1'){
                     x.pipe += h264Output
                 }else{

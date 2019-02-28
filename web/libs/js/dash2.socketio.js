@@ -111,10 +111,13 @@ $.ccio.globalWebsocket=function(d,user){
                 }else{
                     $.each(f,g);
                 }
-                if($.ccio.op().jpeg_on===true){
+                setTimeout(function(){
+                    $.ccio.sortListMonitors(user)
+                },1000)
+                if($.ccio.op().jpeg_on === true){
                     $.ccio.cx({f:'monitor',ff:'jpeg_on'},user)
                 }
-                $.gR.drawList();
+                $.gR.drawList()
             })
             $.ccio.pm(3,d.apis,null,user);
             $('.os_platform').html(d.os.platform)
