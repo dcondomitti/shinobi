@@ -1,4 +1,5 @@
 var fs = require('fs')
+var execSync = require('child_process').execSync
 module.exports = function(s,config,lang,app,io){
     if(config.dropInEventServer === true){
         if(config.dropInEventDeleteFileAfterTrigger === undefined)config.dropInEventDeleteFileAfterTrigger = true
@@ -39,11 +40,29 @@ module.exports = function(s,config,lang,app,io){
                 fs.mkdirSync(s.dir.dropInEvents)
             }
         }
-        var onMonitorInit = function(monitorConfig){
+        var getDropInEventDir = function(monitorConfig){
             var ke = monitorConfig.ke
             var mid = monitorConfig.mid
             var groupEventDropDir = s.dir.dropInEvents + ke
-
+            var monitorEventDropDir = groupEventDropDir + '/' + mid + '/'
+            return monitorEventDropDir
+        }
+        var onMonitorStop = function(monitorConfig){
+            var ke = monitorConfig.ke
+            var mid = monitorConfig.mid
+            if(s.group[monitorConfig.ke].mon[monitorConfig.mid].dropInEventWatcher){
+                s.group[monitorConfig.ke].mon[monitorConfig.mid].dropInEventWatcher.close()
+                delete(s.group[monitorConfig.ke].mon[monitorConfig.mid].dropInEventWatcher)
+            }
+            var monitorEventDropDir = getDropInEventDir(monitorConfig)
+            if(fs.existsSync(monitorEventDropDir))execSync('rm -rf ' + monitorEventDropDir)
+        }
+        var onMonitorInit = function(monitorConfig){
+            onMonitorStop(monitorConfig)
+            var ke = monitorConfig.ke
+            var mid = monitorConfig.mid
+            var monitorEventDropDir = getDropInEventDir(monitorConfig)
+            var groupEventDropDir = s.dir.dropInEvents + ke
             if(!fs.existsSync(groupEventDropDir)){
                 fs.mkdirSync(groupEventDropDir)
             }
@@ -51,15 +70,11 @@ module.exports = function(s,config,lang,app,io){
             if(!fs.existsSync(monitorEventDropDir)){
                 fs.mkdirSync(monitorEventDropDir)
             }
-            if(s.group[monitorConfig.ke].mon[monitorConfig.mid].dropInEventWatcher){
-                s.group[monitorConfig.ke].mon[monitorConfig.mid].dropInEventWatcher.close()
-                delete(s.group[monitorConfig.ke].mon[monitorConfig.mid].dropInEventWatcher)
-            }
             var fileQueue = {}
             s.group[monitorConfig.ke].mon[monitorConfig.mid].dropInEventFileQueue = fileQueue
             var eventTrigger = function(eventType,filename){
                 var filePath = monitorEventDropDir + filename
-                if(filename.indexOf('.jpg') > -1){
+                if(filename.indexOf('.jpg') > -1 || filename.indexOf('.jpeg') > -1){
                     var snapPath = s.dir.streams + ke + '/' + mid + '/s.jpg'
                     fs.unlink(snapPath,function(err){
                         fs.createReadStream(filePath).pipe(fs.createWriteStream(snapPath))
@@ -99,7 +114,7 @@ module.exports = function(s,config,lang,app,io){
                     clearTimeout(fileQueue[filename])
                     fileQueue[filename] = setTimeout(function(){
                         eventTrigger(eventType,filename)
-                    },3000)
+                    },1200)
                 }
             })
             s.group[monitorConfig.ke].mon[monitorConfig.mid].dropInEventWatcher = directoryWatch
@@ -136,6 +151,7 @@ module.exports = function(s,config,lang,app,io){
         //add extensions
         s.beforeMonitorsLoadedOnStartup(beforeMonitorsLoadedOnStartup)
         s.onMonitorInit(onMonitorInit)
+        s.onMonitorStop(onMonitorStop)
     }
     // SMTP Server
     // allow starting SMTP server without dropInEventServer
@@ -158,7 +174,7 @@ module.exports = function(s,config,lang,app,io){
                 var split = address.address.split('@')
                 var monitorId = split[0]
                 var ke = session.user
-                if(s.group[ke].mon_conf[monitorId]){
+                if(s.group[ke].mon_conf[monitorId] && s.group[ke].mon[monitorId].isStarted === true){
                     s.triggerEvent({
                         id: monitorId,
                         ke: ke,
