@@ -55,9 +55,6 @@ module.exports = function(s,config,lang){
         s.onEventTriggerBeforeFilterExtensions.forEach(function(extender){
             extender(d,filter)
         })
-        if(s.group[d.ke].mon[d.id].open){
-            d.details.videoTime = s.group[d.ke].mon[d.id].open;
-        }
         var detailString = JSON.stringify(d.details);
         if(!s.group[d.ke]||!s.group[d.ke].mon[d.id]){
             return s.systemLog(lang['No Monitor Found, Ignoring Request'])

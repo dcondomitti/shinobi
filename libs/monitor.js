@@ -1173,13 +1173,6 @@ module.exports = function(s,config,lang){
                 //check if ffmpeg is recording
                 s.group[e.ke].mon[e.id].fswatch = fs.watch(e.dir, {encoding : 'utf8'}, (event, filename) => {
                     switch(event){
-                        case'rename':
-                        try{
-                            s.group[e.ke].mon[e.id].open = filename.split('.')[0]
-                        }catch(err){
-                            s.debugLog('Failed to split filename : ',filename)
-                        }
-                        break;
                         case'change':
                             s.resetRecordingCheck(e)
                         break;

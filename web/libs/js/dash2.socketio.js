@@ -652,18 +652,10 @@ $.ccio.globalWebsocket=function(d,user){
                 var newSetOfEventsWithoutChecked = {};
                 var eventTime
                 $.each(eventsToCheck,function(n,v){
-                    try{
-                        if(v.details.videoTime.indexOf('T') > -1){
-                            eventTime = v.details.videoTime.split('T');
-                        }else{
-                            eventTime = v.details.videoTime.split(' ');
-                        }
-                    }catch(err){
-                        if(v.time.indexOf('T') > -1){
-                            eventTime = v.time.split('T');
-                        }else{
-                            eventTime = v.time.split(' ');
-                        }
+                    if(v.time.indexOf('T') > -1){
+                        eventTime = v.time.split('T');
+                    }else{
+                        eventTime = v.time.split(' ');
                     }
                     eventTime[1] = eventTime[1].replace(/-/g,':'),eventTime = eventTime.join(' ');
                     if(eventTime === startTimeFormatted){
