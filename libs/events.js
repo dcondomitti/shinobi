@@ -254,7 +254,7 @@ module.exports = function(s,config,lang){
             }
             //save this detection result in SQL, only coords. not image.
             if(filter.save && currentConfig.detector_save === '1'){
-                s.sqlQuery('INSERT INTO Events (ke,mid,details) VALUES (?,?,?)',[d.ke,d.id,detailString])
+                s.sqlQuery('INSERT INTO Events (ke,mid,details,time) VALUES (?,?,?,?)',[d.ke,d.id,detailString,new Date()])
             }
             if(currentConfig.detector_notrigger === '1'){
                 var detector_notrigger_timeout

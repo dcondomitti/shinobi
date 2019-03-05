@@ -652,10 +652,12 @@ $.ccio.globalWebsocket=function(d,user){
                 var newSetOfEventsWithoutChecked = {};
                 var eventTime
                 $.each(eventsToCheck,function(n,v){
-                    if(v.time.indexOf('T') > -1){
-                        eventTime = v.time.split('T');
+                    if(typeof v.time === 'string' && v.time.indexOf('T') > -1){
+                        eventTime = v.time.split('T')
+                    }else if(typeof v.time === 'number'){
+                        eventTime = moment(v.time).format('YYYY-MM-DD HH:mm:ss').split(' ')
                     }else{
-                        eventTime = v.time.split(' ');
+                        eventTime = v.time.split(' ')
                     }
                     eventTime[1] = eventTime[1].replace(/-/g,':'),eventTime = eventTime.join(' ');
                     if(eventTime === startTimeFormatted){
