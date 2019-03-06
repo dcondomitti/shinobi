@@ -17,7 +17,6 @@ module.exports = function(s,config,lang){
             break;
         }
     }
-    //multi plugin connections
     s.connectedPlugins = {}
     s.connectedDetectorPlugins = {}
     s.detectorPluginArray = []
@@ -151,7 +150,13 @@ module.exports = function(s,config,lang){
                 socket.on('ocv',s.pluginEventController);
                 socket.on('disconnect', function(){
                     s.connectedPlugins[v.id].plugged=false
-                    delete(s.api[v.id])
+                    if(v.type === 'detector'){
+                        s.tx({f:'detector_unplugged',plug:v.id},'CPU')
+                        s.removeDetectorPlugin(v.id)
+                        s.sendDetectorInfoToClient({f:'detector_plugged'},function(data){
+                            s.tx(data,'CPU')
+                        })
+                    }
                     s.systemLog('Plugin Disconnected : '+v.id)
                     s.connectedPlugins[v.id].reconnector = setInterval(function(){
                         if(socket.connected===true){

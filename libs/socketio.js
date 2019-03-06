@@ -1365,9 +1365,8 @@ module.exports = function(s,config,lang,io){
                 }
             }
             if(cn.pluginEngine){
-                s.connectedPlugins[cn.pluginEngine].plugged=false
+                s.connectedPlugins[cn.pluginEngine].plugged = false
                 s.tx({f:'plugin_engine_unplugged',plug:cn.pluginEngine},'CPU')
-                delete(s.api[cn.pluginEngine])
             }
             if(cn.cron){
                 delete(s.cron);
