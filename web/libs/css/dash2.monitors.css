@@ -2,7 +2,7 @@
 .jpegMode .cpu_load .progress-bar,.jpegMode .ram_load .progress-bar{background-color:#5cb85c}
 .jpegMode [system="jpegToggle"],[system].text-success{color:#5cb85c!important}
 
-.monitor_item .stream-hud{opacity:0;position:absolute;top:0;left:0;width:100%;height:100%;z-index:2}
+.monitor_item .stream-hud{opacity:0;position:absolute;top:0;left:0;width:100%;height:100%;z-index:10}
 .monitor_item .stream-hud .camera_cpu_usage{position:absolute;top:0;left:0;width: 100%;}
 .monitor_item .stream-hud .camera_cpu_usage .progress{width: 100%;}
 .monitor_item .stream-hud .camera_cpu_usage:hover .progress{height:20px;transition:0.2s}
