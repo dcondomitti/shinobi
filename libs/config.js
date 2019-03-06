@@ -34,7 +34,7 @@ module.exports = function(s){
     if(config.databaseLogs === undefined){config.databaseLogs=false}
     if(config.useUTC === undefined){config.useUTC=false}
     if(config.iconURL === undefined){config.iconURL = "https://shinobi.video/libs/assets/icon/apple-touch-icon-152x152.png"}
-    if(config.pipeAddition === undefined){config.pipeAddition=7}else{config.pipeAddition=parseInt(config.pipeAddition)}
+    if(config.pipeAddition === undefined){config.pipeAddition=10}else{config.pipeAddition=parseInt(config.pipeAddition)}
     if(config.hideCloudSaveUrls === undefined){config.hideCloudSaveUrls = true}
     if(config.insertOrphans === undefined){config.insertOrphans = true}
     if(config.orphanedVideoCheckMax === undefined){config.orphanedVideoCheckMax = 20}
@@ -51,5 +51,12 @@ module.exports = function(s){
         if(config.childNodes.key === undefined)config.childNodes.key = [
             '3123asdasdf1dtj1hjk23sdfaasd12asdasddfdbtnkkfgvesra3asdsd3123afdsfqw345'
         ];
+    if(config.cron.key === 'change_this_to_something_very_random__just_anything_other_than_this'){
+        console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        console.error('!! Change your cron key in your conf.json.                     !!')
+        console.error(`!! If you're running Shinobi remotely you should do this now.  !!`)
+        console.error('!! You can do this in the Super User panel or from terminal.   !!')
+        console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+    }
     return config
 }

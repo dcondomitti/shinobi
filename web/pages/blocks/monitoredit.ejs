@@ -87,7 +87,13 @@
                         <option value="socket"><%-lang['Shinobi Streamer']%></option>
                         <option value="dashcam"><%-lang['Dashcam (Streamer v2)']%></option>
                         <option value="local"><%-lang['Local']%></option>
+                        <% if(config.rtmpServer){ %><option value="rtmp"><%-lang['RTMP']%></option><% } %>
                     </select></div>
+                </label>
+              </div>
+              <div class="form-group h_t_input h_t_rtmp">
+                <label><div><span><%-lang['Stream Key']%></span></div>
+                    <div><input class="form-control" detail="rtmp_key"></div>
                 </label>
               </div>
               <div class="h_t_input h_t_h264 h_t_hls h_t_mp4 h_t_jpeg h_t_mjpeg h_t_local">
@@ -198,6 +204,17 @@
 <!--     START of Input     -->
           <div class="form-group-group forestgreen" section id="monSectionInput">
           <h4><%-lang['Input Settings']%></h4>
+              <div class="form-group input-mapping" style="display:none">
+                <label><div><span><%-lang['Primary Input']%></span></div>
+                    <div><select class="form-control" detail="primary_input">
+                        <option value="0"><%-lang['All streams in first feed']%> (0)</option>
+                        <option value="0:0" selected><%-lang['First stream in feed']%> (0:0, <%-lang.Default%>)</option>
+                        <option value="0:1"><%-lang['Second stream in feed']%> (0:1)</option>
+                        <option value="0:v"><%-lang['Video streams only']%> (0:v)</option>
+                        <option value="0:v:0"><%-lang['Video stream only from first feed']%> (0:v:0)</option>
+                    </select></div>
+                </label>
+              </div>
               <div class="form-group">
                 <label><div><span><%-lang['Analyzation Duration']%></span></div>
                 <div><input class="form-control" detail="aduration"></div>
@@ -950,6 +967,11 @@
                         <div><input class="form-control" detail="detector_timeout" placeholder="10"></div>
                         </label>
                       </div>
+                      <div class="form-group">
+                        <label><div><span><%-lang['Notification Video Length']%></span></div>
+                        <div><input class="form-control" detail="detector_send_video_length" placeholder="10"></div>
+                        </label>
+                      </div>
                   </div>
                   <div class="form-group h_rec_mtd_input h_rec_mtd_hot h_rec_mtd_sip">
                     <label><div><span><%-lang['Timeout Reset on Next Event']%></span></div>
@@ -967,6 +989,21 @@
                                 <option value="1"><%-lang.Yes%></option>
                             </select></div>
                         </label>
+                      </div>
+                  </div>
+                  <div class="form-group">
+                    <label><div><span><%-lang['Trigger Camera Groups']%></span></div>
+                        <div><select class="form-control" detail="detector_multi_trigger" selector="det_multi_trig">
+                            <option value="0"><%-lang.No%></option>
+                            <option value="1" selected><%-lang.Yes%></option>
+                        </select></div>
+                    </label>
+                  </div>
+                  <div class="form-group-group orange det_multi_trig_input det_multi_trig_1" section id="monSectionDetectorGroupMulti" style="display:none">
+                      <h4><%-lang['Trigger Camera Groups']%></h4>
+                      <div>
+                          <ul class="mdl-list" id="monitor_group_detector_multi"></ul>
+                          <input type="hidden" detail="group_detector_multi">
                       </div>
                   </div>
                   <div class="form-group">
@@ -1078,6 +1115,14 @@
                             </select></div>
                         </label>
                       </div>
+                      <!-- <div class="form-group h_det_pam_input h_det_pam_1">
+                        <label><div><span><%-lang['Show Matrices']%></span></div>
+                            <div><select class="form-control" detail="detector_show_matrix">
+                                    <option value="0" selected><%-lang.No%></option>
+                                    <option value="1"><%-lang.Yes%></option>
+                            </select></div>
+                        </label>
+                      </div> -->
                       <div class="form-group">
                         <label><div><span><%-lang['Indifference']%></span></div>
                         <div><input class="form-control" detail="detector_sensitivity" placeholder="0.5"></div>
@@ -1145,27 +1190,27 @@
                       </div>
                   </div>
                   <!--     Start of Audio Detection     -->
-                              <div class="form-group-group orange" section id="monSectionAudioDetector">
-                                  <h4><%-lang['Audio Detector']%></h4>
-                                  <div class="form-group">
-                                    <label><div><span><%-lang['Enabled']%></span></div>
-                                        <div><select class="form-control" detail="detector_audio">
-                                            <option value="0" selected><%-lang.No%></option>
-                                            <option value="1"><%-lang.Yes%></option>
-                                        </select></div>
-                                    </label>
-                                  </div>
-                                  <div class="form-group">
-                                    <label><div><span><%-lang['Minimum dB']%></span></div>
-                                        <div><input class="form-control" detail="detector_audio_min_db" placeholder="5"></div>
-                                    </label>
-                                  </div>
-                                  <div class="form-group">
-                                    <label><div><span><%-lang['Maximum dB']%></span></div>
-                                        <div><input class="form-control" detail="detector_audio_max_db" placeholder=""></div>
-                                    </label>
-                                  </div>
-                              </div>
+                  <div class="form-group-group orange" section id="monSectionAudioDetector">
+                      <h4><%-lang['Audio Detector']%></h4>
+                      <div class="form-group">
+                        <label><div><span><%-lang['Enabled']%></span></div>
+                            <div><select class="form-control" detail="detector_audio">
+                                <option value="0" selected><%-lang.No%></option>
+                                <option value="1"><%-lang.Yes%></option>
+                            </select></div>
+                        </label>
+                      </div>
+                      <div class="form-group">
+                        <label><div><span><%-lang['Minimum dB']%></span></div>
+                            <div><input class="form-control" detail="detector_audio_min_db" placeholder="5"></div>
+                        </label>
+                      </div>
+                      <div class="form-group">
+                        <label><div><span><%-lang['Maximum dB']%></span></div>
+                            <div><input class="form-control" detail="detector_audio_max_db" placeholder=""></div>
+                        </label>
+                      </div>
+                  </div>
                   <!--     END of Audio Detection     -->
                   <div class="form-group-group orange shinobi-detector-opencv shinobi-detector-openalpr shinobi-detector-yolo shinobi-detector-dlib shinobi-detector_plug" section id="monSectionDetectorObject">
                       <h4><%-lang['Object Detection']%> <small><%-lang['Plugin']%> : <b class="shinobi-detector_name"></b> <b class="shinobi-detector-invert"><%-lang['Not Connected']%></b><b class="shinobi-detector" style="display:none"><%-lang['Connected']%></b></small></h4>
@@ -1174,6 +1219,14 @@
                             <div><select class="form-control" detail="detector_use_detect_object" selector="h_casc">
                                 <option value="0" selected><%-lang.No%></option>
                                 <option value="1"><%-lang.Yes%></option>
+                            </select></div>
+                        </label>
+                      </div>
+                      <div class="form-group">
+                        <label><div><span><%-lang['Send Frames']%></span></div>
+                            <div><select class="form-control" detail="detector_send_frames_object">
+                                <option value="0"><%-lang.No%></option>
+                                <option value="1" selected><%-lang.Yes%></option>
                             </select></div>
                         </label>
                       </div>
@@ -1202,19 +1255,19 @@
                               </div>
                               <div class="form-group">
                                 <label><div><span><%-lang['Width']%></span></div>
-                                    <div><input class="form-control" type="number" min="1" detail="detector_scale_x_object" placeholder="320"></div>
+                                    <div><input class="form-control" type="number" min="1" detail="detector_scale_x_object" placeholder=""></div>
                                 </label>
                               </div>
                               <div class="form-group">
                                 <label><div><span><%-lang['Height']%></span></div>
-                                    <div><input class="form-control" type="number" min="1" detail="detector_scale_y_object" placeholder="240"></div>
+                                    <div><input class="form-control" type="number" min="1" detail="detector_scale_y_object" placeholder=""></div>
                                 </label>
                               </div>
                           </div>
                       </div>
                       <div class=" h_casc_input h_casc_1" style="display:none">
                           <div class="form-group-group orange shinobi-detector-opencv shinobi-detector-openalpr shinobi-detector_plug" style="display:none" section id="monSectionLisencePlateDetector">
-                              <h4><%-lang['Lisence Plate Detector']%></h4>
+                              <h4><%-lang['License Plate Detector']%></h4>
                               <div class="form-group">
                                 <label><div><span><%-lang['Enabled']%></span></div>
                                     <div><select class="form-control" detail="detector_lisence_plate">

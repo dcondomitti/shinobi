@@ -40,6 +40,11 @@ module.exports = function(s,config){
         s.onTwoFactorAuthCodeNotificationExtensions.push(callback)
     }
     //
+    s.onStalePurgeLockExtensions = []
+    s.onStalePurgeLock = function(callback){
+        s.onStalePurgeLockExtensions.push(callback)
+    }
+    //
     s.cloudDiskUseStartupExtensions = {}
 
     ////// EVENTS //////
@@ -72,6 +77,11 @@ module.exports = function(s,config){
         s.onMonitorStopExtensions.push(callback)
     }
     //
+    s.onMonitorSaveExtensions = []
+    s.onMonitorSave = function(callback){
+        s.onMonitorSaveExtensions.push(callback)
+    }
+    //
     s.onMonitorUnexpectedExitExtensions = []
     s.onMonitorUnexpectedExit = function(callback){
         s.onMonitorUnexpectedExitExtensions.push(callback)
@@ -90,6 +100,11 @@ module.exports = function(s,config){
     s.onMonitorPingFailedExtensions = []
     s.onMonitorPingFailed = function(callback){
         s.onMonitorPingFailedExtensions.push(callback)
+    }
+    //
+    s.onMonitorDiedExtensions = []
+    s.onMonitorDied = function(callback){
+        s.onMonitorDiedExtensions.push(callback)
     }
 
     ///////// SYSTEM ////////
@@ -111,6 +126,21 @@ module.exports = function(s,config){
     s.onFFmpegLoadedExtensions = []
     s.onFFmpegLoaded = function(callback){
         s.onFFmpegLoadedExtensions.push(callback)
+    }
+    //
+    s.beforeMonitorsLoadedOnStartupExtensions = []
+    s.beforeMonitorsLoadedOnStartup = function(callback){
+        s.beforeMonitorsLoadedOnStartupExtensions.push(callback)
+    }
+    //
+    s.onWebSocketConnectionExtensions = []
+    s.onWebSocketConnection = function(callback){
+        s.onWebSocketConnectionExtensions.push(callback)
+    }
+    //
+    s.onWebSocketDisconnectionExtensions = []
+    s.onWebSocketDisconnection = function(callback){
+        s.onWebSocketDisconnectionExtensions.push(callback)
     }
     //
 }

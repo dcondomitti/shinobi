@@ -111,10 +111,13 @@ $.ccio.globalWebsocket=function(d,user){
                 }else{
                     $.each(f,g);
                 }
-                if($.ccio.op().jpeg_on===true){
+                setTimeout(function(){
+                    $.ccio.sortListMonitors(user)
+                },1000)
+                if($.ccio.op().jpeg_on === true){
                     $.ccio.cx({f:'monitor',ff:'jpeg_on'},user)
                 }
-                $.gR.drawList();
+                $.gR.drawList()
             })
             $.ccio.pm(3,d.apis,null,user);
             $('.os_platform').html(d.os.platform)
@@ -649,18 +652,12 @@ $.ccio.globalWebsocket=function(d,user){
                 var newSetOfEventsWithoutChecked = {};
                 var eventTime
                 $.each(eventsToCheck,function(n,v){
-                    try{
-                        if(v.details.videoTime.indexOf('T') > -1){
-                            eventTime = v.details.videoTime.split('T');
-                        }else{
-                            eventTime = v.details.videoTime.split(' ');
-                        }
-                    }catch(err){
-                        if(v.time.indexOf('T') > -1){
-                            eventTime = v.time.split('T');
-                        }else{
-                            eventTime = v.time.split(' ');
-                        }
+                    if(typeof v.time === 'string' && v.time.indexOf('T') > -1){
+                        eventTime = v.time.split('T')
+                    }else if(typeof v.time === 'number'){
+                        eventTime = moment(v.time).format('YYYY-MM-DD HH:mm:ss').split(' ')
+                    }else{
+                        eventTime = v.time.split(' ')
                     }
                     eventTime[1] = eventTime[1].replace(/-/g,':'),eventTime = eventTime.join(' ');
                     if(eventTime === startTimeFormatted){
@@ -880,22 +877,10 @@ $user.ws.on('f',function (d){
             }
         break;
         case'detector_plugged':
-            if(!d.notice){d.notice=''}
-            $('.shinobi-detector').show()
-            $('.shinobi-detector-msg').html(d.notice)
-            $('.shinobi-detector_name').text(d.plug)
-            $('.shinobi-detector-'+d.plug).show()
-            $('.shinobi-detector-invert').hide()
-            $.aM.drawList()
+            $.aM.addDetectorPlugin(d.plug,d)
         break;
         case'detector_unplugged':
-            $('.stream-objects .stream-detected-object').remove()
-            $('.shinobi-detector').hide()
-            $('.shinobi-detector-msg').empty()
-            $('.shinobi-detector_name').empty()
-            $('.shinobi-detector_plug').hide()
-            $('.shinobi-detector-invert').show()
-            $.aM.drawList()
+            $.aM.removeDetectorPlugin(d.plug)
         break;
         case'monitor_edit_failed':
             d.pnote={title:'Monitor Not Saved',text:'<b>'+d.mon.name+'</b> <small>'+d.mon.mid+'</small> has not been saved.',type:'error'}

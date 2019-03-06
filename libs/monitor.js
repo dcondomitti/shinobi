@@ -165,6 +165,9 @@ module.exports = function(s,config,lang){
         var streamDirItems = fs.readdirSync(pathDir)
         var items = []
         var copiedItems = []
+        var videoLength = s.group[monitor.ke].mon_conf[monitor.id].details.detector_send_video_length
+        if(!videoLength || videoLength === '')videoLength = '10'
+        if(videoLength.length === 1)videoLength = '0' + videoLength
         var createMerged = function(copiedItems){
             var allts = pathDir+items.join('_')
             fs.stat(allts,function(err,stats){
@@ -172,7 +175,7 @@ module.exports = function(s,config,lang){
                     //not exist
                     var cat = 'cat '+copiedItems.join(' ')+' > '+allts
                     exec(cat,function(){
-                        var merger = spawn(config.ffmpegDir,s.splitForFFPMEG(('-re -i '+allts+' -acodec copy -vcodec copy '+pathDir+mergedFile)))
+                        var merger = spawn(config.ffmpegDir,s.splitForFFPMEG(('-re -i '+allts+' -acodec copy -vcodec copy -t 00:00:' + videoLength + ' '+pathDir+mergedFile)))
                         merger.stderr.on('data',function(data){
                             s.userLog(monitor,{type:"Buffer Merge",msg:data.toString()})
                         })
@@ -200,7 +203,7 @@ module.exports = function(s,config,lang){
             }
         })
         items.sort()
-        items = items.slice(items.length - 5,items.length)
+        // items = items.slice(items.length - 5,items.length)
         items.forEach(function(filename){
             try{
                 var tempFilename = filename.split('.')
@@ -216,6 +219,64 @@ module.exports = function(s,config,lang){
                 fs.createReadStream(pathDir+filename).pipe(tempWriteStream)
             }catch(err){
 
+            }
+        })
+        return items
+    }
+    s.mergeRecordedVideos = function(videoRows,groupKey,callback){
+        var tempDir = s.dir.streams + groupKey + '/'
+        var pathDir = s.dir.fileBin + groupKey + '/'
+        var streamDirItems = fs.readdirSync(pathDir)
+        var items = []
+        var mergedFile = []
+        videoRows.forEach(function(video){
+            var filepath = s.getVideoDirectory(video) + s.formattedTime(video.time) + '.' + video.ext
+            if(
+                filepath.indexOf('.mp4') > -1
+                // || filename.indexOf('.webm') > -1
+            ){
+                mergedFile.push(s.formattedTime(video.time))
+                items.push(filepath)
+            }
+        })
+        mergedFile.sort()
+        mergedFile = mergedFile.join('_') + '.mp4'
+        var mergedFilepath = pathDir + mergedFile
+        var mergedRawFilepath = pathDir + 'raw_' + mergedFile
+        items.sort()
+        fs.stat(mergedFilepath,function(err,stats){
+            if(err){
+                //not exist
+                var tempScriptPath = tempDir + s.gid(5) + '.sh'
+                var cat = 'cat '+items.join(' ')+' > '+mergedRawFilepath
+                fs.writeFileSync(tempScriptPath,cat,'utf8')
+                exec('sh ' + tempScriptPath,function(){
+                    s.userLog({
+                        ke: groupKey,
+                        mid: '$USER'
+                    },{type:lang['Videos Merge'],msg:mergedFile})
+                    var merger = spawn(config.ffmpegDir,s.splitForFFPMEG(('-re -loglevel warning -i ' + mergedRawFilepath + ' -acodec copy -vcodec copy ' + mergedFilepath)))
+                    merger.stderr.on('data',function(data){
+                        s.userLog({
+                            ke: groupKey,
+                            mid: '$USER'
+                        },{type:lang['Videos Merge'],msg:data.toString()})
+                    })
+                    merger.on('close',function(){
+                        s.file('delete',mergedRawFilepath)
+                        s.file('delete',tempScriptPath)
+                        setTimeout(function(){
+                            fs.stat(mergedFilepath,function(err,stats){
+                                if(!err)s.file('delete',mergedFilepath)
+                            })
+                        },1000 * 60 * 60 * 24)
+                        delete(merger)
+                        callback(mergedFilepath,mergedFile)
+                    })
+                })
+            }else{
+                //file exist
+                callback(mergedFilepath,mergedFile)
             }
         })
         return items
@@ -606,6 +667,14 @@ module.exports = function(s,config,lang){
         // exec('chmod -R 777 '+e.sdir,function(err){
         //
         // })
+        var binDir = s.dir.fileBin + e.ke + '/'
+        if (!fs.existsSync(binDir)){
+            fs.mkdirSync(binDir)
+        }
+        binDir = s.dir.fileBin + e.ke + '/' + e.id + '/'
+        if (!fs.existsSync(binDir)){
+            fs.mkdirSync(binDir)
+        }
         return setStreamDir
     }
     s.stripAuthFromHost = function(e){
@@ -838,34 +907,10 @@ module.exports = function(s,config,lang){
                         s.group[e.ke].mon[e.id].lastJpegDetectorFrame = d
                     })
                 }
-            }else if(s.ocv){
-                if(s.ocv.connectionType !== 'ram'){
-                    s.group[e.ke].mon[e.id].spawn.stdio[3].on('data',function(d){
-                        s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:d});
-                    })
-                }else{
-                    s.group[e.ke].mon[e.id].spawn.stdio[3].on('data',function(d){
-                        if(!s.group[e.ke].mon[e.id].detectorFrameSaveBuffer){
-                            s.group[e.ke].mon[e.id].detectorFrameSaveBuffer=[d]
-                        }else{
-                            s.group[e.ke].mon[e.id].detectorFrameSaveBuffer.push(d)
-                        }
-                        if(d[d.length-2] === 0xFF && d[d.length-1] === 0xD9){
-                            var buffer = Buffer.concat(s.group[e.ke].mon[e.id].detectorFrameSaveBuffer);
-                            var frameLocation = s.dir.streams + e.ke + '/' + e.id + '/' + s.gid(5) + '.jpg'
-                            if(s.ocv){
-                                fs.writeFile(frameLocation,buffer,function(err){
-                                    if(err){
-                                        s.debugLog(err)
-                                    }else{
-                                        s.ocvTx({f:'frameFromRam',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frameLocation:frameLocation})
-                                    }
-                                })
-                            }
-                            s.group[e.ke].mon[e.id].detectorFrameSaveBuffer = null;
-                        }
-                    })
-                }
+            }else if(s.isAtleatOneDetectorPluginConnected){
+                s.group[e.ke].mon[e.id].spawn.stdio[3].on('data',function(d){
+                    s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:d});
+                })
             }
         }
         //frames to stream
@@ -966,9 +1011,10 @@ module.exports = function(s,config,lang){
         s.group[e.ke].mon[e.id].spawn.stderr.on('data',function(d){
             d=d.toString();
             switch(true){
-                // case checkLog(d,'No space left on device'):
-                //
-                // break;
+                case checkLog(d,'No space left on device'):
+                    s.checkUserPurgeLock(e.ke)
+                    s.purgeDiskForGroup(e)
+                break;
                 case checkLog(d,'error while decoding'):
                     s.userLog(e,{type:lang['Error While Decoding'],msg:lang.ErrorWhileDecodingText});
                 break;
@@ -1003,7 +1049,7 @@ module.exports = function(s,config,lang){
                     s.launchMonitorProcesses(e)
                 break;
                 case /T[0-9][0-9]-[0-9][0-9]-[0-9][0-9]./.test(d):
-                    var filename = d.split('.')[0]+'.'+e.ext
+                    var filename = d.split('.')[0].split(' [')[0].trim()+'.'+e.ext
                     s.insertCompletedVideo(e,{
                         file : filename
                     },function(err){
@@ -1103,13 +1149,6 @@ module.exports = function(s,config,lang){
                 //check if ffmpeg is recording
                 s.group[e.ke].mon[e.id].fswatch = fs.watch(e.dir, {encoding : 'utf8'}, (event, filename) => {
                     switch(event){
-                        case'rename':
-                        try{
-                            s.group[e.ke].mon[e.id].open = filename.split('.')[0]
-                        }catch(err){
-                            s.debugLog('Failed to split filename : ',filename)
-                        }
-                        break;
                         case'change':
                             s.resetRecordingCheck(e)
                         break;
@@ -1283,7 +1322,10 @@ module.exports = function(s,config,lang){
         }else{
             s.cameraDestroy(s.group[e.ke].mon[e.id].spawn,e)
         }
-        s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Died});
+        s.sendMonitorStatus({id:e.id,ke:e.ke,status:lang.Died})
+        s.onMonitorDiedExtensions.forEach(function(extender){
+            extender(Object.assign(s.group[e.ke].mon_conf[e.id],{}),e)
+        })
     }
     s.isWatchCountable = function(d){
         try{
@@ -1390,6 +1432,9 @@ module.exports = function(s,config,lang){
             }
             s.tx(txData,'GRP_'+form.ke)
             callback(!endData.ok,endData)
+            s.onMonitorSaveExtensions.forEach(function(extender){
+                extender(Object.assign(s.group[form.ke].mon_conf[form.mid],{}),form,endData)
+            })
         })
     }
     s.camera = function(x,e,cn){
@@ -1568,5 +1613,35 @@ module.exports = function(s,config,lang){
                 callback(endData)
             }
         })
+    }
+    s.getCamerasForMultiTrigger = function(monitor){
+        var list={}
+        var cameras=[]
+        var group
+        try{
+            group=JSON.parse(monitor.details.group_detector_multi)
+            if(!group){group=[]}
+        }catch(err){
+            group=[]
+        }
+        group.forEach(function(b){
+            Object.keys(s.group[monitor.ke].mon_conf).forEach(function(v){
+                try{
+                    var groups = JSON.parse(s.group[monitor.ke].mon_conf[v].details.groups)
+                    if(!groups){
+                        groups=[]
+                    }
+                }catch(err){
+                    groups=[]
+                }
+                if(!list[v]&&groups.indexOf(b)>-1){
+                    list[v]={}
+                    if(s.group[monitor.ke].mon_conf[v].mode !== 'stop'){
+                        cameras.push(Object.assign({},s.group[monitor.ke].mon_conf[v]))
+                    }
+                }
+            })
+        })
+        return cameras
     }
 }

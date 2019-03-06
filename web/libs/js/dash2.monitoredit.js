@@ -231,9 +231,8 @@ $.aM.import=function(e){
         }catch(er){
             input_maps = e.ss.input_maps;
         }
-        var mapContainers = $('[input-mapping]')
         if(input_maps.length>0){
-            mapContainers.show()
+            $.aM.showInputMappingFields()
             $.each(input_maps,function(n,v){
                 var tempID = $.ccio.tm('input-map')
                 var parent = $('#monSectionMap'+tempID)
@@ -242,7 +241,7 @@ $.aM.import=function(e){
                 })
             })
         }else{
-            mapContainers.hide()
+            $.aM.showInputMappingFields(false)
         }
     }
     //get channels
@@ -317,7 +316,7 @@ $.aM.import=function(e){
         }
     });
     try{
-        $.each(['groups','group_detector'],function(m,b){
+        $.each(['groups','group_detector_multi'],function(m,b){
             var tmp=''
             $.each($user.mon_groups,function(n,v){
                 tmp+='<li class="mdl-list__item">';
@@ -563,13 +562,12 @@ $.aM.mapSave = function(){
 $.aM.maps.on('click','.delete',function(){
     $(this).parents('.input-map').remove()
     var inputs = $('[map-detail]')
-    var mapContainers = $('[input-mapping]');
     if(inputs.length===0){
         $.aM.e.find('[detail="input_maps"]').val('[]').change()
-        mapContainers.hide();
+        $.aM.showInputMappingFields(false)
     }else{
         inputs.first().change()
-        mapContainers.show();
+        $.aM.showInputMappingFields()
     }
     $.aM.mapPlacementInit()
 })
@@ -639,6 +637,16 @@ $.aM.buildMonitorURL = function(){
     }
     return e.url
 }
+$.aM.showInputMappingFields = function(showMaps){
+    var el = $('[input-mapping],.input-mapping')
+    if(showMaps === undefined)showMaps = true
+    if(showMaps){
+        el.show()
+    }else{
+        el.hide()
+    }
+    $.aM.drawList()
+}
 $.aM.channels.on('click','.delete',function(){
     $(this).parents('.stream-channel').remove()
     $.aM.channelSave()
@@ -656,6 +664,15 @@ $.aM.e.on('change','[groups]',function(){
         e.s.push($(v).val())
     });
     $.aM.e.find('[detail="groups"]').val(JSON.stringify(e.s)).change()
+})
+$.aM.e.on('change','[group_detector_multi]',function(){
+  var e={};
+    e.e=$.aM.e.find('[group_detector_multi]:checked');
+    e.s=[];
+    e.e.each(function(n,v){
+        e.s.push($(v).val())
+    });
+    $.aM.e.find('[detail="group_detector_multi"]').val(JSON.stringify(e.s)).change()
 })
 $.aM.e.on('change','.detector_cascade_selection',function(){
   var e={};
@@ -725,7 +742,7 @@ $.aM.e.find('.save_config').click(function(e){
         [0].click()
 });
 $.aM.e.find('.add_map').click(function(e){
-    $('[input-mapping]').show()
+    $.aM.showInputMappingFields()
     $.ccio.tm('input-map')
 });
 $.aM.e.find('.add_channel').click(function(e){
@@ -770,4 +787,44 @@ $.aM.f.find('[name="type"]').change(function(e){
         break;
     }
 });
+    $.aM.connectedDetectorPlugins = {}
+    $.aM.addDetectorPlugin = function(name,d){
+        $.aM.connectedDetectorPlugins[d.plug] = {
+            id: d.id,
+            plug: d.plug,
+            notice: d.notice,
+            connectionType: d.connectionType
+        }
+        $.aM.drawPluginElements()
+    }
+    $.aM.removeDetectorPlugin = function(name){
+        delete($.aM.connectedDetectorPlugins[name])
+        $.aM.drawPluginElements(name)
+    }
+    $.aM.drawPluginElements = function(){
+        if(Object.keys($.aM.connectedDetectorPlugins).length === 0){
+            $('.stream-objects .stream-detected-object').remove()
+            $('.shinobi-detector').hide()
+            $('.shinobi-detector-msg').empty()
+            $('.shinobi-detector_name').empty()
+            $('.shinobi-detector_plug').hide()
+            $('.shinobi-detector-invert').show()
+            $.aM.drawList()
+        }else{
+            var pluginTitle = []
+            var pluginNotice = []
+            $.each($.aM.connectedDetectorPlugins,function(name,d){
+                pluginTitle.push(name)
+                if(d.notice){
+                    pluginNotice.push('<b>' + d.plug + '</b> : ' + d.notice)
+                }
+                $('.shinobi-detector-'+d.plug).show()
+            })
+            $('.shinobi-detector').show()
+            $('.shinobi-detector-invert').hide()
+            $('.shinobi-detector_name').text(pluginTitle.join(', '))
+            if(pluginNotice.length > 0)$('.shinobi-detector-msg').text(pluginNotice.join('<br>'))
+            $.aM.drawList()
+        }
+    }
 })

@@ -767,6 +767,14 @@
                   "possible": ""
                },
                {
+                  "name": "detail=detector_send_video_length",
+                  "field": "Notification Video Length",
+                  "description": "In seconds. The length of the video that gets sent to your Notification service, like Email or Discord.",
+                  "default": "10",
+                  "example": "",
+                  "possible": ""
+               },
+               {
                   "name": "detail=watchdog_reset",
                   "field": "Timeout Reset on Next Event",
                   "description": "If there is an overlap in trigger record should it reset.",
@@ -835,8 +843,16 @@
                {
                   "name": "detail=detector_fps",
                   "field": "Detector Rate (FPS)",
-                  "description": "How many frames a second to send to the motion detector; 1 is the default.",
-                  "default": "1",
+                  "description": "How many frames a second to send to the motion detector; 2 is the default.",
+                  "default": "2",
+                  "example": "",
+                  "possible": ""
+               },
+               {
+                  "name": "detail=detector_buffer_seconds",
+                  "field": "Recorded Buffer",
+                  "description": "How many seconds before the event to include in the recorded video.",
+                  "default": "5",
                   "example": "",
                   "possible": ""
                },

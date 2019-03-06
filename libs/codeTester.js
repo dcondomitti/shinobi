@@ -1,6 +1,6 @@
 var fs = require('fs');
 var execSync = require('child_process').execSync;
-module.exports = function(s,config,lang,io){
+module.exports = function(s,config,lang){
     var onFFmpegLoaded = function(ffmpeg){
         if(process.argv[2] && process.argv[2].indexOf('test') > -1){
             config.testMode = true

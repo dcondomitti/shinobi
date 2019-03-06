@@ -135,7 +135,9 @@ module.exports = function(s,config,onFinish){
                     string += ' -map '+v.map
                 })
             }else{
-                string += ' -map 0'
+                var primaryMap = '0:0'
+                if(e.details.primary_input && e.details.primary_input !== '')primaryMap = e.details.primary_input
+                string += ' -map ' + primaryMap
             }
         }
         return string;
@@ -645,7 +647,7 @@ module.exports = function(s,config,onFinish){
             x.dimensions = e.details.stream_scale_x+'x'+e.details.stream_scale_y;
         }
         //record - segmenting
-        x.segment=' -f segment -segment_atclocktime 1 -reset_timestamps 1 -strftime 1 -segment_list pipe:2 -segment_time '+(60*e.cutoff)+' "'+e.dir+'%Y-%m-%dT%H-%M-%S.'+e.ext+'"';
+        x.segment=' -f segment -segment_format_options movflags=faststart+frag_keyframe+empty_moov -segment_atclocktime 1 -reset_timestamps 1 -strftime 1 -segment_list pipe:2 -segment_time '+(60*e.cutoff)+' "'+e.dir+'%Y-%m-%dT%H-%M-%S.'+e.ext+'"';
         //record - set defaults for extension, video quality
         switch(e.ext){
             case'mp4':
@@ -765,31 +767,46 @@ module.exports = function(s,config,onFinish){
         //x = temporary values
         x.cust_detect = ' '
         //detector - plugins, motion
-        if(e.details.detector === '1' && e.details.detector_send_frames === '1' && e.coProcessor === false){
-            if(e.details.input_map_choices&&e.details.input_map_choices.detector){
+        var sendFramesGlobally = (e.details.detector_send_frames === '1')
+        var sendFramesToObjectDetector = (e.details.detector_send_frames_object !== '0' && e.details.detector_use_detect_object === '1')
+        if(e.details.detector === '1' && (sendFramesGlobally || sendFramesToObjectDetector) && e.coProcessor === false){
+            if(sendFramesGlobally && e.details.input_map_choices && e.details.input_map_choices.detector){
                 //add input feed map
                 x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
             }
-            if(!e.details.detector_fps||e.details.detector_fps===''){e.details.detector_fps=2}
-            if(e.details.detector_scale_x&&e.details.detector_scale_x!==''&&e.details.detector_scale_y&&e.details.detector_scale_y!==''){x.dratio=' -s '+e.details.detector_scale_x+'x'+e.details.detector_scale_y}else{x.dratio=' -s 320x240'}
+            if(!e.details.detector_fps || e.details.detector_fps === ''){x.detector_fps = 2}else{x.detector_fps = parseInt(e.details.detector_fps)}
+            if(e.details.detector_scale_x && e.details.detector_scale_x !== '' && e.details.detector_scale_y && e.details.detector_scale_y !== ''){x.dratio=' -s '+e.details.detector_scale_x+'x'+e.details.detector_scale_y}else{x.dratio=' -s 320x240'}
             if(e.details.cust_detect&&e.details.cust_detect!==''){x.cust_detect+=e.details.cust_detect;}
-            x.detector_vf = ['fps='+e.details.detector_fps]
+            if(sendFramesGlobally)x.pipe += ' -r ' + x.detector_fps + x.dratio + x.cust_detect
+            x.detector_vf = []
             if(e.cudaEnabled){
                 x.detector_vf.push('hwdownload,format=nv12')
             }
-            x.detector_vf = '-vf "'+x.detector_vf.join(',')+'"'
-            if(e.details.detector_pam==='1'){
-                if(e.cudaEnabled){
+            if(sendFramesGlobally && x.detector_vf.length > 0)x.pipe += ' -vf "'+x.detector_vf.join(',')+'"'
+
+            var h264Output = ' -q:v 1 -an -c:v libx264 -f hls -tune zerolatency -g 1 -hls_time 2 -hls_list_size 3 -start_number 0 -live_start_index 3 -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'detectorStreamX.m3u8"'
+            if(e.details.detector_pam === '1'){
+                if(sendFramesGlobally && e.cudaEnabled){
                     x.pipe += ' -vf "hwdownload,format=nv12"'
                 }
-                x.pipe+=' -an -c:v pam -pix_fmt gray -f image2pipe -r '+e.details.detector_fps+x.cust_detect+x.dratio+' pipe:3'
+                if(sendFramesGlobally)x.pipe += ' -an -c:v pam -pix_fmt gray -f image2pipe pipe:3'
                 if(e.details.detector_use_detect_object === '1'){
                     //for object detection
                     x.pipe += s.createFFmpegMap(e,e.details.input_map_choices.detector)
-                    x.pipe += ' -an -f singlejpeg '+x.detector_vf+x.cust_detect+x.dratio+' pipe:4';
+                    if(e.details.detector_scale_x_object&&e.details.detector_scale_x_object!==''&&e.details.detector_scale_y_object&&e.details.detector_scale_y_object!==''){x.dobjratio=' -s '+e.details.detector_scale_x_object+'x'+e.details.detector_scale_y_object}else{x.dobjratio=x.dratio}
+                    x.pipe += ' -r ' + x.detector_fps + x.dobjratio + x.cust_detect
+                    if(e.details.detector_h264 === '1'){
+                        x.pipe += h264Output
+                    }else{
+                        x.pipe += ' -an -f singlejpeg pipe:4'
+                    }
                 }
-            }else{
-                x.pipe+=' -an -f image2pipe '+x.detector_vf+x.cust_detect+x.dratio+' pipe:3';
+            }else if(sendFramesGlobally){
+                if(e.details.detector_h264 === '1'){
+                    x.pipe += h264Output
+                }else{
+                    x.pipe += ' -an -f singlejpeg pipe:3'
+                }
             }
         }
         //Traditional Recording Buffer
@@ -838,7 +855,6 @@ module.exports = function(s,config,onFinish){
             if(!e.details.detector_buffer_hls_list_size||e.details.detector_buffer_hls_list_size===''){e.details.detector_buffer_hls_list_size='4'}
             if(!e.details.detector_buffer_start_number||e.details.detector_buffer_start_number===''){e.details.detector_buffer_start_number='0'}
             if(!e.details.detector_buffer_live_start_index||e.details.detector_buffer_live_start_index===''){e.details.detector_buffer_live_start_index='-3'}
-
             if(e.details.detector_buffer_vcodec.indexOf('_vaapi')>-1){
                 if(x.hwaccel.indexOf('-vaapi_device')>-1){
                     x.detector_buffer_filters.push('format=nv12')
@@ -859,7 +875,7 @@ module.exports = function(s,config,onFinish){
             if(x.detector_buffer_filters.length>0){
                 x.pipe+=' -vf '+x.detector_buffer_filters.join(',')
             }
-            x.pipe+=x.detector_buffer_fps+x.detector_buffer_acodec+' -c:v '+e.details.detector_buffer_vcodec+' -f hls -tune '+e.details.detector_buffer_tune+' -g '+e.details.detector_buffer_g+' -hls_time '+e.details.detector_buffer_hls_time+' -hls_list_size '+e.details.detector_buffer_hls_list_size+' -start_number '+e.details.detector_buffer_start_number+' -live_start_index '+e.details.detector_buffer_live_start_index+' -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'detectorStream.m3u8"'
+            x.pipe += x.detector_buffer_fps+x.detector_buffer_acodec+' -c:v '+e.details.detector_buffer_vcodec+' -f hls -tune '+e.details.detector_buffer_tune+' -g '+e.details.detector_buffer_g+' -hls_time '+e.details.detector_buffer_hls_time+' -hls_list_size '+e.details.detector_buffer_hls_list_size+' -start_number '+e.details.detector_buffer_start_number+' -live_start_index '+e.details.detector_buffer_live_start_index+' -hls_allow_cache 0 -hls_flags +delete_segments+omit_endlist "'+e.sdir+'detectorStream.m3u8"'
         }
     }
     ffmpeg.buildCoProcessorFeed = function(e,x){
@@ -884,9 +900,10 @@ module.exports = function(s,config,onFinish){
             case'mjpeg':
                 x.ffmpegCommandString += ' -reconnect 1 -f mjpeg'+x.cust_input+x.hwaccel+' -i "'+e.url+'"';
             break;
-            // case'rtmp':
-            //     x.ffmpegCommandString += x.cust_input+x.hwaccel+' -i -';
-            // break;
+            case'rtmp':
+                if(!e.details.rtmp_key)e.details.rtmp_key = ''
+                x.ffmpegCommandString += x.cust_input+x.hwaccel+` -i "rtmp://127.0.0.1:1935/${e.ke + '_' + e.mid + '_' + e.details.rtmp_key}"`;
+            break;
             case'h264':case'hls':case'mp4':
                 x.ffmpegCommandString += x.cust_input+x.hwaccel+' -i "'+e.url+'"';
             break;

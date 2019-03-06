@@ -4,7 +4,7 @@ var moment = require('moment');
 var crypto = require('crypto');
 var exec = require('child_process').exec;
 var execSync = require('child_process').execSync;
-module.exports = function(s,config,lang,io,){
+module.exports = function(s,config,lang,io){
     console.log('FFmpeg version : '+s.ffmpegVersion)
     console.log('Node.js version : '+execSync("node -v"))
     s.processReady = function(){
@@ -34,6 +34,9 @@ module.exports = function(s,config,lang,io,){
     }
     var loadedAccounts = []
     var loadMonitors = function(callback){
+        s.beforeMonitorsLoadedOnStartupExtensions.forEach(function(extender){
+            extender()
+        })
         s.systemLog(lang.startUpText4)
         //preliminary monitor start
         s.sqlQuery('SELECT * FROM Monitors', function(err,monitors) {

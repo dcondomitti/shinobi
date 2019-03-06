@@ -22,7 +22,7 @@ var config = loadLib('config')(s)
 //language loader
 var lang = loadLib('language')(s,config)
 //code test module
-loadLib('codeTester')(s,config,lang,io)
+loadLib('codeTester')(s,config,lang)
 //basic functions
 loadLib('basic')(s,config)
 //video processing engine
@@ -64,9 +64,13 @@ loadLib('ffmpeg')(s,config,function(ffmpeg){
     //cluster module
     loadLib('childNode')(s,config,lang,app,io)
     //cloud uploaders : amazon s3, webdav, backblaze b2..
-    loadLib('cloudUploaders')(s,config,lang)
+    loadLib('uploaders')(s,config,lang)
     //notifiers : discord..
     loadLib('notification')(s,config,lang)
+    //notifiers : discord..
+    loadLib('rtmpserver')(s,config,lang)
+    //dropInEvents server (file manipulation to create event trigger)
+    loadLib('dropInEvents')(s,config,lang,app,io)
     //custom module loader
     loadLib('customAutoLoad')(s,config,lang,app,io)
     //scheduling engine
