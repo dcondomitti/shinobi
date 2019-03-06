@@ -133,4 +133,14 @@ module.exports = function(s,config){
         s.beforeMonitorsLoadedOnStartupExtensions.push(callback)
     }
     //
+    s.onWebSocketConnectionExtensions = []
+    s.onWebSocketConnection = function(callback){
+        s.onWebSocketConnectionExtensions.push(callback)
+    }
+    //
+    s.onWebSocketDisconnectionExtensions = []
+    s.onWebSocketDisconnection = function(callback){
+        s.onWebSocketDisconnectionExtensions.push(callback)
+    }
+    //
 }

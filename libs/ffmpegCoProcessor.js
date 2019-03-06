@@ -189,34 +189,10 @@ module.exports = function(s,config,lang,ffmpeg){
                             s.group[e.ke].mon[e.id].lastJpegDetectorFrame = d
                         })
                     }
-                }else if(s.ocv){
-                    if(s.ocv.connectionType !== 'ram'){
-                        s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].on('data',function(d){
-                            s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:d});
-                        })
-                    }else{
-                        s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].on('data',function(d){
-                            if(!s.group[e.ke].mon[e.id].detectorFrameSaveBuffer){
-                                s.group[e.ke].mon[e.id].detectorFrameSaveBuffer=[d]
-                            }else{
-                                s.group[e.ke].mon[e.id].detectorFrameSaveBuffer.push(d)
-                            }
-                            if(d[d.length-2] === 0xFF && d[d.length-1] === 0xD9){
-                                var buffer = Buffer.concat(s.group[e.ke].mon[e.id].detectorFrameSaveBuffer);
-                                var frameLocation = s.dir.streams + e.ke + '/' + e.id + '/' + s.gid(5) + '.jpg'
-                                if(s.ocv){
-                                    fs.writeFile(frameLocation,buffer,function(err){
-                                        if(err){
-                                            s.debugLog(err)
-                                        }else{
-                                            s.ocvTx({f:'frameFromRam',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frameLocation:frameLocation})
-                                        }
-                                    })
-                                }
-                                s.group[e.ke].mon[e.id].detectorFrameSaveBuffer = null;
-                            }
-                        })
-                    }
+                }else if(s.isAtleatOneDetectorPluginConnected){
+                    s.group[e.ke].mon[e.id].coSpawnProcessor.stdio[3].on('data',function(d){
+                        s.ocvTx({f:'frame',mon:s.group[e.ke].mon_conf[e.id].details,ke:e.ke,id:e.id,time:s.formattedTime(),frame:d});
+                    })
                 }
             }
         }

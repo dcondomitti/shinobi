@@ -787,4 +787,44 @@ $.aM.f.find('[name="type"]').change(function(e){
         break;
     }
 });
+    $.aM.connectedDetectorPlugins = {}
+    $.aM.addDetectorPlugin = function(name,d){
+        $.aM.connectedDetectorPlugins[d.plug] = {
+            id: d.id,
+            plug: d.plug,
+            notice: d.notice,
+            connectionType: d.connectionType
+        }
+        $.aM.drawPluginElements()
+    }
+    $.aM.removeDetectorPlugin = function(name){
+        delete($.aM.connectedDetectorPlugins[name])
+        $.aM.drawPluginElements(name)
+    }
+    $.aM.drawPluginElements = function(){
+        if(Object.keys($.aM.connectedDetectorPlugins).length === 0){
+            $('.stream-objects .stream-detected-object').remove()
+            $('.shinobi-detector').hide()
+            $('.shinobi-detector-msg').empty()
+            $('.shinobi-detector_name').empty()
+            $('.shinobi-detector_plug').hide()
+            $('.shinobi-detector-invert').show()
+            $.aM.drawList()
+        }else{
+            var pluginTitle = []
+            var pluginNotice = []
+            $.each($.aM.connectedDetectorPlugins,function(name,d){
+                pluginTitle.push(name)
+                if(d.notice){
+                    pluginNotice.push('<b>' + d.plug + '</b> : ' + d.notice)
+                }
+                $('.shinobi-detector-'+d.plug).show()
+            })
+            $('.shinobi-detector').show()
+            $('.shinobi-detector-invert').hide()
+            $('.shinobi-detector_name').text(pluginTitle.join(', '))
+            if(pluginNotice.length > 0)$('.shinobi-detector-msg').text(pluginNotice.join('<br>'))
+            $.aM.drawList()
+        }
+    }
 })

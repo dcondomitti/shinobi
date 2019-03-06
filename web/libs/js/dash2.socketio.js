@@ -877,22 +877,10 @@ $user.ws.on('f',function (d){
             }
         break;
         case'detector_plugged':
-            if(!d.notice){d.notice=''}
-            $('.shinobi-detector').show()
-            $('.shinobi-detector-msg').html(d.notice)
-            $('.shinobi-detector_name').text(d.plug)
-            $('.shinobi-detector-'+d.plug).show()
-            $('.shinobi-detector-invert').hide()
-            $.aM.drawList()
+            $.aM.addDetectorPlugin(d.plug,d)
         break;
         case'detector_unplugged':
-            $('.stream-objects .stream-detected-object').remove()
-            $('.shinobi-detector').hide()
-            $('.shinobi-detector-msg').empty()
-            $('.shinobi-detector_name').empty()
-            $('.shinobi-detector_plug').hide()
-            $('.shinobi-detector-invert').show()
-            $.aM.drawList()
+            $.aM.removeDetectorPlugin(d.plug)
         break;
         case'monitor_edit_failed':
             d.pnote={title:'Monitor Not Saved',text:'<b>'+d.mon.name+'</b> <small>'+d.mon.mid+'</small> has not been saved.',type:'error'}
