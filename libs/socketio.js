@@ -9,12 +9,8 @@ module.exports = function(s,config,lang,io){
     s.clientSocketConnection = {}
     //send data to detector plugin
     s.ocvTx=function(data){
-        if(!s.ocv){return}
-        if(s.ocv.isClientPlugin===true){
-            s.tx(data,s.ocv.id)
-        }else{
-            s.connectedPlugins[s.ocv.plug].tx(data)
-        }
+        // chaining coming in future update
+        s.sendToAllDetectors(data)
     }
     //send data to socket client function
     s.tx = function(z,y,x){if(x){return x.broadcast.to(y).emit('f',z)};io.to(y).emit('f',z);}
@@ -446,8 +442,8 @@ module.exports = function(s,config,lang,io){
                         s.group[d.ke].mon={}
                         if(!s.group[d.ke].mon){s.group[d.ke].mon={}}
                     }
-                    if(s.ocv){
-                        tx({f:'detector_plugged',plug:s.ocv.plug,notice:s.ocv.notice})
+                    if(s.isAtleatOneDetectorPluginConnected){
+                        s.sendDetectorInfoToClient({f:'detector_plugged'},tx)
                         s.ocvTx({f:'readPlugins',ke:d.ke})
                     }
                     tx({f:'users_online',users:s.group[d.ke].users})
@@ -515,12 +511,23 @@ module.exports = function(s,config,lang,io){
                         s.ocvTx(d.data)
                     break;
                     case'monitorOrder':
-                        if(d.monitorOrder&&d.monitorOrder instanceof Object){
+                        if(d.monitorOrder && d.monitorOrder instanceof Object){
                             s.sqlQuery('SELECT details FROM Users WHERE uid=? AND ke=?',[cn.uid,cn.ke],function(err,r){
-                                if(r&&r[0]){
-                                    r=JSON.parse(r[0].details);
-                                    r.monitorOrder=d.monitorOrder;
-                                    s.sqlQuery('UPDATE Users SET details=? WHERE uid=? AND ke=?',[JSON.stringify(r),cn.uid,cn.ke])
+                                if(r && r[0]){
+                                    details = JSON.parse(r[0].details)
+                                    details.monitorOrder = d.monitorOrder
+                                    s.sqlQuery('UPDATE Users SET details=? WHERE uid=? AND ke=?',[s.s(details),cn.uid,cn.ke])
+                                }
+                            })
+                        }
+                    break;
+                    case'monitorListOrder':
+                        if(d.monitorListOrder && d.monitorListOrder instanceof Object){
+                            s.sqlQuery('SELECT details FROM Users WHERE uid=? AND ke=?',[cn.uid,cn.ke],function(err,r){
+                                if(r && r[0]){
+                                    details = JSON.parse(r[0].details)
+                                    details.monitorListOrder = d.monitorListOrder
+                                    s.sqlQuery('UPDATE Users SET details=? WHERE uid=? AND ke=?',[s.s(details),cn.uid,cn.ke])
                                 }
                             })
                         }
@@ -1358,22 +1365,29 @@ module.exports = function(s,config,lang,io){
                 }
             }
             if(cn.pluginEngine){
-                s.connectedPlugins[cn.pluginEngine].plugged=false
+                s.connectedPlugins[cn.pluginEngine].plugged = false
                 s.tx({f:'plugin_engine_unplugged',plug:cn.pluginEngine},'CPU')
-                delete(s.api[cn.pluginEngine])
             }
             if(cn.cron){
                 delete(s.cron);
             }
-            if(cn.ocv && s.ocv){
-                s.tx({f:'detector_unplugged',plug:s.ocv.plug},'CPU')
-                delete(s.ocv);
-                delete(s.api[cn.id])
+            if(cn.detectorPlugin){
+                s.tx({f:'detector_unplugged',plug:cn.detectorPlugin},'CPU')
+                s.removeDetectorPlugin(cn.detectorPlugin)
+                s.sendDetectorInfoToClient({f:'detector_plugged'},function(data){
+                    s.tx(data,'CPU')
+                })
             }
             if(cn.superSessionKey){
                 delete(s.superUsersApi[cn.superSessionKey])
             }
+            s.onWebSocketDisconnectionExtensions.forEach(function(extender){
+                extender(cn)
+            })
             delete(s.clientSocketConnection[cn.id])
+        })
+        s.onWebSocketConnectionExtensions.forEach(function(extender){
+            extender(cn)
         })
     });
 }

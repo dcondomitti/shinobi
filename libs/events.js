@@ -10,7 +10,7 @@ module.exports = function(s,config,lang){
         var newString = string + ''
         var d = Object.assign(eventData,addOps)
         var detailString = s.stringJSON(d.details)
-        newString
+        newString = newString
             .replace(/{{TIME}}/g,d.currentTimestamp)
             .replace(/{{REGION_NAME}}/g,d.details.name)
             .replace(/{{SNAP_PATH}}/g,s.dir.streams+'/'+d.ke+'/'+d.id+'/s.jpg')
@@ -55,9 +55,6 @@ module.exports = function(s,config,lang){
         s.onEventTriggerBeforeFilterExtensions.forEach(function(extender){
             extender(d,filter)
         })
-        if(s.group[d.ke].mon[d.id].open){
-            d.details.videoTime = s.group[d.ke].mon[d.id].open;
-        }
         var detailString = JSON.stringify(d.details);
         if(!s.group[d.ke]||!s.group[d.ke].mon[d.id]){
             return s.systemLog(lang['No Monitor Found, Ignoring Request'])
@@ -239,9 +236,25 @@ module.exports = function(s,config,lang){
                 frame : s.group[d.ke].mon[d.id].lastJpegDetectorFrame
             })
         }else{
+            if(currentConfig.detector_multi_trigger === '1'){
+                s.getCamerasForMultiTrigger(d.mon).forEach(function(monitor){
+                    if(monitor.mid !== d.id){
+                        s.triggerEvent({
+                            id: monitor.mid,
+                            ke: monitor.ke,
+                            details: {
+                                confidence: 100,
+                                name: "multiTrigger",
+                                plug: d.details.plug,
+                                reason: d.details.reason
+                            }
+                        })
+                    }
+                })
+            }
             //save this detection result in SQL, only coords. not image.
             if(filter.save && currentConfig.detector_save === '1'){
-                s.sqlQuery('INSERT INTO Events (ke,mid,details) VALUES (?,?,?)',[d.ke,d.id,detailString])
+                s.sqlQuery('INSERT INTO Events (ke,mid,details,time) VALUES (?,?,?,?)',[d.ke,d.id,detailString,new Date()])
             }
             if(currentConfig.detector_notrigger === '1'){
                 var detector_notrigger_timeout
@@ -321,6 +334,9 @@ module.exports = function(s,config,lang){
     s.createEventBasedRecording = function(d){
         d.mon = s.group[d.ke].mon_conf[d.id]
         var currentConfig = s.group[d.ke].mon[d.id].details
+        if(currentConfig.detector !== '1'){
+            return
+        }
         var detector_timeout
         if(!currentConfig.detector_timeout||currentConfig.detector_timeout===''){
             detector_timeout = 10

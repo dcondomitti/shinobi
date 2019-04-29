@@ -295,7 +295,7 @@ module.exports = function(s,config){
                             var userDetails = JSON.parse(d.form.details)
                             s.group[d.ke].sizeLimit = parseFloat(newSize)
                             s.onAccountSaveExtensions.forEach(function(extender){
-                                extender(s.group[d.ke],userDetails)
+                                extender(s.group[d.ke],userDetails,user)
                             })
                             s.unloadGroupAppExtensions.forEach(function(extender){
                                 extender(user)
@@ -322,20 +322,22 @@ module.exports = function(s,config){
             callback(notFound,preset)
         })
     }
+    s.checkUserPurgeLock = function(groupKey){
+        var userGroup = s.group[groupKey]
+        if(s.group[groupKey].usedSpace > s.group[groupKey].sizeLimit){
+            s.group[groupKey].sizePurgeQueue = []
+            s.group[groupKey].sizePurging = false
+            s.systemLog(lang.sizePurgeLockedText + ' : ' + groupKey)
+            s.onStalePurgeLockExtensions.forEach(function(extender){
+                extender(groupKey,s.group[groupKey].usedSpace,s.group[groupKey].sizeLimit)
+            })
+        }
+    }
     if(config.cron.deleteOverMax === true){
         s.checkForStalePurgeLocks = function(){
             var doCheck = function(){
                 Object.keys(s.group).forEach(function(groupKey){
-                    var userGroup = s.group[groupKey]
-                    var monitorCount = 10
-                    if(userGroup.mon)monitorCount = Object.keys(userGroup.mon).length
-                    var purgeRequestCount = userGroup.sizePurgeQueue.length
-                    var isLocked = (userGroup.sizePurging === true)
-                    if(isLocked && purgeRequestCount > monitorCount + 10){
-                        s.group[groupKey].sizePurgeQueue = []
-                        s.group[groupKey].sizePurging = false
-                        s.systemLog(lang.sizePurgeLockedText + ' : ' + groupKey)
-                    }
+                    s.checkUserPurgeLock(groupKey)
                 })
             }
             clearTimeout(s.checkForStalePurgeLocksInterval)

@@ -166,7 +166,6 @@ module.exports = function(s,config,lang,app){
             ok: false
         }
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             var hasRestrictions = user.details.sub && user.details.allmonitors !== '1'
             if(req.params.f !== 'delete'){
@@ -245,7 +244,6 @@ module.exports = function(s,config,lang,app){
     ],function (req,res){
         var endData = {ok:false}
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             var endData = {
                 ok : false
@@ -291,7 +289,6 @@ module.exports = function(s,config,lang,app){
     ],function (req,res){
         var endData = {ok:false}
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             var endData = {
                 ok : false
@@ -344,7 +341,6 @@ module.exports = function(s,config,lang,app){
     ],function (req,res){
         var endData = {ok:false}
         res.setHeader('Content-Type', 'application/json');
-        res.header("Access-Control-Allow-Origin",req.headers.origin);
         s.auth(req.params,function(user){
             var endData = {
                 ok : false

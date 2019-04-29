@@ -772,27 +772,30 @@ $.ccio.tm=function(x,d,z,user){
                     cellHeight: 80,
                     verticalMargin: 10,
                 };
-                //monitor="watch_off"
-                $(z).gridstack(options);
-                $(z).on('change', function(event, ui) {
-                    var monitors = {}
-                    $.grid.e.find(" .monitor_item").each(function(n,v){
-                        var el = $(v)
-                        var item = {}
-                        item.ke = el.attr('ke')
-                        item.mid = el.attr('mid')
-                        item.x = el.attr('data-gs-x')
-                        item.y = el.attr('data-gs-y')
-                        item.height = el.attr('data-gs-height')
-                        item.width = el.attr('data-gs-width')
-                        monitors[item.ke+item.mid] = item
-                    })
-                    user.details.monitorOrder=monitors;
-                    $.ccio.cx({f:'monitorOrder',monitorOrder:monitors},user)
-                });
+                $(z).sortable({
+                    stop : function(event,ui){
+                        var order = {}
+                        $('.link-monitors-list').each(function(n,block){
+                            var el = $(this)
+                            var ke = el.attr('ke')
+                            var authToken = el.attr('auth')
+                            var orderKey = ke + authToken
+                            if(authToken === $user.auth_token)orderKey = 0
+                            if(!order[orderKey])order[orderKey] = []
+                            var monitorBlocks = $(this).find('.monitor_block')
+                            $.each(monitorBlocks,function(n,block){
+                                var mid = $(block).attr('mid')
+                                order[orderKey].push(mid)
+                            })
+                        })
+                        $user.details.monitorListOrder = order
+                        $.ccio.cx({f:'monitorListOrder',monitorListOrder:order},user)
+                    },
+                    handle: '.title'
+                })
             }
             $(z).prepend(tmp)
-            componentHandler.upgradeAllRegistered()
+            // componentHandler.upgradeAllRegistered()
         break;
         case 0:case 4:
             $.ccio.init('ls');

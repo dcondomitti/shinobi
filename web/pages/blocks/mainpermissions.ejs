@@ -120,6 +120,22 @@
             </label>
         </div>
         <div class="form-group h_l_input h_l_limited">
+            <label><div><span><%-lang['Can use Wasabi Hot Cloud Storage']%></span></div>
+                <div><select class="form-control" detail="use_whcs">
+                    <option value="1" selected><%-lang.Yes%></option>
+                    <option value="0"><%-lang.No%></option>
+                </select></div>
+            </label>
+        </div>
+        <div class="form-group h_l_input h_l_limited">
+            <label><div><span><%-lang['Can use SFTP']%></span></div>
+                <div><select class="form-control" detail="use_sftp">
+                    <option value="1" selected><%-lang.Yes%></option>
+                    <option value="0"><%-lang.No%></option>
+                </select></div>
+            </label>
+        </div>
+        <div class="form-group h_l_input h_l_limited">
             <label><div><span><%-lang['Can use WebDAV']%></span></div>
                 <div><select class="form-control" detail="use_webdav">
                     <option value="1" selected><%-lang.Yes%></option>
@@ -146,24 +162,24 @@
         <div class="form-group h_l_input h_l_limited">
             <label><div><span><%-lang['Use Global Amazon S3 Video Storage']%></span></div>
                 <div><select class="form-control" detail="aws_use_global">
-                    <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>
+                    <option value="1"><%-lang.Yes%></option>
+                    <option value="0" selected><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
         <div class="form-group h_l_input h_l_limited">
             <label><div><span><%-lang['Use Global Backblaze B2 Video Storage']%></span></div>
                 <div><select class="form-control" detail="b2_use_global">
-                    <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>
+                    <option value="1"><%-lang.Yes%></option>
+                    <option value="0" selected><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
         <div class="form-group h_l_input h_l_limited">
             <label><div><span><%-lang['Use Global WebDAV Video Storage']%></span></div>
                 <div><select class="form-control" detail="webdav_use_global">
-                    <option value="1" selected><%-lang.Yes%></option>
-                    <option value="0"><%-lang.No%></option>
+                    <option value="1"><%-lang.Yes%></option>
+                    <option value="0" selected><%-lang.No%></option>
                 </select></div>
             </label>
         </div>
